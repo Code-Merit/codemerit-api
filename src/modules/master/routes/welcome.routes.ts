@@ -27,7 +27,7 @@ export const welcomeRoutes = [
     path: '/app/standard-quiz',
     title: 'Browse Quizzes',
     iconType: 'material-icons-outlined',
-    icon: 'school',
+    icon: 'extension',
     class: '',
     groupTitle: false,
     badge: '',

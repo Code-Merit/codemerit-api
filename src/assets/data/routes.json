@@ -74,7 +74,7 @@
     },
     {
       "path": "/quiz/builder",
-      "title": "Quiz Builder",
+      "title": "Quiz Genera",
       "iconType": "material-icons-outlined",
       "icon": "extension",
       "class": "",

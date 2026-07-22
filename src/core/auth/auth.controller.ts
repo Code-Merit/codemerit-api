@@ -15,6 +15,7 @@ import { AuthService } from './providers/auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Public } from './decorators/public.decorator';
 import { LocalAuthGuard } from './guards/local-auth.guard';
+import { OptionalJwtAuthGuard } from './jwt/optional-jwt-auth-guard';
 import { AccountVerificationDto } from './dto/account-verification.dto';
 import { UserService } from '../users/providers/user.service';
 import { UserOtpTagsEnum } from '../users/enums/user-otp-Tags.enum';
@@ -56,11 +57,17 @@ export class AuthController {
     return new ApiResponse('Google authentication evaluated', result);
   }
 
+  /** Still fully public — self-signup never carries a token — but OptionalJwtAuthGuard also
+   * inspects one if the caller happens to send it (the admin-panel "add user" form, flow ===
+   * 'UserRegistration'), so `createdBy` can be the verified caller's own id rather than anything
+   * client-supplied in the body. See AuthService.signup for where that's actually used. */
   @Post('register')
+  @UseGuards(OptionalJwtAuthGuard)
   async signup(
     @Body() createUserDto: CreateUserDto,
+    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.authService.signup(createUserDto);
+    const result = await this.authService.signup(createUserDto, req.user?.id);
     if (
       createUserDto.flow &&
       createUserDto.flow === 'QuickRegistration' &&

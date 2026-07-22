@@ -47,7 +47,7 @@ export class Question extends AbstractEntity implements IQuestion {
 
   @Column({
     type: 'varchar',
-    length: 50,
+    length: 100,
     unique: true,
     nullable: true,
     default: null,

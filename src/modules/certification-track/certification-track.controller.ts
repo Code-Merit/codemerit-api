@@ -19,6 +19,8 @@ import { ApiResponse } from 'src/common/utils/api-response';
 import { CertificationTrackService } from './providers/certification-track.service';
 import { CreateCertificationTrackDto } from './dtos/create-certification-track.dto';
 import { LinkSubjectTracksDto } from './dtos/link-subject-tracks.dto';
+import { LinkJobRoleDto } from './dtos/link-job-role.dto';
+import { UpdateJobRoleLinkDto } from './dtos/update-job-role-link.dto';
 import { UpdateCertificationTrackDto } from './dtos/update-certification-track.dto';
 
 const intPipe = (label: string) =>
@@ -105,5 +107,39 @@ export class CertificationTrackController {
   ): Promise<ApiResponse<any>> {
     await this.service.unlinkSubjectTrack(id, subjectTrackId);
     return new ApiResponse('Subject track unlinked from certification track.', null);
+  }
+
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @RequirePermission(UserPermissionEnum.CertificationTrackUpdate, UserPermissionTitleEnum.CertificationTrack)
+  @Post(':id/job-roles')
+  async linkJobRole(
+    @Param('id', intPipe('Certification Track ID')) id: number,
+    @Body() dto: LinkJobRoleDto,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.linkJobRole(id, dto);
+    return new ApiResponse('Job role linked to certification track.', result);
+  }
+
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @RequirePermission(UserPermissionEnum.CertificationTrackUpdate, UserPermissionTitleEnum.CertificationTrack)
+  @Put(':id/job-roles/:jobRoleId')
+  async updateJobRoleLink(
+    @Param('id', intPipe('Certification Track ID')) id: number,
+    @Param('jobRoleId', intPipe('Job Role ID')) jobRoleId: number,
+    @Body() dto: UpdateJobRoleLinkDto,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.updateJobRoleLink(id, jobRoleId, dto);
+    return new ApiResponse('Job role association updated.', result);
+  }
+
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @RequirePermission(UserPermissionEnum.CertificationTrackUpdate, UserPermissionTitleEnum.CertificationTrack)
+  @Delete(':id/job-roles/:jobRoleId')
+  async unlinkJobRole(
+    @Param('id', intPipe('Certification Track ID')) id: number,
+    @Param('jobRoleId', intPipe('Job Role ID')) jobRoleId: number,
+  ): Promise<ApiResponse<any>> {
+    await this.service.unlinkJobRole(id, jobRoleId);
+    return new ApiResponse('Job role unlinked from certification track.', null);
   }
 }

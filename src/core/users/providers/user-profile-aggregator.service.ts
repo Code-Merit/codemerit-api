@@ -96,7 +96,8 @@ export class UserProfileAggregatorService {
   private async getCertificates(userId: number) {
     const rows = await this.dataSource
       .createQueryBuilder()
-      .select('c.certificateNumber', 'certificateNumber')
+      .select('c.id', 'certificateId')
+      .addSelect('c.certificateNumber', 'certificateNumber')
       .addSelect('c.status', 'status')
       .addSelect('c.issuedAt', 'issuedAt')
       .addSelect('c.expiresAt', 'expiresAt')
@@ -109,21 +110,50 @@ export class UserProfileAggregatorService {
       .addSelect('jr.slug', 'jobRoleSlug')
       .from('certificate', 'c')
       .innerJoin('certification_track', 'ct', 'ct.id = c.certificationTrackId')
-      .innerJoin('job_role', 'jr', 'jr.id = ct.jobRoleId')
+      .leftJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id')
+      .leftJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId')
       .where('c.userId = :userId', { userId })
       .orderBy('c.issuedAt', 'DESC')
+      .addOrderBy('ctjr.sortOrder', 'ASC')
       .getRawMany();
 
-    return rows.map((r) => ({
-      certificateNumber: r.certificateNumber,
-      status: r.status,
-      issuedAt: r.issuedAt,
-      expiresAt: r.expiresAt,
-      pdfUrl: r.pdfUrl,
-      verificationCode: r.verificationCode,
-      certificationTrack: { id: +r.certificationTrackId, title: r.certificationTrackTitle },
-      jobRole: { id: +r.jobRoleId, title: r.jobRoleTitle, slug: r.jobRoleSlug },
-    }));
+    const byCertificate = new Map<
+      number,
+      {
+        certificateNumber: string;
+        status: string;
+        issuedAt: Date;
+        expiresAt: Date;
+        pdfUrl: string;
+        verificationCode: string;
+        certificationTrack: { id: number; title: string };
+        jobRoles: Array<{ id: number; title: string; slug: string }>;
+      }
+    >();
+    for (const r of rows) {
+      const certId = +r.certificateId;
+      if (!byCertificate.has(certId)) {
+        byCertificate.set(certId, {
+          certificateNumber: r.certificateNumber,
+          status: r.status,
+          issuedAt: r.issuedAt,
+          expiresAt: r.expiresAt,
+          pdfUrl: r.pdfUrl,
+          verificationCode: r.verificationCode,
+          certificationTrack: { id: +r.certificationTrackId, title: r.certificationTrackTitle },
+          jobRoles: [],
+        });
+      }
+      if (r.jobRoleId) {
+        byCertificate.get(certId).jobRoles.push({
+          id: +r.jobRoleId,
+          title: r.jobRoleTitle,
+          slug: r.jobRoleSlug,
+        });
+      }
+    }
+
+    return Array.from(byCertificate.values());
   }
 
   private async getRecentQuizzes(userId: number) {

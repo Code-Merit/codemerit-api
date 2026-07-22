@@ -319,6 +319,20 @@ export class UserPermissionService {
     });
   }
 
+  /** Whether userId holds ANY grant of the given permission name, regardless of scope — the right
+   * check for broad "Role:"-prefixed capability grants (e.g. TalentPartner), which aren't scoped to
+   * a specific resource the way Badge:Grant/QuestionAuthor:Create are (see PermissionsService's
+   * resourceType/resourceId-scoped findOneByUser for that case instead). */
+  async hasPermission(userId: number, permissionName: string): Promise<boolean> {
+    const count = await this.userPermissionRepo
+      .createQueryBuilder('up')
+      .innerJoin('up.permission', 'p')
+      .where('up.userId = :userId', { userId })
+      .andWhere('p.permission = :permissionName', { permissionName })
+      .getCount();
+    return count > 0;
+  }
+
   async findUserPermissionList(userId: number) {
     return this.userPermissionRepo
       .createQueryBuilder('userPermission')

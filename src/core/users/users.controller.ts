@@ -9,17 +9,14 @@ import {
   Put,
   Query,
   Request,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiResponse } from 'src/common/utils/api-response';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { QuizService } from 'src/modules/quiz/providers/quiz.service';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
+import { CreateUserDto } from '../auth/dto/create-user.dto';
 import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
-import { UserRoleEnum } from './enums/user-roles.enum';
 import { UserProfileService } from './providers/user-profile.service';
 import { UserProfileAggregatorService } from './providers/user-profile-aggregator.service';
 import { UserService } from './providers/user.service';
@@ -69,15 +66,32 @@ export class UsersController {
   //the profile should be attached with login & in data.profile
   //Additional : Implement slugify use for username during registration. Existing utility in project. See usage.
 
-  @UseGuards(RolesGuard)
-  @Roles(UserRoleEnum.ADMIN)
   @Get()
-  async getAllUsers(): Promise<ApiResponse<any>> {
-    const result = await this.usersService.findUserList();
+  async getAllUsers(@Request() req: any): Promise<ApiResponse<any>> {
+    const result = await this.usersService.findUserList({
+      id: req.user.id,
+      role: req.user.role,
+    });
     if (result && result.length > 0) {
       return new ApiResponse('Users listed successfully.', result);
     }
     return new ApiResponse('User not found.', null);
+  }
+
+  /** Admin/Talent-Partner-driven creation (the "Manage Users" add-user form) — distinct from
+   * public self-signup (`POST /auth/register`). `createdBy` is stamped from the authenticated
+   * caller here, not from the request body, so it's trustworthy enough to gate "users I added"
+   * (findUserList's Talent-Partner filter, updateUser's ownership check). */
+  @Post()
+  async createUser(
+    @Body() createUserDto: CreateUserDto,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.usersService.createUserByPrivilegedCaller(
+      { id: req.user.id, role: req.user.role },
+      createUserDto,
+    );
+    return new ApiResponse('User created successfully.', result);
   }
 
   // @UseGuards(RolesGuard)
@@ -93,8 +107,12 @@ export class UsersController {
   async updateUser(
     @Query('userId', ParseIntPipe) userId: number,
     @Body() updateUserDto: UpdateUserDto,
+    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.usersService.updateUser(userId, updateUserDto);
+    const result = await this.usersService.updateUser(userId, updateUserDto, {
+      id: req.user.id,
+      role: req.user.role,
+    });
     return new ApiResponse('User profile updated successfully.', result);
   }
 
@@ -158,8 +176,9 @@ export class UsersController {
   @Delete('delete/:userId')
   async remove(
     @Query('userId', ParseIntPipe) userId: number,
+    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    await this.usersService.remove(userId);
+    await this.usersService.remove(userId, { id: req.user.id, role: req.user.role });
     return new ApiResponse('User deleted Successful.', null);
   }
 }

@@ -114,16 +114,21 @@ export class ProgramService {
       .getRawMany();
   }
 
-  /** Cert tracks for the given job role IDs, each row = one (cert, subjectTrack) pair. */
+  /**
+   * Cert tracks for the given job role IDs, each row = one (cert, subjectTrack) pair.
+   * A certification can be associated with multiple job roles via certification_track_job_role
+   * (sortOrder/isPublished/an optional descriptionOverride are per-role; the composition — which
+   * subject tracks count toward it — is shared and lives once on certification_track).
+   */
   private async fetchCertTrackHierarchy(jobRoleIds: number[]) {
     if (!jobRoleIds.length) return [];
     return this.dataSource
       .createQueryBuilder()
       .select('ct.id', 'ctId')
       .addSelect('ct.title', 'ctTitle')
-      .addSelect('ct.description', 'ctDesc')
-      .addSelect('ct.sortOrder', 'ctSortOrder')
-      .addSelect('ct.jobRoleId', 'ctJobRoleId')
+      .addSelect('COALESCE(ctjr.descriptionOverride, ct.description)', 'ctDesc')
+      .addSelect('ctjr.sortOrder', 'ctSortOrder')
+      .addSelect('ctjr.jobRoleId', 'ctJobRoleId')
       .addSelect('st.id', 'stId')
       .addSelect('st.title', 'stTitle')
       .addSelect('st.slug', 'stSlug')
@@ -132,13 +137,14 @@ export class ProgramService {
       .addSelect('s.title', 'stSubjectTitle')
       .addSelect('s.slug', 'stSubjectSlug')
       .from('certification_track', 'ct')
+      .innerJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id')
       .innerJoin('certification_track_subject_track', 'ctst', 'ctst.certificationTrackId = ct.id')
       .innerJoin('subject_track', 'st', 'st.id = ctst.subjectTrackId AND st.isPublished = 1')
       .innerJoin('subject', 's', 's.id = st.subjectId')
-      .where('ct.jobRoleId IN (:...jobRoleIds)', { jobRoleIds })
-      .andWhere('ct.isPublished = 1')
-      .orderBy('ct.jobRoleId', 'ASC')
-      .addOrderBy('ct.sortOrder', 'ASC')
+      .where('ctjr.jobRoleId IN (:...jobRoleIds)', { jobRoleIds })
+      .andWhere('ctjr.isPublished = 1')
+      .orderBy('ctjr.jobRoleId', 'ASC')
+      .addOrderBy('ctjr.sortOrder', 'ASC')
       .addOrderBy('st.sortOrder', 'ASC')
       .getRawMany();
   }
@@ -168,10 +174,10 @@ export class ProgramService {
     const [certCounts, stCounts, { raw: rawRows, entities }] = await Promise.all([
       this.dataSource
         .createQueryBuilder()
-        .select('ct.jobRoleId', 'jobRoleId')
-        .addSelect('COUNT(ct.id)', 'count')
-        .from('certification_track', 'ct')
-        .groupBy('ct.jobRoleId')
+        .select('ctjr.jobRoleId', 'jobRoleId')
+        .addSelect('COUNT(ctjr.id)', 'count')
+        .from('certification_track_job_role', 'ctjr')
+        .groupBy('ctjr.jobRoleId')
         .getRawMany()
         .then((rows) => new Map(rows.map((r) => [+r.jobRoleId, +r.count]))),
       this.subjectTrackRepo
@@ -277,6 +283,7 @@ export class ProgramService {
       const skipped = +raw.skipped || 0;
       const numTrivia = +raw.numTrivia || 0;
       const coverage = numTrivia > 0 ? +((attempted / numTrivia) * 100).toFixed(1) : 0;
+      const correctCoverage = numTrivia > 0 ? +((correct / numTrivia) * 100).toFixed(1) : 0;
       const accuracy = attempted > 0 ? +(correct * 100 / attempted).toFixed(1) : 0;
       const score = +generateScore(attempted, correct, wrong).toFixed(0);
       const attemptedEasy = +raw.attemptedEasy || 0;
@@ -300,6 +307,7 @@ export class ProgramService {
           attemptedEasy, correctEasy,
           attemptedMedium, correctMedium,
           attemptedHard, correctHard,
+          correctCoverage,
         ),
       });
     }
@@ -435,6 +443,7 @@ export class ProgramService {
       const skipped = +raw.skipped || 0;
       const numTrivia = +raw.numTrivia || 0;
       const coverage = numTrivia > 0 ? +((attempted / numTrivia) * 100).toFixed(1) : 0;
+      const correctCoverage = numTrivia > 0 ? +((correct / numTrivia) * 100).toFixed(1) : 0;
       const accuracy = attempted > 0 ? +(correct * 100 / attempted).toFixed(1) : 0;
       const score = +generateScore(attempted, correct, wrong).toFixed(0);
 
@@ -478,6 +487,7 @@ export class ProgramService {
             attemptedEasy, correctEasy,
             attemptedMedium, correctMedium,
             attemptedHard, correctHard,
+            correctCoverage,
           ),
           userRank: subjectMerits.userRanks.get(+rs.subjectId) ?? null,
         });

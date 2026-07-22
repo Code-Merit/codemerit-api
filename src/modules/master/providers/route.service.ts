@@ -1,13 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { IUserPermissionDto } from 'src/common/dto/user-permission.dto';
 import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
+import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { lmsRoutes } from '../routes/lms.routes';
 import { welcomeRoutes } from '../routes/welcome.routes';
 import { quizRoutes } from '../routes/quiz.routes';
-import { adminRoutes } from '../routes/admin.routes';
+import { adminRoutes, manageUsersRoutes } from '../routes/admin.routes';
 import { uiRoutes } from '../routes/ui.routes';
 import { userRoutes } from '../routes/user.routes';
-import { smeRoutes } from '../routes/sme.routes';
+import { smeRoutes, smeInterviewRoutes } from '../routes/sme.routes';
 import { footerRoutes } from '../routes/footer.routes';
 
 @Injectable()
@@ -58,6 +59,17 @@ export class RouteService {
     const permissionNames = userPermissions.map((p) => p.permissionName);
     if (permissionNames.includes(UserPermissionEnum.LmsManager)) {
       routes = [...routes, ...lmsRoutes, ...quizRoutes, ...smeRoutes];
+    }
+    if (permissionNames.includes(UserPermissionEnum.Sme)) {
+      routes = [...routes, ...smeInterviewRoutes];
+    }
+    // Admins already saw this via adminRoutes historically; Talent Partners get it purely via
+    // permission, regardless of their own base role (which is typically 'User', not 'Admin').
+    if (
+      this.normalizeRole(userRole) === UserRoleEnum.ADMIN ||
+      permissionNames.includes(UserPermissionEnum.TalentPartner)
+    ) {
+      routes = [...routes, ...manageUsersRoutes];
     }
     routes = [...routes,
       ...uiRoutes,

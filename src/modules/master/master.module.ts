@@ -16,6 +16,7 @@ import { UserPermissionModule } from '../user-permission/user-permission.module'
 import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
 import { CertificationTrack } from 'src/common/typeorm/entities/certification-track.entity';
+import { CertificationTrackJobRole } from 'src/common/typeorm/entities/certification-track-job-role.entity';
 import { MeritService } from './providers/merit.service';
 import { SubjectStatsService } from './providers/subject-stats.service';
 import { ProgramService } from './providers/program.service';
@@ -26,7 +27,7 @@ import { BadgeQueryModule } from '../achievement/badge-query.module';
   imports: [
     TypeOrmModule.forFeature([
       User, JobRole, UserJobRole, Subject, JobRoleSubject,
-      Topic, UserSubject, UserPermission, SubjectTrack, CertificationTrack,
+      Topic, UserSubject, UserPermission, SubjectTrack, CertificationTrack, CertificationTrackJobRole,
     ]),
     UserPermissionModule,
     BadgeQueryModule,

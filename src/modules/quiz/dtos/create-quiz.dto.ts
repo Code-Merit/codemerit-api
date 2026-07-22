@@ -52,16 +52,25 @@ export class CreateQuizDto {
   description: string;
 
   @ApiPropertyOptional({ example: '1, 2' })
-  @ValidateIf((o) => !o.topicIds)
+  @ValidateIf((o) => !o.topicIds && !o.subjectTrackIds)
   @IsString()
-  @IsNotEmpty({ message: 'Either subjectIds or topicIds is required' })
+  @IsNotEmpty({ message: 'At least one of subjectIds, topicIds, or subjectTrackIds is required' })
   subjectIds?: string;
 
   @ApiPropertyOptional({ example: '100, 200' })
-  @ValidateIf((o) => !o.subjectIds)
+  @ValidateIf((o) => !o.subjectIds && !o.subjectTrackIds)
   @IsString()
-  @IsNotEmpty({ message: 'Either subjectIds or topicIds is required' })
+  @IsNotEmpty({ message: 'At least one of subjectIds, topicIds, or subjectTrackIds is required' })
   topicIds?: string;
+
+  @ApiPropertyOptional({
+    example: '5, 6',
+    description: 'SubjectTrack IDs — resolved server-side to their member topics',
+  })
+  @ValidateIf((o) => !o.subjectIds && !o.topicIds)
+  @IsString()
+  @IsNotEmpty({ message: 'At least one of subjectIds, topicIds, or subjectTrackIds is required' })
+  subjectTrackIds?: string;
 
   @ApiProperty({
     enum: QuizTypeEnum,

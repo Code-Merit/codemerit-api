@@ -96,9 +96,5 @@ export class CreateUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  createdBy?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   flow?: string;
 }

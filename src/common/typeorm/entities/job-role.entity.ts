@@ -1,7 +1,7 @@
 import { Column, CreateDateColumn, Entity, OneToMany, UpdateDateColumn } from 'typeorm';
 import { IJobRole } from '../interface/job-role.interface';
 import { AbstractEntity } from './abstract.entity';
-import { CertificationTrack } from './certification-track.entity';
+import { CertificationTrackJobRole } from './certification-track-job-role.entity';
 import { JobRoleSubject } from './job-role-subject.entity';
 
 @Entity()
@@ -82,6 +82,6 @@ export class JobRole extends AbstractEntity implements IJobRole {
   @OneToMany(() => JobRoleSubject, (jrs) => jrs.jobRole)
   jobRoleSubjects: JobRoleSubject[];
 
-  @OneToMany(() => CertificationTrack, (ct) => ct.jobRole)
-  certificationTracks: CertificationTrack[];
+  @OneToMany(() => CertificationTrackJobRole, (ctjr) => ctjr.jobRole)
+  certificationTrackJobRoles: CertificationTrackJobRole[];
 }

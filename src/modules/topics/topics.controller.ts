@@ -24,6 +24,8 @@ import { UserPermissionEnum, UserPermissionTitleEnum } from 'src/common/policies
 export class TopicsController {
   constructor(private readonly topicService: TopicsService) { }
 
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @RequirePermission(UserPermissionEnum.TopicCreate, UserPermissionTitleEnum.Topic)
   @Post('create')
   async create(
     @Body() createTopicDto: CreateTopicDto,
@@ -56,10 +58,12 @@ export class TopicsController {
     return new ApiResponse('Topic Found', result);
   }
 
-  @Put('update/:topicId')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @RequirePermission(UserPermissionEnum.TopicUpdate, UserPermissionTitleEnum.Topic)
+  @Put('update/:id')
   async update(
     @Param(
-      'topicId',
+      'id',
       new ParseIntPipe({
         errorHttpStatusCode: 400,
         exceptionFactory: () =>
@@ -76,10 +80,12 @@ export class TopicsController {
     );
   }
 
-  @Delete('delete/:topicId')
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @RequirePermission(UserPermissionEnum.TopicDelete, UserPermissionTitleEnum.Topic)
+  @Delete('delete/:id')
   async remove(
     @Param(
-      'topicId',
+      'id',
       new ParseIntPipe({
         errorHttpStatusCode: 400,
         exceptionFactory: () =>

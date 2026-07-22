@@ -97,18 +97,20 @@ export class MasterService {
     const rows = await this.dataSource
       .createQueryBuilder()
       .select('ct.id', 'id')
-      .addSelect('ct.jobRoleId', 'jobRoleId')
+      .addSelect('ctjr.jobRoleId', 'jobRoleId')
       .addSelect('ct.title', 'title')
-      .addSelect('ct.sortOrder', 'sortOrder')
-      .addSelect('ct.isPublished', 'isPublished')
+      .addSelect('ctjr.sortOrder', 'sortOrder')
+      .addSelect('ctjr.isPublished', 'isPublished')
       .addSelect('jr.title', 'jobRoleTitle')
       .addSelect('COUNT(ctst.id)', 'subjectTrackCount')
       .from('certification_track', 'ct')
-      .innerJoin('job_role', 'jr', 'jr.id = ct.jobRoleId')
+      .innerJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id')
+      .innerJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId')
       .leftJoin('certification_track_subject_track', 'ctst', 'ctst.certificationTrackId = ct.id')
       .groupBy('ct.id')
-      .orderBy('ct.jobRoleId', 'ASC')
-      .addOrderBy('ct.sortOrder', 'ASC')
+      .addGroupBy('ctjr.jobRoleId')
+      .orderBy('ctjr.jobRoleId', 'ASC')
+      .addOrderBy('ctjr.sortOrder', 'ASC')
       .getRawMany();
 
     return rows.map((r) => ({

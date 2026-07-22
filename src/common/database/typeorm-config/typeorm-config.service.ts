@@ -11,6 +11,7 @@ import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { UserXpLog } from 'src/common/typeorm/entities/user-xp-log.entity';
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
 import { CertificationTrack } from 'src/common/typeorm/entities/certification-track.entity';
+import { CertificationTrackJobRole } from 'src/common/typeorm/entities/certification-track-job-role.entity';
 import { InterviewStatusHistory } from 'src/common/typeorm/entities/interview-status-history.entity';
 import { Interview } from 'src/common/typeorm/entities/interview.entity';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
@@ -101,6 +102,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         Interview,
         InterviewStatusHistory,
         CertificationTrack,
+        CertificationTrackJobRole,
         SubjectTrack,
         CertificationTrackSubjectTrack,
         SubjectTrackTopic,

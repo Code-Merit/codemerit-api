@@ -78,7 +78,13 @@ export class AuthService {
   }
 
   async login(user: User) {
-    if (user.accountStatus != AccountStatusEnum.ACTIVE) {
+    if (user.accountStatus === AccountStatusEnum.BLOCKED) {
+      throw new AppCustomException(
+        HttpStatus.FORBIDDEN,
+        'This account has been blocked. Please contact support.',
+      );
+    }
+    if (user.accountStatus !== AccountStatusEnum.ACTIVE) {
       throw new AppCustomException(
         HttpStatus.FORBIDDEN,
         'Please verify your account using the OTP sent to your e-mail before signing in.',
@@ -314,8 +320,16 @@ export class AuthService {
     return response.data;
   }
 
-  async signup(createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  /**
+   * `callerId` comes from OptionalJwtAuthGuard on the controller — a verified token's own subject,
+   * never anything client-supplied in the body — so it can't be spoofed. Only honored for the
+   * 'UserRegistration' flow (the admin-panel add-user form); every other caller of this public,
+   * unauthenticated endpoint gets createdBy forced to null, same as plain self-signup always has,
+   * even if a token happened to be attached.
+   */
+  async signup(createUserDto: CreateUserDto, callerId?: number) {
+    const createdBy = createUserDto.flow === 'UserRegistration' ? (callerId ?? null) : null;
+    return this.usersService.create(createUserDto, createdBy);
   }
 
   async accountVerification(accountVerificationDto: AccountVerificationDto) {

@@ -37,18 +37,6 @@ export const adminRoutes = [
     ],
   },
   {
-    path: '/users/list',
-    title: 'Manage Users',
-    iconType: 'material-icons-outlined',
-    icon: 'supervised_user_circle',
-    class: '',
-    groupTitle: false,
-    badge: '',
-    badgeClass: '',
-    role: ['Admin'],
-    submenu: [],
-  },
-  {
     path: '/admin/permissions/list',
     title: 'User Permissions',
     iconType: 'material-icons-outlined',
@@ -58,6 +46,25 @@ export const adminRoutes = [
     badge: '',
     badgeClass: '',
     role: ['Admin'],
+    submenu: [],
+  },
+];
+
+// Conditionally injected by RouteService for Admin (by role) OR anyone holding the
+// Role:TalentPartner permission (by permission, not role — see route.service.ts). `role: ['All']`
+// here because visibility is already fully decided by that injection condition, not by the
+// caller's actual UserRoleEnum value (a Talent Partner's own role is typically 'User', not 'Admin').
+export const manageUsersRoutes = [
+  {
+    path: '/users/list',
+    title: 'Manage Users',
+    iconType: 'material-icons-outlined',
+    icon: 'supervised_user_circle',
+    class: '',
+    groupTitle: false,
+    badge: '',
+    badgeClass: '',
+    role: ['All'],
     submenu: [],
   },
 ];

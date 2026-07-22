@@ -238,7 +238,7 @@ export class SubjectStatsService {
     const journeyWrong = +raw.journeyWrong || 0;
     // computeAttemptMetrics() is the one shared implementation of this formula —
     // every level (subject/topic/subjectTrack) calls it instead of reimplementing it.
-    const { coverage, currentAccuracy, score, journeyAccuracy, journeyScore } = computeAttemptMetrics({
+    const { coverage, correctCoverage, currentAccuracy, score, journeyAccuracy, journeyScore } = computeAttemptMetrics({
       numTrivia, attempted, correct, wrong, journeyAttempts, journeyCorrect, journeyWrong,
     });
 
@@ -272,6 +272,7 @@ export class SubjectStatsService {
         +raw.attemptedEasy || 0, +raw.correctEasy || 0,
         +raw.attemptedMedium || 0, +raw.correctMedium || 0,
         +raw.attemptedHard || 0, +raw.correctHard || 0,
+        correctCoverage,
       ),
       skipped,
       currentAccuracy,
@@ -283,7 +284,6 @@ export class SubjectStatsService {
       journeyAccuracy,
       journeyScore,
       userRank: subjectMerits.userRanks.get(subjectId) ?? null,
-      syllabus,
       subjectTracks,
       certificationTracks,
       lessons,
@@ -310,8 +310,8 @@ export class SubjectStatsService {
       .createQueryBuilder()
       .select('ct.id', 'ctId')
       .addSelect('ct.title', 'ctTitle')
-      .addSelect('ct.description', 'ctDesc')
-      .addSelect('ct.sortOrder', 'ctSortOrder')
+      .addSelect('COALESCE(ctjr.descriptionOverride, ct.description)', 'ctDesc')
+      .addSelect('ctjr.sortOrder', 'ctSortOrder')
       .addSelect('jr.id', 'jrId')
       .addSelect('jr.title', 'jrTitle')
       .addSelect('jr.slug', 'jrSlug')
@@ -319,10 +319,11 @@ export class SubjectStatsService {
       .addSelect('jr.color', 'jrColor')
       .addSelect('ctst.subjectTrackId', 'stId')
       .from('certification_track_subject_track', 'ctst')
-      .innerJoin('certification_track', 'ct', 'ct.id = ctst.certificationTrackId AND ct.isPublished = 1')
-      .innerJoin('job_role', 'jr', 'jr.id = ct.jobRoleId AND jr.isPublished = 1')
+      .innerJoin('certification_track', 'ct', 'ct.id = ctst.certificationTrackId')
+      .innerJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id AND ctjr.isPublished = 1')
+      .innerJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId AND jr.isPublished = 1')
       .where('ctst.subjectTrackId IN (:...subjectTrackIds)', { subjectTrackIds })
-      .orderBy('ct.sortOrder', 'ASC')
+      .orderBy('ctjr.sortOrder', 'ASC')
       .getRawMany();
 
     if (!rows.length) return [];
@@ -350,25 +351,27 @@ export class SubjectStatsService {
     const certMap = new Map<number, Certificate>(myCertificates.map((c) => [c.certificationTrackId, c]));
 
     type CtEntry = { meta: any; stIds: number[] };
-    const ctIndex = new Map<number, CtEntry>();
+    const ctIndex = new Map<string, CtEntry>();
     for (const row of rows) {
       const ctId = +row.ctId;
-      if (!ctIndex.has(ctId)) {
-        ctIndex.set(ctId, {
+      const jrId = +row.jrId;
+      const key = `${ctId}-${jrId}`;
+      if (!ctIndex.has(key)) {
+        ctIndex.set(key, {
           meta: {
             id: ctId,
             title: row.ctTitle,
             description: row.ctDesc,
             sortOrder: +row.ctSortOrder,
             jobRole: {
-              id: +row.jrId, title: row.jrTitle, slug: row.jrSlug,
+              id: jrId, title: row.jrTitle, slug: row.jrSlug,
               image: row.jrImage, color: row.jrColor,
             },
           },
           stIds: [],
         });
       }
-      ctIndex.get(ctId)!.stIds.push(+row.stId);
+      ctIndex.get(key)!.stIds.push(+row.stId);
     }
 
     return [...ctIndex.values()]

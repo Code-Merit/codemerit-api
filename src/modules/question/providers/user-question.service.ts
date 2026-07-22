@@ -10,6 +10,7 @@ import { QuestionTopic } from 'src/common/typeorm/entities/quesion-topic.entity'
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
 import { Question } from 'src/common/typeorm/entities/question.entity';
+import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { DataSource, In, Repository } from 'typeorm';
 import { GetQuestionsByIdsDto } from '../dtos/get-questions-by-ids.dto';
 import { QuestionListResponseDto } from '../dtos/question-list-response.dto';
@@ -26,22 +27,32 @@ export class UserQuestionService {
     dto: GetQuestionsByIdsDto
   ): Promise<QuestionListResponseDto[]> {
 
-    const { subjectIds = [], topicIds = [], numQuestions = 10 } = dto;
+    const { subjectIds = [], topicIds = [], subjectTrackIds = [], numQuestions = 10 } = dto;
     let msg: string = 'unique';
-    if (subjectIds.length === 0 && topicIds.length === 0) {
+    if (subjectIds.length === 0 && topicIds.length === 0 && subjectTrackIds.length === 0) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
-        'At least one of the subjects or topics must be provided.'
+        'At least one of subjects, topics, or subjectTracks must be provided.'
       );
     }
-    const isTopicBased = topicIds.length > 0;
-    const groupIds = isTopicBased ? topicIds : subjectIds;
-    const perGroupCount = Math.ceil(numQuestions / groupIds.length);
 
-    const groupColumn = isTopicBased ? 'qt.topicId' : 'q.subjectId';
+    // A quiz can be requested by subject, topic, and/or subjectTrack at once — these
+    // combine (union of topics), they don't override each other. Everything is
+    // resolved down to one topic-level pool so a single partitioning/fairness scheme
+    // (one ROW_NUMBER group per topic) applies no matter which scope(s) were asked for,
+    // instead of subject-scoped quizzes getting a coarser, topic-imbalance-prone
+    // per-subject partition.
+    const groupIds = await this.resolveTopicIds(subjectIds, topicIds, subjectTrackIds);
+    if (groupIds.length === 0) {
+      throw new AppCustomException(
+        HttpStatus.NOT_FOUND,
+        'No published topics found for the given subject(s)/topic(s)/subjectTrack(s).'
+      );
+    }
+    const perGroupCount = Math.ceil(numQuestions / groupIds.length);
     const groupIdList = groupIds.map(() => '?').join(',');
 
-    let uniqueQuestions = await this.getUniqueQuestions(groupColumn, groupIdList, userId, groupIds, perGroupCount);
+    let uniqueQuestions = await this.getUniqueQuestions(groupIdList, userId, groupIds, perGroupCount);
 
     // let uniqueQuestions = rawResults;
 
@@ -53,7 +64,7 @@ export class UserQuestionService {
       // Avoid empty IN () issues by falling back to [0]
       const listOfExistingIds = existingIds.length ? existingIds : [0];
 
-      const randomQuestions = await this.getRandomQuestions(groupColumn, groupIdList, userId, groupIds, listOfExistingIds, missingCount);
+      const randomQuestions = await this.getRandomQuestions(groupIdList, userId, groupIds, listOfExistingIds, missingCount);
 
       uniqueQuestions = [...uniqueQuestions, ...randomQuestions];
       // uniqueQuestions = [...new Map([...uniqueQuestions, ...randomQuestions].map((q:any) => [q.questionId, q])).values()];
@@ -141,7 +152,45 @@ export class UserQuestionService {
   }
 
 
-  private async getUniqueQuestions(groupColumn: any, groupIdList: any, userId: any, groupIds: any,
+  /**
+   * Resolves subjectIds/topicIds/subjectTrackIds down to one deduplicated set of
+   * topicIds: subjects and subjectTracks are expanded to their member topics
+   * (published only), explicit topicIds pass through as-is. This is what lets
+   * question selection always partition per-topic — a Subject or SubjectTrack quiz
+   * gets the same per-topic fairness a Topic quiz already had, instead of treating
+   * the whole subject/track as one undifferentiated pool.
+   */
+  private async resolveTopicIds(
+    subjectIds: number[],
+    topicIds: number[],
+    subjectTrackIds: number[],
+  ): Promise<number[]> {
+    const resolved = new Set<number>(topicIds);
+
+    if (subjectIds.length > 0) {
+      const rows = await this.dataSource.getRepository(Topic).find({
+        where: { subjectId: In(subjectIds), isPublished: true },
+        select: ['id'],
+      });
+      rows.forEach((r) => resolved.add(r.id));
+    }
+
+    if (subjectTrackIds.length > 0) {
+      const rows = await this.dataSource
+        .createQueryBuilder()
+        .select('stt.topicId', 'topicId')
+        .from('subject_track_topic', 'stt')
+        .innerJoin('subject_track', 'st', 'st.id = stt.subjectTrackId AND st.isPublished = 1')
+        .innerJoin('topic', 't', 't.id = stt.topicId AND t.isPublished = 1')
+        .where('stt.subjectTrackId IN (:...subjectTrackIds)', { subjectTrackIds })
+        .getRawMany();
+      rows.forEach((r) => resolved.add(+r.topicId));
+    }
+
+    return [...resolved];
+  }
+
+  private async getUniqueQuestions(groupIdList: any, userId: any, groupIds: any,
     perGroupCount: any): Promise<any[]> {
 
     const rawQuery = `
@@ -150,8 +199,13 @@ export class UserQuestionService {
         FROM question_attempt
         WHERE userId = ? AND isCorrect = TRUE
       ),
+      attempted_questions AS (
+        SELECT DISTINCT questionId
+        FROM question_attempt
+        WHERE userId = ?
+      ),
       grouped_questions AS (
-        SELECT 
+        SELECT
         q.id AS questionId, q.title, q.question, q.questionType, q.level, q.marks, q.slug, q.timeAllowed, q.tag, q.status, q.answer, q.hint,
           q.orderId, q.createdAt,
 
@@ -159,18 +213,25 @@ export class UserQuestionService {
 
           t.id AS topicId, t.title AS topicTitle, t.description AS topicDescription,
 
-          ${groupColumn} AS groupId,
-          ROW_NUMBER() OVER (PARTITION BY ${groupColumn} ORDER BY RAND()) as rn
+          qt.topicId AS groupId,
+          -- Never-attempted questions fill each group's quota before previously-wrong
+          -- ones get a repeat chance, so a small pool's handful of missed questions can't
+          -- dominate every "unique" quiz purely by RAND() luck.
+          ROW_NUMBER() OVER (
+            PARTITION BY qt.topicId
+            ORDER BY CASE WHEN aq.questionId IS NOT NULL THEN 1 ELSE 0 END ASC, RAND()
+          ) as rn
 
         FROM question q
 
         LEFT JOIN subject s ON s.id = q.subjectId
-        LEFT JOIN question_topic qt ON qt.questionId = q.id
+        INNER JOIN question_topic qt ON qt.questionId = q.id
         LEFT JOIN topic t ON t.id = qt.topicId
+        LEFT JOIN attempted_questions aq ON aq.questionId = q.id
 
         WHERE q.questionType = 'Trivia'
           AND q.status = 'Active'
-          AND ${groupColumn} IN (${groupIdList})
+          AND qt.topicId IN (${groupIdList})
           AND NOT EXISTS (
             SELECT 1 FROM correct_questions cq WHERE cq.questionId = q.id
           )
@@ -182,15 +243,17 @@ export class UserQuestionService {
       `;
     const params = [
       userId,
+      userId,
       ...groupIds,
       perGroupCount
     ];
     return this.dataSource.query(rawQuery, params);
   }
-  private async getRandomQuestions(groupColumn: any, groupIdList: any, userId: any, groupIds: any,
+  private async getRandomQuestions(groupIdList: any, userId: any, groupIds: any,
     listOfExistingIds: any, missingCount: any): Promise<any[]> {
 
     const params2 = [
+      userId,                     // attempted_questions subquery, for priority ordering
       QuestionTypeEnum.Trivia,         // questionType
       QuestionStatusEnum.Active,       // status
       userId,                     // already selected
@@ -204,7 +267,7 @@ export class UserQuestionService {
       WHERE userId = ? AND isCorrect = TRUE`;
 
     const query2 = `
-      SELECT 
+      SELECT
         q.id AS questionId, q.title, q.question, q.questionType, q.level, q.marks, q.slug, q.timeAllowed, q.tag, q.status, q.answer,
         q.hint, q.orderId, q.createdAt,
 
@@ -214,16 +277,20 @@ export class UserQuestionService {
 
       FROM question q
       LEFT JOIN subject s ON s.id = q.subjectId
-      LEFT JOIN question_topic qt ON qt.questionId = q.id
+      INNER JOIN question_topic qt ON qt.questionId = q.id
       LEFT JOIN topic t ON t.id = qt.topicId
+      LEFT JOIN (
+        SELECT DISTINCT questionId FROM question_attempt WHERE userId = ?
+      ) aq ON aq.questionId = q.id
 
       WHERE q.questionType = ?
         AND q.status = ?
         AND q.id NOT IN (${checkExistQuestionIds})
         AND q.id NOT IN (?)
-        AND ${groupColumn} IN (${groupIdList})
+        AND qt.topicId IN (${groupIdList})
 
-      ORDER BY q.level, RAND()
+      -- Same never-attempted-first priority as getUniqueQuestions() above.
+      ORDER BY q.level, (aq.questionId IS NOT NULL) ASC, RAND()
       LIMIT ?;
   `;
     return this.dataSource.query(

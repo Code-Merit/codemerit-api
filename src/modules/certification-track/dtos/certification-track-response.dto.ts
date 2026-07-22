@@ -7,14 +7,19 @@ export class CertTrackSubjectTrackDto {
   topicCount: number;
 }
 
-export class CertificationTrackResponseDto {
-  id: number;
+export class CertTrackJobRoleDto {
   jobRoleId: number;
   jobRoleTitle: string;
-  title: string;
-  description: string;
   sortOrder: number;
   isPublished: boolean;
+  descriptionOverride: string;
+}
+
+export class CertificationTrackResponseDto {
+  id: number;
+  title: string;
+  description: string;
+  jobRoles: CertTrackJobRoleDto[];
   subjectTrackCount: number;
   subjectTracks: CertTrackSubjectTrackDto[];
 }

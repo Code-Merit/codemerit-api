@@ -29,13 +29,13 @@ export class GetQuestionsByIdsDto {
 
   @ApiPropertyOptional({
     type: [Number],
-    example: [100, 200],
-    description: 'Array of job IDs',
+    example: [1, 2],
+    description: 'Array of SubjectTrack IDs — resolved to their member topics for selection',
   })
   @IsOptional()
   @IsArray()
   @ArrayNotEmpty()
-  jobIds?: number[];
+  subjectTrackIds?: number[];
 
   @IsOptional()
   @IsNumber()

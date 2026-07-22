@@ -34,8 +34,7 @@ export class Subject extends AbstractEntity implements ISubject {
   body: string;
 
   @Column({
-    type: 'varchar',
-    length: 100,
+    type: 'text',
     nullable: true,
   })
   scope: string;

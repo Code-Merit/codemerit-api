@@ -2,33 +2,25 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
   Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { AbstractEntity } from './abstract.entity';
 import { CertificationTrackSubjectTrack } from './certification-track-subject-track.entity';
-import { JobRole } from './job-role.entity';
+import { CertificationTrackJobRole } from './certification-track-job-role.entity';
 
-@Unique(['jobRoleId', 'title'])
+// A canonical certification (e.g. "JavaScript Programmer"). Not tied to a
+// single job role — see CertificationTrackJobRole for which roles offer it,
+// each with its own sort order and optional role-tailored description.
+@Unique(['title'])
 @Entity()
 export class CertificationTrack extends AbstractEntity {
-  @Column({ type: 'integer', nullable: false })
-  jobRoleId: number;
-
   @Column({ type: 'varchar', length: 100, nullable: false })
   title: string;
 
   @Column({ type: 'text', nullable: true, default: null })
   description: string;
-
-  @Column({ type: 'int', nullable: false, default: 1 })
-  sortOrder: number;
-
-  @Column({ type: 'boolean', default: true })
-  isPublished: boolean;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
@@ -36,15 +28,12 @@ export class CertificationTrack extends AbstractEntity {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => JobRole, (jobRole) => jobRole.certificationTracks, {
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'jobRoleId' })
-  jobRole: JobRole;
-
   @OneToMany(
     () => CertificationTrackSubjectTrack,
     (ctst) => ctst.certificationTrack,
   )
   certificationTrackSubjectTracks: CertificationTrackSubjectTrack[];
+
+  @OneToMany(() => CertificationTrackJobRole, (ctjr) => ctjr.certificationTrack)
+  certificationTrackJobRoles: CertificationTrackJobRole[];
 }

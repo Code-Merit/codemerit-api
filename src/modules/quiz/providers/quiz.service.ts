@@ -112,11 +112,12 @@ export class QuizService {
     let quizCategory = '';
     if (
       !createQuizDto?.subjectIds?.length &&
-      !createQuizDto?.topicIds?.length
+      !createQuizDto?.topicIds?.length &&
+      !createQuizDto?.subjectTrackIds?.length
     ) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
-        'Please specify at least one subject or topic to generate a quiz.',
+        'Please specify at least one subject, topic, or subjectTrack to generate a quiz.',
       );
     }
 
@@ -133,33 +134,45 @@ export class QuizService {
     console.log('QuizBuilder @createQuiz Start:', createQuizDto?.subjectIds);
     let topicIds: number[] = [];
     let subjectIds: number[] = [];
+    let subjectTrackIds: number[] = [];
     const questionIds: number[] = createQuizDto?.questionIds ?? [];
 
-    if (createQuizDto?.topicIds) {
-      const topicStr = String(createQuizDto.topicIds);
-      topicIds = topicStr
+    const parseIdList = (raw: string): number[] =>
+      String(raw)
         .split(',')
         .map((id) => parseInt(id.trim(), 10))
         .filter((id) => Number.isInteger(id) && id > 0);
-    }
-    if (topicIds.length > 0) {
-      quizCategory = 'Topic';
-    }
 
     if (createQuizDto?.subjectIds) {
-      const subjectStr = String(createQuizDto.subjectIds);
-      subjectIds = subjectStr
-        .split(',')
-        .map((id) => parseInt(id.trim(), 10))
-        .filter((id) => Number.isInteger(id) && id > 0);
+      subjectIds = parseIdList(createQuizDto.subjectIds);
     }
     if (subjectIds.length > 0) {
       quizCategory = 'Subject';
     }
 
+    if (createQuizDto?.subjectTrackIds) {
+      subjectTrackIds = parseIdList(createQuizDto.subjectTrackIds);
+    }
+    if (subjectTrackIds.length > 0) {
+      quizCategory = 'SubjectTrack';
+    }
+
+    if (createQuizDto?.topicIds) {
+      topicIds = parseIdList(createQuizDto.topicIds);
+    }
+    if (topicIds.length > 0) {
+      quizCategory = 'Topic';
+    }
+
+    // All three scopes are resolved down to one topic-level pool by
+    // UserQuestionService — they combine (union), they don't override each other,
+    // so a quiz can legitimately span e.g. one whole subject plus a couple of
+    // specific extra topics. `quizCategory` above only picks a label for the
+    // auto-generated title when multiple scopes are given at once, most-specific wins.
     const ids = new GetQuestionsByIdsDto();
     ids.subjectIds = subjectIds;
     ids.topicIds = topicIds;
+    ids.subjectTrackIds = subjectTrackIds;
     ids.questionIds = questionIds;
     const requestedNumQuestions =
       createQuizDto?.numQuestions ?? createQuizDto?.settings?.numQuestions;
@@ -219,32 +232,70 @@ export class QuizService {
     }
     try {
       let title = createQuizDto.title;
-      if (!title) {
+      let shortDesc = createQuizDto.shortDesc;
+      // Frontend sends "" rather than omitting these fields — both are falsy, so this
+      // still triggers auto-generation. Reuses the one lookup per scope for both title
+      // and shortDesc instead of querying twice; precedence (last-applied-wins, most
+      // specific scope given overwrites) matches quizCategory's Subject → SubjectTrack →
+      // Topic order above.
+      if (!title || !shortDesc) {
         if (subjectIds && subjectIds.length > 0) {
           const subjects =
             await this.masterService.getSubjectListByIds(subjectIds);
-          title = getTitleBySubjectIds(subjects) + ' Quiz';
+          const names = subjects.map((s) => s.title).join(', ');
+          if (!title) title = getTitleBySubjectIds(subjects) + ' Quiz';
+          if (!shortDesc) shortDesc = `Test your knowledge of ${names}.`;
+        }
+        if (subjectTrackIds && subjectTrackIds.length > 0) {
+          const tracks = await this.dataSource
+            .createQueryBuilder()
+            .select('st.title', 'title')
+            .from('subject_track', 'st')
+            .where('st.id IN (:...subjectTrackIds)', { subjectTrackIds })
+            .getRawMany();
+          const names = tracks.map((t) => t.title).join(', ');
+          if (!title) title = tracks.map((t) => t.title).join(' ') + ' Quiz';
+          if (!shortDesc) shortDesc = `A quiz covering the ${names} track.`;
         }
         if (topicIds && topicIds.length > 0) {
           const topics = await this.masterService.getTopicListByIds(topicIds);
-          title = getTitleByTopicIds(topics) + ' Quiz';
+          const names = topics.map((t) => t.title).join(', ');
+          if (!title) title = getTitleByTopicIds(topics) + ' Quiz';
+          if (!shortDesc) shortDesc = `Quick quiz on ${names}.`;
         }
       }
       const quiz = new Quiz();
       quiz.title = title;
       quiz.tag = createQuizDto.tag ;
       quiz.quizType = createQuizDto.quizType;
-      quiz.shortDesc = createQuizDto.shortDesc;
+      quiz.shortDesc = shortDesc ? shortDesc.slice(0, 200) : shortDesc;
       quiz.description = createQuizDto.description;
       quiz.goal = createQuizDto.goal ?? null;
       quiz.label = createQuizDto.label;
       quiz.category = createQuizDto.category ?? 'Default';
       quiz.isPublished = createQuizDto.isPublished ?? false;
-      let slug = generateSlug(title);
-      let existingSlug = await this.quizRepository.findOne({ where: { slug } });
-      while (existingSlug) {
-        slug = generateUniqueSlug(title);
-        existingSlug = await this.quizRepository.findOne({ where: { slug } });
+
+      let slug: string;
+      if (createQuizDto.quizType === QuizTypeEnum.UserQuiz) {
+        // Auto-generated UserQuiz titles are templated from scope names (e.g. every
+        // "HTML Document Structure" topic quiz gets the same title), so the plain
+        // title-slug collides constantly — baking in the creator's username + a short
+        // timestamp makes every UserQuiz slug unique on the first try, and still reads
+        // as: html-document-structure-quiz-by-vishal-kumar-md41k2a0
+        const username = await this.getUsernameForSlug(userId);
+        slug = this.buildUserQuizSlug(title, username);
+        let existingSlug = await this.quizRepository.findOne({ where: { slug } });
+        while (existingSlug) {
+          slug = this.buildUserQuizSlug(title, username);
+          existingSlug = await this.quizRepository.findOne({ where: { slug } });
+        }
+      } else {
+        slug = generateSlug(title);
+        let existingSlug = await this.quizRepository.findOne({ where: { slug } });
+        while (existingSlug) {
+          slug = generateUniqueSlug(title);
+          existingSlug = await this.quizRepository.findOne({ where: { slug } });
+        }
       }
       quiz.slug = slug;
       quiz.createdBy = userId;
@@ -312,6 +363,23 @@ export class QuizService {
         'Failed to save quiz and questions: ' + errorMessage,
       );
     }
+  }
+
+  private async getUsernameForSlug(userId: number): Promise<string> {
+    const user = await this.dataSource
+      .getRepository(User)
+      .findOne({ where: { id: userId }, select: ['username'] });
+    return user?.username || 'user';
+  }
+
+  /** `{title-slug}-by-{username}-{shortTimestamp}`, capped to the 100-char slug column. */
+  private buildUserQuizSlug(title: string, username: string): string {
+    const shortTimestamp =
+      Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+    const userPart = generateSlug(username, 24) || 'user';
+    const suffix = `-by-${userPart}-${shortTimestamp}`;
+    const titlePart = generateSlug(title, Math.max(1, 100 - suffix.length)) || 'quiz';
+    return `${titlePart}${suffix}`;
   }
 
   /**

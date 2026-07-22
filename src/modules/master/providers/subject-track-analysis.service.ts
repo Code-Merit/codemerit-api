@@ -151,6 +151,8 @@ export class SubjectTrackAnalysisService {
           title: ts.title,
           slug: ts.slug,
           label: ts.label,
+          description: ts.description,
+          goal: ts.goal,
           numTrivia,
           attempted,
           journeyAttempts: allAttempts,
@@ -190,7 +192,7 @@ export class SubjectTrackAnalysisService {
       const stJourneyCorrect = topics.reduce((s: number, t: any) => s + (t.journeyCorrect || 0), 0);
       const stJourneyWrong = topics.reduce((s: number, t: any) => s + (t.journeyWrong || 0), 0);
       const {
-        coverage: stCoverage, currentAccuracy: stAccuracy, score: stScore,
+        coverage: stCoverage, correctCoverage: stCorrectCoverage, currentAccuracy: stAccuracy, score: stScore,
         journeyAccuracy: stJourneyAccuracy, journeyScore: stJourneyScore,
       } = computeAttemptMetrics({
         numTrivia: stNumTrivia, attempted: stAttempted, correct: stCorrect, wrong: stWrong,
@@ -238,6 +240,7 @@ export class SubjectTrackAnalysisService {
           stAttemptedEasy, stCorrectEasy,
           stAttemptedMedium, stCorrectMedium,
           stAttemptedHard, stCorrectHard,
+          stCorrectCoverage,
         ),
         isStarted: stAllAttempts > 0,
         completedTopics,
@@ -275,7 +278,11 @@ export class SubjectTrackAnalysisService {
     return stIds.map((id) => stMap.get(id)).filter(Boolean).sort((a: any, b: any) => a.sortOrder - b.sortOrder);
   }
 
-  /** CertificationTrack IDs that include at least one SubjectTrack under any of these subjects. */
+  /**
+   * CertificationTrack IDs that include at least one SubjectTrack under any of these subjects.
+   * A cert only counts if it's published for at least one job role — publish status now lives
+   * per-role on certification_track_job_role, not on certification_track itself.
+   */
   async getCertificationTrackIdsForSubjects(subjectIds: number[]): Promise<number[]> {
     if (!subjectIds.length) return [];
     const rows = await this.dataSource
@@ -284,7 +291,7 @@ export class SubjectTrackAnalysisService {
       .from('certification_track', 'ct')
       .innerJoin('certification_track_subject_track', 'ctst', 'ctst.certificationTrackId = ct.id')
       .innerJoin('subject_track', 'st', 'st.id = ctst.subjectTrackId AND st.subjectId IN (:...subjectIds)', { subjectIds })
-      .where('ct.isPublished = 1')
+      .innerJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id AND ctjr.isPublished = 1')
       .getRawMany();
     return rows.map((r) => +r.ctId);
   }
@@ -293,7 +300,8 @@ export class SubjectTrackAnalysisService {
    * Full (cert, subjectTrack) hierarchy for the given CertificationTrack IDs — same row
    * shape as ProgramService.fetchCertTrackHierarchy, just keyed by certificationTrackIds
    * instead of jobRoleIds (used by achievement evaluation, which is scoped to the
-   * subject(s) just attempted rather than a whole job role).
+   * subject(s) just attempted, and computes progress the same way regardless of which
+   * job role(s) the certification happens to be associated with).
    */
   async fetchCertTrackSubjectTrackHierarchy(certificationTrackIds: number[]): Promise<any[]> {
     if (!certificationTrackIds.length) return [];
@@ -301,13 +309,11 @@ export class SubjectTrackAnalysisService {
       .createQueryBuilder()
       .select('ct.id', 'ctId')
       .addSelect('ct.title', 'ctTitle')
-      .addSelect('ct.jobRoleId', 'ctJobRoleId')
       .addSelect('st.id', 'stId')
       .from('certification_track', 'ct')
       .innerJoin('certification_track_subject_track', 'ctst', 'ctst.certificationTrackId = ct.id')
       .innerJoin('subject_track', 'st', 'st.id = ctst.subjectTrackId AND st.isPublished = 1')
       .where('ct.id IN (:...certificationTrackIds)', { certificationTrackIds })
-      .andWhere('ct.isPublished = 1')
       .getRawMany();
   }
 }

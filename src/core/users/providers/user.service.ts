@@ -34,6 +34,13 @@ import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { MailService } from 'src/common/mail/providers/mail.service';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { UserPermissionService } from 'src/modules/user-permission/providers/user-permission.service';
+import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
+import { UserRoleEnum } from '../enums/user-roles.enum';
+
+export interface RequestingUser {
+  id: number;
+  role: string;
+}
 
 @Injectable()
 export class UserService {
@@ -57,7 +64,14 @@ export class UserService {
     private readonly userPermissionService: UserPermissionService,
   ) {}
 
-  async create(data: Partial<CreateUserDto>): Promise<User> {
+  /**
+   * `createdBy` is a separate, explicit parameter — never read off the client-supplied `data` —
+   * so it can only ever be set by a trusted server-side caller (createUserByPrivilegedCaller
+   * below), not smuggled in through a public, unauthenticated request body. Self-service signup
+   * (native + Google/LinkedIn) always leaves it null: nobody "added" a user who signed up
+   * themselves.
+   */
+  async create(data: Partial<CreateUserDto>, createdBy: number | null = null): Promise<User> {
     const existingEmail = await this.findByEmail(data.email);
     console.log('existingEmail', existingEmail);
 
@@ -85,6 +99,7 @@ export class UserService {
 
     try {
       const user = this.userRepo.create(data as Partial<User>);
+      user.createdBy = createdBy;
       if (data.image) {
         user.image = data.image;
       }
@@ -287,8 +302,60 @@ export class UserService {
     return this.userRepo.find();
   }
 
-  async findUserList(): Promise<any[]> {
-    const rows = await this.userRepo
+  /** Talent Partners get the same broad, unscoped "can manage users" grant Admins have — the
+   * "Role:" prefix on TalentPartner (see UserPermissionEnum) marks it as a capability grant, not
+   * something scoped to one subject/topic, so a plain existence check is the right one here. */
+  private async isTalentPartner(userId: number): Promise<boolean> {
+    return this.userPermissionService.hasPermission(userId, UserPermissionEnum.TalentPartner);
+  }
+
+  /** Throws if caller is neither Admin nor a Talent-Partner-permission holder — the shared gate
+   * for every "Manage Users" capability (list/create/edit), now that this is reachable by more
+   * than just Admins. Returns isAdmin so callers can further branch (e.g. which fields/rows a
+   * Talent Partner may see or touch vs. an Admin's unrestricted access). */
+  private async ensureCanManageUsers(caller: RequestingUser): Promise<{ isAdmin: boolean }> {
+    const isAdmin = caller.role === UserRoleEnum.ADMIN;
+    if (!isAdmin && !(await this.isTalentPartner(caller.id))) {
+      throw new AppCustomException(
+        HttpStatus.FORBIDDEN,
+        'You do not have permission to manage users.',
+      );
+    }
+    return { isAdmin };
+  }
+
+  /** The Admin/Talent-Partner-facing counterpart to public self-signup (`AuthService.signup`) —
+   * same underlying `create()`, but `createdBy` is stamped from the verified caller, not the
+   * request body, so "users I added" (findUserList's Talent-Partner filter, updateUser's
+   * ownership check) rests on a trustworthy value instead of client-supplied data. */
+  async createUserByPrivilegedCaller(
+    caller: RequestingUser,
+    dto: CreateUserDto,
+  ): Promise<User> {
+    await this.ensureCanManageUsers(caller);
+    return this.create(dto, caller.id);
+  }
+
+  /** Counts rows of `tableName` grouped by its `userId` column, for the given user ids — used to
+   * add lightweight aggregate fields (numJobRoles/numQuizTaken/numAssessments) to the user list
+   * without join-fanout: each is one small grouped query, same batching shape as
+   * apiUsageService.findMapByUserIds, rather than multiplying findUserList's own join further. */
+  private async countMapByUserIds(tableName: string, userIds: number[]): Promise<Map<number, number>> {
+    if (!userIds.length) return new Map();
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('t.userId', 'userId')
+      .addSelect('COUNT(*)', 'cnt')
+      .from(tableName, 't')
+      .where('t.userId IN (:...userIds)', { userIds })
+      .groupBy('t.userId')
+      .getRawMany();
+    return new Map(rows.map((r) => [Number(r.userId), Number(r.cnt)]));
+  }
+
+  async findUserList(caller: RequestingUser): Promise<any[]> {
+    const { isAdmin } = await this.ensureCanManageUsers(caller);
+    const qb = this.userRepo
       .createQueryBuilder('user')
       .leftJoin('user_job_role', 'userJobRole', 'userJobRole.userId = user.id')
       .leftJoin('job_role', 'jobRole', 'jobRole.id = userJobRole.jobRoleId')
@@ -308,11 +375,22 @@ export class UserService {
         'user.accountStatus AS accountStatus',
         'user.createdAt AS createdAt',
         'jobRole.title AS jobRoleTitle',
-      ])
-      .getRawMany();
+      ]);
+
+    // Talent Partners only manage the accounts they personally added — Admins still see everyone.
+    if (!isAdmin) {
+      qb.andWhere('user.createdBy = :callerId', { callerId: caller.id });
+    }
+
+    const rows = await qb.getRawMany();
 
     const userIds = [...new Set(rows.map((row) => Number(row.id)))];
-    const usageMap = await this.apiUsageService.findMapByUserIds(userIds);
+    const [usageMap, jobRoleCountMap, quizCountMap, assessmentCountMap] = await Promise.all([
+      this.apiUsageService.findMapByUserIds(userIds),
+      this.countMapByUserIds('user_job_role', userIds),
+      this.countMapByUserIds('quiz_result', userIds),
+      this.countMapByUserIds('assessment_session', userIds),
+    ]);
 
     const userMap = new Map<number, any>();
 
@@ -334,6 +412,12 @@ export class UserService {
           mobile: row.mobile,
           level: row.level,
           points: row.points,
+          numJobRoles: jobRoleCountMap.get(userId) ?? 0,
+          numQuizTaken: quizCountMap.get(userId) ?? 0,
+          numAssessments: assessmentCountMap.get(userId) ?? 0,
+          // Visible to everyone who can call this list (Admin + Talent Partner) — read-only here.
+          // The actual restriction is edit access: updateUser() still rejects a Talent Partner
+          // trying to *change* accountStatus, regardless of whether they can see it in the list.
           accountStatus: row.accountStatus,
           createdAt: row.createdAt,
           jobRoleTitles: [] as string[],
@@ -655,14 +739,62 @@ export class UserService {
     }
   }
 
+  /**
+   * `caller` is omitted for trusted, system-initiated calls (e.g. auth.service.ts auto-activating
+   * a user's own account right after a Google/LinkedIn callback) — those aren't a "manage someone
+   * else's account" action at all, so they skip the gate below entirely. The HTTP-facing
+   * controller path always supplies `caller`, and only that path is subject to the Talent-Partner
+   * restrictions (can't touch an already-Active user, can't change role/accountStatus).
+   */
   async updateUser(
     userId: number,
     updateUserDto: UpdateUserDto,
+    caller?: RequestingUser,
   ): Promise<User> {
-    const user = await this.findOne(userId);
+    // createdBy has `select: false` on the entity, so a plain findOne() never loads it — needed
+    // explicitly here (and only here) for the ownership check below; addSelect is the standard
+    // way to pull one hidden column back in without changing every other findOne() caller's shape.
+    const user = caller
+      ? await this.userRepo
+          .createQueryBuilder('user')
+          .addSelect('user.createdBy')
+          .where('user.id = :userId', { userId })
+          .getOne()
+      : await this.findOne(userId);
     if (!user) {
       throw new AppCustomException(HttpStatus.BAD_REQUEST, 'User not found');
     }
+
+    if (caller) {
+      const { isAdmin } = await this.ensureCanManageUsers(caller);
+      if (!isAdmin) {
+        if (user.createdBy !== caller.id) {
+          throw new AppCustomException(
+            HttpStatus.FORBIDDEN,
+            'Talent Partners can only edit users they added.',
+          );
+        }
+        if (user.accountStatus === AccountStatusEnum.ACTIVE) {
+          throw new AppCustomException(
+            HttpStatus.FORBIDDEN,
+            'Talent Partners cannot edit an active user.',
+          );
+        }
+        if (updateUserDto.accountStatus !== undefined) {
+          throw new AppCustomException(
+            HttpStatus.FORBIDDEN,
+            'Talent Partners cannot change a user\'s account status.',
+          );
+        }
+        if (updateUserDto.role !== undefined) {
+          throw new AppCustomException(
+            HttpStatus.FORBIDDEN,
+            'Talent Partners cannot change a user\'s role.',
+          );
+        }
+      }
+    }
+
     const { linkedinUrl, ...userFields } = updateUserDto as UpdateUserDto & {
       linkedinUrl?: string;
     };
@@ -687,7 +819,13 @@ export class UserService {
     return savedUser;
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, caller: RequestingUser): Promise<void> {
+    if (caller.role !== UserRoleEnum.ADMIN) {
+      throw new AppCustomException(
+        HttpStatus.FORBIDDEN,
+        'Only Admins can delete users.',
+      );
+    }
     const user = await this.findOne(id);
     if (user) {
       await this.userRepo.update(id, {

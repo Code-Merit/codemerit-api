@@ -7,6 +7,7 @@ import { Badge } from 'src/common/typeorm/entities/badge.entity';
 import { BadgeRule } from 'src/common/typeorm/entities/badge-rule.entity';
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
 import { CertificationTrack } from 'src/common/typeorm/entities/certification-track.entity';
+import { CertificationTrackJobRole } from 'src/common/typeorm/entities/certification-track-job-role.entity';
 import { CertificationTrackSubjectTrack } from 'src/common/typeorm/entities/certification-track-subject-track.entity';
 import { Interview } from 'src/common/typeorm/entities/interview.entity';
 import { InterviewStatusHistory } from 'src/common/typeorm/entities/interview-status-history.entity';
@@ -16,6 +17,7 @@ import { Lesson } from 'src/common/typeorm/entities/lesson.entity';
 import { LessonSection } from 'src/common/typeorm/entities/lesson-section.entity';
 import { Notification } from 'src/common/typeorm/entities/notification.entity';
 import { Permission } from 'src/common/typeorm/entities/permission.entity';
+import { PermissionRequest } from 'src/common/typeorm/entities/permission-request.entity';
 import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
@@ -55,8 +57,8 @@ export const AppDataSource = new DataSource({
     Topic, UserOtp, Question, QuestionOption, QuestionTopic, AssessmentSession,
     SkillRating, QuestionAttempt, Quiz, QuizResult, QuizQuestion, QuizSubject,
     QuizTopic, QuizSettings, Lesson, LessonSection, UserLessonTracker,
-    Permission, UserPermission, ApiUsage, Notification, SkillMetric,
-    Interview, InterviewStatusHistory, CertificationTrack, SubjectTrack,
+    Permission, PermissionRequest, UserPermission, ApiUsage, Notification, SkillMetric,
+    Interview, InterviewStatusHistory, CertificationTrack, CertificationTrackJobRole, SubjectTrack,
     CertificationTrackSubjectTrack, SubjectTrackTopic, Certificate,
     Activity, Badge, BadgeRule, UserBadge, UserStreak, UserXpLog,
   ],

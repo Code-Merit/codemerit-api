@@ -203,12 +203,6 @@ export class TopicAnalysisService {
     const wrongEasy = +raw.wrongEasy || 0;
     const wrongMedium = +raw.wrongMedium || 0;
     const wrongHard = +raw.wrongHard || 0;
-    const userLevel = getAggregateUserLevel(
-      attemptedEasy, correctEasy,
-      attemptedMedium, correctMedium,
-      attemptedHard, correctHard,
-    );
-
     const isStarted = numMyAttempts > 0;
     // Completion requires actually answering correctly, not just attempting — coverage
     // must never gate completion/certification on its own (see TOPIC_DONE's usage in
@@ -226,6 +220,14 @@ export class TopicAnalysisService {
       journeyWrong,
     });
     const isCompleted = correctCoverage >= TOPIC_DONE;
+    // userLevel needs correctCoverage (above) to cap an over-confident accuracy-only
+    // read — see getAggregateUserLevel's doc comment.
+    const userLevel = getAggregateUserLevel(
+      attemptedEasy, correctEasy,
+      attemptedMedium, correctMedium,
+      attemptedHard, correctHard,
+      correctCoverage,
+    );
 
     const topicsList = {
       id: +raw.topicId,
