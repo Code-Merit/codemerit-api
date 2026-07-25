@@ -47,7 +47,7 @@ export class AdminContentService {
     const [programs, certificationTracks, subjectTracks, subjects, topics, questions, lessonTotal] =
       await Promise.all([
         this.publishedStats(this.jobRoleRepo, 'jr'),
-        this.publishedStats(this.certificationTrackRepo, 'ct'),
+        this.getCertificationTrackStats(),
         this.publishedStats(this.subjectTrackRepo, 'st'),
         this.publishedStats(this.subjectRepo, 's'),
         this.publishedStats(this.topicRepo, 't'),
@@ -75,6 +75,28 @@ export class AdminContentService {
       lessons,
       moderationQueue,
     };
+  }
+
+  // CertificationTrack itself carries no isPublished/jobRoleId column — a track is offered
+  // through one or more job roles via CertificationTrackJobRole, each link with its own publish
+  // flag (see certification-track-job-role.entity.ts). "Published" here means the track is
+  // currently offered via at least one published job-role link; a track with zero links, or only
+  // unpublished ones, counts as draft — same definition ProgramService uses when assembling a
+  // job role's cert tracks (ctjr.isPublished = 1).
+  private async getCertificationTrackStats(): Promise<PublishedStats> {
+    const result = await this.certificationTrackRepo
+      .createQueryBuilder('ct')
+      .leftJoin('ct.certificationTrackJobRoles', 'ctjr')
+      .select([
+        'COUNT(DISTINCT ct.id) as total',
+        'COUNT(DISTINCT CASE WHEN ctjr.isPublished = true THEN ct.id END) as published',
+      ])
+      .getRawOne();
+
+    const total = +result.total || 0;
+    const published = +result.published || 0;
+
+    return { total, published, draft: total - published };
   }
 
   private async publishedStats(repo: Repository<any>, alias: string): Promise<PublishedStats> {

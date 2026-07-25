@@ -4,6 +4,7 @@ import {
   Get,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   Request,
@@ -18,6 +19,7 @@ import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard'
 import { UserPermissionService } from '../user-permission/providers/user-permission.service';
 import { CreateLessonDto } from './dtos/create-lesson.dto';
 import { GetLessonsDto } from './dtos/get-lessons.dto';
+import { UpdateLessonProgressDto } from './dtos/update-lesson-progress.dto';
 import { LessonService } from './providers/lesson.service';
 
 @Controller('apis/lesson')
@@ -68,10 +70,38 @@ export class LessonController {
   }
 
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':slug')
-  async findBySlug(@Param('slug') slug: string): Promise<ApiResponse<any>> {
-    const result = await this.service.findBySlug(slug);
+  async findBySlug(
+    @Param('slug') slug: string,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.findBySlug(slug, req.user?.id);
     return new ApiResponse('Lesson fetched successfully', result);
   }
 
+  @UseGuards(AuthGuard('jwt'))
+  @Post(':slug/access')
+  async recordAccess(
+    @Param('slug') slug: string,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.recordLessonAccess(req.user.id, slug);
+    return new ApiResponse('Lesson access recorded successfully', result);
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':slug/progress')
+  async updateProgress(
+    @Param('slug') slug: string,
+    @Body() dto: UpdateLessonProgressDto,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.updateLessonProgress(
+      req.user.id,
+      slug,
+      dto,
+    );
+    return new ApiResponse('Lesson progress updated successfully', result);
+  }
 }

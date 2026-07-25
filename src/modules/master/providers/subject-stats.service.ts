@@ -457,7 +457,11 @@ export class SubjectStatsService {
       ? list.filter((l) => l.status === UserLessonTrackerStatusEnum.Completed).length
       : 0;
 
-    return { total: list.length, completed, list };
+    // Same numerator/denominator*100, .toFixed(1) convention computeAttemptMetrics() uses for
+    // question coverage — kept inline here since it's a single field, not shared across levels.
+    const learningCompleteness = list.length > 0 ? +((completed / list.length) * 100).toFixed(1) : 0;
+
+    return { total: list.length, completed, learningCompleteness, list };
   }
 
   // ─── Related Job Roles ────────────────────────────────────────────────────────

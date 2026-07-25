@@ -48,6 +48,21 @@ export class Lesson extends AbstractEntity {
   level: number;
 
   @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: false,
+    default: 'tutorial'
+  })
+  format: 'comic' | 'tutorial' | 'reference';
+
+  @Column({
+    type: 'json',
+    nullable: true,
+    default: null,
+  })
+  tags: string[] | null;
+
+  @Column({
     type: 'integer',
     nullable: false,
   })

@@ -94,34 +94,61 @@ export class MasterService {
   }
 
   private async getMasterCertificationTracks() {
-    const rows = await this.dataSource
-      .createQueryBuilder()
-      .select('ct.id', 'id')
-      .addSelect('ctjr.jobRoleId', 'jobRoleId')
-      .addSelect('ct.title', 'title')
-      .addSelect('ctjr.sortOrder', 'sortOrder')
-      .addSelect('ctjr.isPublished', 'isPublished')
-      .addSelect('jr.title', 'jobRoleTitle')
-      .addSelect('COUNT(ctst.id)', 'subjectTrackCount')
-      .from('certification_track', 'ct')
-      .innerJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id')
-      .innerJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId')
-      .leftJoin('certification_track_subject_track', 'ctst', 'ctst.certificationTrackId = ct.id')
-      .groupBy('ct.id')
-      .addGroupBy('ctjr.jobRoleId')
-      .orderBy('ctjr.jobRoleId', 'ASC')
-      .addOrderBy('ctjr.sortOrder', 'ASC')
-      .getRawMany();
+    const [rows, stRows] = await Promise.all([
+      this.dataSource
+        .createQueryBuilder()
+        .select('ct.id', 'id')
+        .addSelect('ct.title', 'title')
+        .addSelect('ctjr.jobRoleId', 'jobRoleId')
+        .addSelect('ctjr.sortOrder', 'sortOrder')
+        .addSelect('ctjr.isPublished', 'isPublished')
+        .addSelect('jr.title', 'jobRoleTitle')
+        .from('certification_track', 'ct')
+        .innerJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id')
+        .innerJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId')
+        .orderBy('ct.id', 'ASC')
+        .addOrderBy('ctjr.sortOrder', 'ASC')
+        .getRawMany(),
+      this.dataSource
+        .createQueryBuilder()
+        .select('ctst.certificationTrackId', 'certId')
+        .addSelect('st.id', 'id')
+        .addSelect('st.title', 'title')
+        .addSelect('st.slug', 'slug')
+        .addSelect('st.subjectId', 'subjectId')
+        .addSelect('s.title', 'subjectName')
+        .from('certification_track_subject_track', 'ctst')
+        .innerJoin('subject_track', 'st', 'st.id = ctst.subjectTrackId')
+        .innerJoin('subject', 's', 's.id = st.subjectId')
+        .orderBy('ctst.certificationTrackId', 'ASC')
+        .addOrderBy('s.title', 'ASC')
+        .addOrderBy('st.title', 'ASC')
+        .getRawMany(),
+    ]);
 
-    return rows.map((r) => ({
-      id: +r.id,
-      jobRoleId: +r.jobRoleId,
-      jobRoleTitle: r.jobRoleTitle,
-      title: r.title,
-      sortOrder: +r.sortOrder,
-      isPublished: Boolean(r.isPublished),
-      subjectTrackCount: +r.subjectTrackCount,
-    }));
+    const stMap = new Map<number, { id: number; title: string; slug: string; subjectId: number; subjectName: string }[]>();
+    for (const r of stRows) {
+      const certId = +r.certId;
+      if (!stMap.has(certId)) stMap.set(certId, []);
+      stMap.get(certId).push({ id: +r.id, title: r.title, slug: r.slug, subjectId: +r.subjectId, subjectName: r.subjectName });
+    }
+
+    const certMap = new Map<number, { id: number; title: string; subjectTrackCount: number; subjectTracks: { id: number; title: string; slug: string; subjectId: number; subjectName: string }[]; jobRoles: { jobRoleId: number; jobRoleTitle: string; sortOrder: number; isPublished: boolean }[] }>();
+    for (const row of rows) {
+      const id = +row.id;
+      if (!certMap.has(id)) {
+        const subjectTracks = stMap.get(id) ?? [];
+        certMap.set(id, { id, title: row.title, subjectTrackCount: subjectTracks.length, subjectTracks, jobRoles: [] });
+      }
+      certMap.get(id).jobRoles.push({
+        jobRoleId: +row.jobRoleId,
+        jobRoleTitle: row.jobRoleTitle,
+        sortOrder: +row.sortOrder,
+        isPublished: Boolean(row.isPublished),
+      });
+    }
+
+    return [...certMap.values()];
   }
 
   async addUserSubjects(userId: number, dto: AddUserSubjectsDto) {

@@ -6,7 +6,8 @@
       "description": "Completed your very first quiz on CodeMerit.",
       "content": "Welcome aboard! You just completed your first quiz.",
       "iconUrl": "/assets/badges/first-quiz.svg",
-      "points": 20
+      "points": 20,
+      "sortOrder": 1
     },
     {
       "code": "perfect_score",
@@ -14,7 +15,8 @@
       "description": "Answered every question correctly in a single quiz.",
       "content": "Flawless! You scored 100% on a quiz.",
       "iconUrl": "/assets/badges/perfect-score.svg",
-      "points": 30
+      "points": 30,
+      "sortOrder": 2
     },
     {
       "code": "subject_mastered",
@@ -22,7 +24,8 @@
       "description": "Reached full topic coverage across an entire subject.",
       "content": "You've mastered every topic in a subject.",
       "iconUrl": "/assets/badges/subject-mastered.svg",
-      "points": 50
+      "points": 50,
+      "sortOrder": 6
     },
     {
       "code": "streak_7",
@@ -30,7 +33,8 @@
       "description": "Practiced 7 days in a row.",
       "content": "A full week of consistent practice!",
       "iconUrl": "/assets/badges/streak-7.svg",
-      "points": 25
+      "points": 25,
+      "sortOrder": 3
     },
     {
       "code": "streak_30",
@@ -38,7 +42,8 @@
       "description": "Practiced 30 days in a row.",
       "content": "A whole month without missing a day!",
       "iconUrl": "/assets/badges/streak-30.svg",
-      "points": 75
+      "points": 75,
+      "sortOrder": 4
     },
     {
       "code": "streak_100",
@@ -46,7 +51,8 @@
       "description": "Practiced 100 days in a row.",
       "content": "100 days of dedication!",
       "iconUrl": "/assets/badges/streak-100.svg",
-      "points": 150
+      "points": 150,
+      "sortOrder": 5
     },
     {
       "code": "cert_earned",
@@ -54,7 +60,744 @@
       "description": "Earned your first certification track certificate.",
       "content": "Congratulations on earning your first certificate!",
       "iconUrl": "/assets/badges/cert-earned.svg",
-      "points": 50
+      "points": 50,
+      "sortOrder": 7
+    },
+    {
+      "code": "angular_beginner",
+      "name": "Angular Beginner",
+      "description": "Answered 80%+ of Easy-level Angular questions correctly.",
+      "content": "You're building solid Angular fundamentals — keep going!",
+      "iconUrl": "/assets/badges/angular-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "angular",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "angular_master",
+      "name": "Angular Master",
+      "description": "Recognized for strong Angular proficiency, earned or awarded by an interviewer.",
+      "content": "Reached expert-level Angular mastery — earned by reaching 90% correct coverage across every Angular topic, or awarded directly by an interviewer.",
+      "iconUrl": "/assets/badges/angular-master.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "angular",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "git_beginner",
+      "name": "Git Beginner",
+      "description": "Answered 80%+ of Easy-level Git questions correctly.",
+      "content": "You're building solid Git fundamentals — keep going!",
+      "iconUrl": "/assets/badges/git-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "git",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "git_expert",
+      "name": "Git Expert",
+      "description": "Reached 90%+ correct coverage across every Git topic.",
+      "content": "You've mastered Git end-to-end.",
+      "iconUrl": "/assets/badges/git-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "git",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "javascript_beginner",
+      "name": "JavaScript Beginner",
+      "description": "Answered 80%+ of Easy-level JavaScript questions correctly.",
+      "content": "You're building solid JavaScript fundamentals — keep going!",
+      "iconUrl": "/assets/badges/javascript-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "javascript",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "javascript_expert",
+      "name": "JavaScript Expert",
+      "description": "Recognized for strong JavaScript proficiency, earned or awarded by an interviewer.",
+      "content": "Reached expert-level JavaScript mastery — earned by reaching 90% correct coverage across every JavaScript topic, or awarded directly by an interviewer.",
+      "iconUrl": "/assets/badges/javascript-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "javascript",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "html_beginner",
+      "name": "HTML Beginner",
+      "description": "Answered 80%+ of Easy-level HTML questions correctly.",
+      "content": "You're building solid HTML fundamentals — keep going!",
+      "iconUrl": "/assets/badges/html-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "html",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "html_expert",
+      "name": "HTML Expert",
+      "description": "Reached 90%+ correct coverage across every HTML topic.",
+      "content": "You've mastered HTML end-to-end.",
+      "iconUrl": "/assets/badges/html-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "html",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "typescript_beginner",
+      "name": "TypeScript Beginner",
+      "description": "Answered 80%+ of Easy-level TypeScript questions correctly.",
+      "content": "You're building solid TypeScript fundamentals — keep going!",
+      "iconUrl": "/assets/badges/typescript-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "typescript",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "typescript_expert",
+      "name": "TypeScript Expert",
+      "description": "Reached 90%+ correct coverage across every TypeScript topic.",
+      "content": "You've mastered TypeScript end-to-end.",
+      "iconUrl": "/assets/badges/typescript-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "typescript",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "computer_fundamentals_beginner",
+      "name": "Computer Fundamentals Beginner",
+      "description": "Answered 80%+ of Easy-level Computer Fundamentals questions correctly.",
+      "content": "You're building solid Computer Fundamentals — keep going!",
+      "iconUrl": "/assets/badges/computer-fundamentals-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "computer-fundamentals",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "computer_fundamentals_expert",
+      "name": "Computer Fundamentals Expert",
+      "description": "Reached 90%+ correct coverage across every Computer Fundamentals topic.",
+      "content": "You've mastered Computer Fundamentals end-to-end.",
+      "iconUrl": "/assets/badges/computer-fundamentals-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "computer-fundamentals",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "css_beginner",
+      "name": "CSS Beginner",
+      "description": "Answered 80%+ of Easy-level CSS questions correctly.",
+      "content": "You're building solid CSS fundamentals — keep going!",
+      "iconUrl": "/assets/badges/css-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "css",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "css_expert",
+      "name": "CSS Expert",
+      "description": "Reached 90%+ correct coverage across every CSS topic.",
+      "content": "You've mastered CSS end-to-end.",
+      "iconUrl": "/assets/badges/css-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "css",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "java_beginner",
+      "name": "Java Beginner",
+      "description": "Answered 80%+ of Easy-level Java questions correctly.",
+      "content": "You're building solid Java fundamentals — keep going!",
+      "iconUrl": "/assets/badges/java-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "java",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "java_expert",
+      "name": "Java Expert",
+      "description": "Reached 90%+ correct coverage across every Java topic.",
+      "content": "You've mastered Java end-to-end.",
+      "iconUrl": "/assets/badges/java-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "java",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "react_beginner",
+      "name": "React Beginner",
+      "description": "Answered 80%+ of Easy-level React questions correctly.",
+      "content": "You're building solid React fundamentals — keep going!",
+      "iconUrl": "/assets/badges/react-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "react",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "react_expert",
+      "name": "React Expert",
+      "description": "Reached 90%+ correct coverage across every React topic.",
+      "content": "You've mastered React end-to-end.",
+      "iconUrl": "/assets/badges/react-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "react",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "tailwind_beginner",
+      "name": "Tailwind CSS Beginner",
+      "description": "Answered 80%+ of Easy-level Tailwind CSS questions correctly.",
+      "content": "You're building solid Tailwind CSS fundamentals — keep going!",
+      "iconUrl": "/assets/badges/tailwind-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "tailwind",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "tailwind_expert",
+      "name": "Tailwind CSS Expert",
+      "description": "Reached 90%+ correct coverage across every Tailwind CSS topic.",
+      "content": "You've mastered Tailwind CSS end-to-end.",
+      "iconUrl": "/assets/badges/tailwind-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "tailwind",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "microsoft_office_beginner",
+      "name": "Microsoft Office Beginner",
+      "description": "Answered 80%+ of Easy-level Microsoft Office questions correctly.",
+      "content": "You're building solid Microsoft Office fundamentals — keep going!",
+      "iconUrl": "/assets/badges/microsoft-office-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "microsoft-office",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "microsoft_office_expert",
+      "name": "Microsoft Office Expert",
+      "description": "Reached 90%+ correct coverage across every Microsoft Office topic.",
+      "content": "You've mastered Microsoft Office end-to-end.",
+      "iconUrl": "/assets/badges/microsoft-office-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "microsoft-office",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "spring_boot_beginner",
+      "name": "Spring Boot Beginner",
+      "description": "Answered 80%+ of Easy-level Spring Boot questions correctly.",
+      "content": "You're building solid Spring Boot fundamentals — keep going!",
+      "iconUrl": "/assets/badges/spring-boot-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "spring-boot",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "spring_boot_expert",
+      "name": "Spring Boot Expert",
+      "description": "Reached 90%+ correct coverage across every Spring Boot topic.",
+      "content": "You've mastered Spring Boot end-to-end.",
+      "iconUrl": "/assets/badges/spring-boot-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "spring-boot",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "nodejs_beginner",
+      "name": "Node.js Beginner",
+      "description": "Answered 80%+ of Easy-level Node.js questions correctly.",
+      "content": "You're building solid Node.js fundamentals — keep going!",
+      "iconUrl": "/assets/badges/nodejs-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "nodejs",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "nodejs_expert",
+      "name": "Node.js Expert",
+      "description": "Reached 90%+ correct coverage across every Node.js topic.",
+      "content": "You've mastered Node.js end-to-end.",
+      "iconUrl": "/assets/badges/nodejs-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "nodejs",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "devops_beginner",
+      "name": "DevOps Beginner",
+      "description": "Answered 80%+ of Easy-level DevOps questions correctly.",
+      "content": "You're building solid DevOps fundamentals — keep going!",
+      "iconUrl": "/assets/badges/devops-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "devops",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "devops_expert",
+      "name": "DevOps Expert",
+      "description": "Reached 90%+ correct coverage across every DevOps topic.",
+      "content": "You've mastered DevOps end-to-end.",
+      "iconUrl": "/assets/badges/devops-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "devops",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "internet_digital_beginner",
+      "name": "Internet & Digital Skills Beginner",
+      "description": "Answered 80%+ of Easy-level Internet & Digital Skills questions correctly.",
+      "content": "You're building solid Internet & Digital Skills fundamentals — keep going!",
+      "iconUrl": "/assets/badges/internet-digital-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "internet-digital",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "internet_digital_expert",
+      "name": "Internet & Digital Skills Expert",
+      "description": "Reached 90%+ correct coverage across every Internet & Digital Skills topic.",
+      "content": "You've mastered Internet & Digital Skills end-to-end.",
+      "iconUrl": "/assets/badges/internet-digital-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "internet-digital",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "data_entry_beginner",
+      "name": "Data Entry & Productivity Beginner",
+      "description": "Answered 80%+ of Easy-level Data Entry & Productivity questions correctly.",
+      "content": "You're building solid Data Entry & Productivity fundamentals — keep going!",
+      "iconUrl": "/assets/badges/data-entry-beginner.svg",
+      "points": 50,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "data-entry",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 80,
+        "difficultyLevel": "Easy"
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "data_entry_expert",
+      "name": "Data Entry & Productivity Expert",
+      "description": "Reached 90%+ correct coverage across every Data Entry & Productivity topic.",
+      "content": "You've mastered Data Entry & Productivity end-to-end.",
+      "iconUrl": "/assets/badges/data-entry-expert.svg",
+      "points": 100,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Subject",
+      "scopeSubjectSlug": "data-entry",
+      "rule": {
+        "metric": "SubjectCorrectCoverage",
+        "threshold": 90
+      },
+      "sortOrder": 2
+    },
+    {
+      "code": "angular_routing_pro",
+      "name": "Angular Routing Pro",
+      "description": "Reached 85%+ correct coverage on Angular's Routing and Navigation topic.",
+      "content": "You've mastered Angular routing and navigation.",
+      "iconUrl": "/assets/badges/angular-routing-pro.svg",
+      "points": 75,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Topic",
+      "scopeTopicSlug": "routing-and-navigation",
+      "rule": {
+        "metric": "TopicCorrectCoverage",
+        "threshold": 85
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "angular_lifecycle_master",
+      "name": "Angular Lifecycle Master",
+      "description": "Reached 85%+ correct coverage on Angular's Lifecycle and Change Detection topic.",
+      "content": "You've mastered Angular's component lifecycle and change detection.",
+      "iconUrl": "/assets/badges/angular-lifecycle-master.svg",
+      "points": 75,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Topic",
+      "scopeTopicSlug": "angular-lifecycle-and-change-detection",
+      "rule": {
+        "metric": "TopicCorrectCoverage",
+        "threshold": 85
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "git_automation_specialist",
+      "name": "Git Automation Specialist",
+      "description": "Reached 85%+ correct coverage on Git's Hooks and Automation topic.",
+      "content": "You've mastered Git hooks and workflow automation.",
+      "iconUrl": "/assets/badges/git-automation-specialist.svg",
+      "points": 75,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Topic",
+      "scopeTopicSlug": "git-hooks-and-automation",
+      "rule": {
+        "metric": "TopicCorrectCoverage",
+        "threshold": 85
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "git_branching_pro",
+      "name": "Git Branching Pro",
+      "description": "Reached 85%+ correct coverage on Git's Branching and Merging topic.",
+      "content": "You've mastered Git branching and merging.",
+      "iconUrl": "/assets/badges/git-branching-pro.svg",
+      "points": 75,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Topic",
+      "scopeTopicSlug": "branching-and-merging",
+      "rule": {
+        "metric": "TopicCorrectCoverage",
+        "threshold": 85
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "js_arrays_objects_specialist",
+      "name": "JS Arrays & Objects Specialist",
+      "description": "Reached 85%+ correct coverage on JavaScript's Arrays and Objects topic.",
+      "content": "You've mastered JavaScript arrays and objects.",
+      "iconUrl": "/assets/badges/js-arrays-objects-specialist.svg",
+      "points": 75,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Topic",
+      "scopeTopicSlug": "javascript-arrays-and-objects",
+      "rule": {
+        "metric": "TopicCorrectCoverage",
+        "threshold": 85
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "modern_js_es6_specialist",
+      "name": "Modern JavaScript (ES6+) Specialist",
+      "description": "Reached 85%+ correct coverage on JavaScript's Modern (ES6+) Essentials topic.",
+      "content": "You've mastered modern ES6+ JavaScript essentials.",
+      "iconUrl": "/assets/badges/modern-js-es6-specialist.svg",
+      "points": 75,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Topic",
+      "scopeTopicSlug": "modern-javascript-es6-essentials",
+      "rule": {
+        "metric": "TopicCorrectCoverage",
+        "threshold": 85
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "semantic_html_specialist",
+      "name": "Semantic HTML Specialist",
+      "description": "Reached 85%+ correct coverage on HTML's Semantic HTML topic.",
+      "content": "You've mastered semantic HTML markup.",
+      "iconUrl": "/assets/badges/semantic-html-specialist.svg",
+      "points": 75,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Topic",
+      "scopeTopicSlug": "semantic-html",
+      "rule": {
+        "metric": "TopicCorrectCoverage",
+        "threshold": 85
+      },
+      "sortOrder": 1
+    },
+    {
+      "code": "html_accessibility_champion",
+      "name": "HTML Accessibility Champion",
+      "description": "Reached 85%+ correct coverage on HTML's Accessibility topic.",
+      "content": "You've mastered accessible HTML.",
+      "iconUrl": "/assets/badges/html-accessibility-champion.svg",
+      "points": 75,
+      "awardMethod": "Manual",
+      "isManuallyGrantable": true,
+      "isPublished": true,
+      "scopeType": "Topic",
+      "scopeTopicSlug": "accessibility-in-html",
+      "rule": {
+        "metric": "TopicCorrectCoverage",
+        "threshold": 85
+      },
+      "sortOrder": 1
     }
   ]
 }

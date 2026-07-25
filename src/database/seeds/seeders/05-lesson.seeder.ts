@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Lesson } from 'src/common/typeorm/entities/lesson.entity';
 import { LessonSection } from 'src/common/typeorm/entities/lesson-section.entity';
+import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
@@ -16,13 +17,16 @@ interface LessonData {
   subjectSlug: string;
   topicSlug: string;
   level: 1 | 2 | 3;
-  sections: Array<{ title: string; description: string }>;
+  format?: 'comic' | 'tutorial' | 'reference';
+  tags?: string[];
+  sections: Array<{ title: string; description?: string; blocks?: object[] }>;
 }
 
 export async function seedLessons(dataSource: DataSource, subjects: Subject[], topics: Topic[]): Promise<void> {
   const data: LessonData[] = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
   const lessonRepo = dataSource.getRepository(Lesson);
   const sectionRepo = dataSource.getRepository(LessonSection);
+  const trackerRepo = dataSource.getRepository(UserLessonTracker);
 
   const author = await dataSource.getRepository(User).findOne({ where: { role: UserRoleEnum.ADMIN } });
   if (!author) {
@@ -34,7 +38,7 @@ export async function seedLessons(dataSource: DataSource, subjects: Subject[], t
   const topicBySlug = new Map(topics.map((t) => [t.slug, t]));
 
   let created = 0;
-  let skipped = 0;
+  let replaced = 0;
   let sectionsCreated = 0;
 
   for (const l of data) {
@@ -47,8 +51,10 @@ export async function seedLessons(dataSource: DataSource, subjects: Subject[], t
 
     const existing = await lessonRepo.findOne({ where: { slug: l.slug } });
     if (existing) {
-      skipped++;
-      continue;
+      await trackerRepo.delete({ lessonId: existing.id });
+      await sectionRepo.delete({ lessonId: existing.id });
+      await lessonRepo.delete({ id: existing.id });
+      replaced++;
     }
 
     const lesson = await lessonRepo.save(
@@ -58,19 +64,25 @@ export async function seedLessons(dataSource: DataSource, subjects: Subject[], t
         topicId: topic.id,
         slug: l.slug,
         level: l.level,
+        format: l.format ?? 'tutorial',
+        tags: l.tags ?? null,
         userId: author.id,
       }),
     );
     created++;
 
     for (const s of l.sections) {
-      await sectionRepo.save(
-        sectionRepo.create({ lessonId: lesson.id, title: s.title, description: s.description }),
-      );
+      const entity = sectionRepo.create({
+        lessonId: lesson.id,
+        title: s.title,
+        description: s.description ?? null,
+        blocks: s.blocks ?? null,
+      });
+      await sectionRepo.save(entity);
       sectionsCreated++;
     }
   }
 
-  console.log(`  ✔ Lessons : ${data.length} declared (${created} created, ${skipped} already existed)`);
+  console.log(`  ✔ Lessons : ${data.length} declared (${created} created, ${replaced} replaced)`);
   console.log(`  ✔ Sections: ${sectionsCreated} created`);
 }

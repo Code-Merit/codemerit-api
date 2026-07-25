@@ -234,7 +234,6 @@ export class ProgramService {
     const jobRoleIds = jobRoles.map((jr) => +jr.id);
 
     const roleSubjectRows = await this.fetchRoleSubjects(jobRoleIds);
-    const allSubjectIds = [...new Set(roleSubjectRows.map((rs) => +rs.subjectId))];
 
     // Parallel fetches
     const [subjectStatsMap, certRows] = await Promise.all([
@@ -371,6 +370,312 @@ export class ProgramService {
       },
       jobRoles: jobRoleDashboards,
     };
+  }
+
+  // ─── Enriched Career Dashboard (authenticated) ───────────────────────────────
+
+  private emptyEnrichedDashboard() {
+    return {
+      summary: {
+        totalJobRoles: 0, totalSubjects: 0,
+        totalLessons: 0, completedLessons: 0, lessonCompletion: 0,
+        totalCertTracks: 0, certTracksAchieved: 0, certTracksInProgress: 0, certTracksNotStarted: 0,
+        overallScore: 0, overallAccuracy: 0, overallTriviaCompletion: 0,
+      },
+      lessons: [],
+      jobRoles: [],
+    };
+  }
+
+  async getEnrichedCareerDashboard(userId: number) {
+    try {
+      return await this.buildEnrichedCareerDashboard(userId);
+    } catch (err) {
+      console.error('[getEnrichedCareerDashboard] Unexpected error for userId', userId, err?.message ?? err);
+      return this.emptyEnrichedDashboard();
+    }
+  }
+
+  private async buildEnrichedCareerDashboard(userId: number) {
+    const jobRoles = await this.fetchUserJobRoles(userId);
+
+    if (!jobRoles.length) {
+      return this.emptyEnrichedDashboard();
+    }
+
+    const jobRoleIds = jobRoles.map((jr) => +jr.id);
+    const roleSubjectRows = await this.fetchRoleSubjects(jobRoleIds);
+    const allSubjectIds = [...new Set(roleSubjectRows.map((rs) => +rs.subjectId))];
+
+    const [subjectStatsMap, certRows, lessons, badgesByRole] = await Promise.all([
+      this.subjectStats.getSubjectStatsMap(userId),
+      this.fetchCertTrackHierarchy(jobRoleIds),
+      this.fetchLessonsForSubjects(allSubjectIds, userId),
+      Promise.all(
+        jobRoleIds.map((jrId) =>
+          this.badgeQueryService
+            .getUserBadgesForScope(BadgeScopeEnum.JOBROLE, jrId, userId)
+            .then((badges): [number, ScopedBadgeDto[]] => [jrId, badges ?? []])
+            .catch((): [number, ScopedBadgeDto[]] => [jrId, []]),
+        ),
+      ).then((entries) => new Map(entries)),
+    ]);
+
+    // Build subject-track map needed for cert progress (mirrors getCareerDashboard exactly;
+    // fetchSubjectTracksWithTopicsByIds and getSubjectTrackMasteryLeaderboards both handle empty arrays)
+    const certStIds = [...new Set(certRows.map((r) => +r.stId))];
+    const stRowsForCerts = await this.subjectTrackAnalyzer.fetchSubjectTracksWithTopicsByIds(certStIds);
+    const allCertTopicIds = [...new Set(stRowsForCerts.map((r) => +r.topicId))];
+    const topicStatsList = allCertTopicIds.length
+      ? await this.topicAnalyzer.getTopicStatsByIds(allCertTopicIds, userId)
+      : [];
+    const topicStatsMap = new Map<number, any>(topicStatsList.map((t) => [t.id, t]));
+    const stMerits = await this.meritService.getSubjectTrackMasteryLeaderboards(certStIds, userId);
+    const stMap = this.subjectTrackAnalyzer.buildSubjectTrackMap(stRowsForCerts, topicStatsMap, stMerits, userId);
+
+    // Cert rows indexed by job role
+    type CertEntry = { meta: any; stIds: number[] };
+    const certByJobRole = new Map<number, Map<number, CertEntry>>();
+    for (const row of certRows) {
+      const jrId = +row.ctJobRoleId;
+      if (!certByJobRole.has(jrId)) certByJobRole.set(jrId, new Map());
+      const certMap = certByJobRole.get(jrId)!;
+      if (!certMap.has(+row.ctId)) {
+        certMap.set(+row.ctId, {
+          meta: { id: +row.ctId, title: row.ctTitle, description: row.ctDesc, sortOrder: +row.ctSortOrder },
+          stIds: [],
+        });
+      }
+      certMap.get(+row.ctId)!.stIds.push(+row.stId);
+    }
+
+    // Lesson completion counts per subject
+    const lessonTotalBySubject = new Map<number, number>();
+    const lessonCompletedBySubject = new Map<number, number>();
+    for (const l of lessons) {
+      lessonTotalBySubject.set(l.subjectId, (lessonTotalBySubject.get(l.subjectId) ?? 0) + 1);
+      if (l.status === 'Completed') {
+        lessonCompletedBySubject.set(l.subjectId, (lessonCompletedBySubject.get(l.subjectId) ?? 0) + 1);
+      }
+    }
+
+    // Subjects per job role (stats only — no full detail; frontend drills via programDetails)
+    const subjectsByJobRole = new Map<number, any[]>();
+    for (const rs of roleSubjectRows) {
+      const jrId = +rs.jobRoleId;
+      if (!subjectsByJobRole.has(jrId)) subjectsByJobRole.set(jrId, []);
+      const raw = subjectStatsMap.get(+rs.subjectId) ?? {};
+      subjectsByJobRole.get(jrId)!.push({
+        id: +rs.subjectId,
+        tag: rs.tag,
+        attempted: +raw.attempted || 0,
+        correct: +raw.correct || 0,
+        wrong: +raw.wrong || 0,
+        numTrivia: +raw.numTrivia || 0,
+        attemptedEasy: +raw.attemptedEasy || 0,
+        attemptedMedium: +raw.attemptedMedium || 0,
+        attemptedHard: +raw.attemptedHard || 0,
+        correctEasy: +raw.correctEasy || 0,
+        correctMedium: +raw.correctMedium || 0,
+        correctHard: +raw.correctHard || 0,
+        lessonTotal: lessonTotalBySubject.get(+rs.subjectId) ?? 0,
+        lessonCompleted: lessonCompletedBySubject.get(+rs.subjectId) ?? 0,
+      });
+    }
+
+    // Assemble per-job-role dashboards; accumulate cross-role totals
+    let totalSubjects = 0, totalCertTracks = 0, certTracksAchieved = 0, certTracksInProgress = 0;
+
+    const jobRoleDashboards = jobRoles.map((jr) => {
+      const subjects = subjectsByJobRole.get(+jr.id) ?? [];
+      totalSubjects += subjects.length;
+
+      // Job-role level trivia metrics (weighted totals, not average of averages)
+      const jrTotalAttempted = subjects.reduce((s: number, sub: any) => s + sub.attempted, 0);
+      const jrTotalCorrect = subjects.reduce((s: number, sub: any) => s + sub.correct, 0);
+      const jrTotalNumTrivia = subjects.reduce((s: number, sub: any) => s + sub.numTrivia, 0);
+      const jrAccuracy = jrTotalAttempted > 0 ? +(jrTotalCorrect * 100 / jrTotalAttempted).toFixed(1) : 0;
+      const jrTriviaCompletion = jrTotalNumTrivia > 0 ? +((jrTotalAttempted / jrTotalNumTrivia) * 100).toFixed(1) : 0;
+
+      // Score: average over MANDATORY subjects (fallback: all subjects)
+      const mandatory = subjects.filter((s: any) => s.tag === 'MANDATORY');
+      const scoreSrc = mandatory.length ? mandatory : subjects;
+      const jrScore = scoreSrc.length
+        ? +(scoreSrc.reduce((s: number, sub: any) => s + generateScore(sub.attempted, sub.correct, sub.wrong), 0) / scoreSrc.length).toFixed(0)
+        : 0;
+
+      // Lesson completion
+      const jrLessonTotal = subjects.reduce((s: number, sub: any) => s + sub.lessonTotal, 0);
+      const jrLessonCompleted = subjects.reduce((s: number, sub: any) => s + sub.lessonCompleted, 0);
+      const jrLessonCompletion = jrLessonTotal > 0 ? +((jrLessonCompleted / jrLessonTotal) * 100).toFixed(1) : 0;
+
+      // userLevel from aggregated difficulty-band attempts across all subjects in this role
+      const jrCorrectCoverage = jrTotalNumTrivia > 0 ? +((jrTotalCorrect / jrTotalNumTrivia) * 100).toFixed(1) : 0;
+      const jrUserLevel = getAggregateUserLevel(
+        subjects.reduce((s: number, sub: any) => s + sub.attemptedEasy, 0),
+        subjects.reduce((s: number, sub: any) => s + sub.correctEasy, 0),
+        subjects.reduce((s: number, sub: any) => s + sub.attemptedMedium, 0),
+        subjects.reduce((s: number, sub: any) => s + sub.correctMedium, 0),
+        subjects.reduce((s: number, sub: any) => s + sub.attemptedHard, 0),
+        subjects.reduce((s: number, sub: any) => s + sub.correctHard, 0),
+        jrCorrectCoverage,
+      );
+
+      // Cert tracks — subject tracks are light copies (no topic detail) to keep the dashboard lean
+      const certMap = certByJobRole.get(+jr.id) ?? new Map<number, CertEntry>();
+      let jrCertsAchieved = 0, jrCertsInProgress = 0;
+      const certificationTracks = [...certMap.values()].map(({ meta: ct, stIds }) => {
+        const subjectTracks = [...new Set(stIds)].map((stId) => {
+          const full = stMap.get(stId);
+          if (!full) return null;
+          const row = certRows.find((r) => +r.stId === stId && +r.ctJobRoleId === +jr.id);
+          return {
+            id: full.id,
+            title: full.title ?? '',
+            slug: full.slug ?? '',
+            sortOrder: full.sortOrder ?? 0,
+            totalTopics: full.totalTopics ?? 0,
+            subject: row
+              ? { id: +(row.stSubjectId ?? 0), title: row.stSubjectTitle ?? '', slug: row.stSubjectSlug ?? '' }
+              : null,
+            progressPercent: full.progressPercent ?? 0,
+            isCompleted: full.isCompleted ?? false,
+          };
+        }).filter(Boolean);
+
+        const total = subjectTracks.length;
+        const completed = subjectTracks.filter((st: any) => st.isCompleted).length;
+        const progressPercent = total > 0 ? +((completed / total) * 100).toFixed(0) : 0;
+        const isAchieved = progressPercent >= CERT_ACHIEVED;
+
+        totalCertTracks++;
+        if (isAchieved) { certTracksAchieved++; jrCertsAchieved++; }
+        else if (completed > 0) { certTracksInProgress++; jrCertsInProgress++; }
+
+        return {
+          ...ct,
+          totalSubjectTracks: total, completedSubjectTracks: completed,
+          progressPercent, isAchieved, achievementThreshold: CERT_ACHIEVED,
+          subjectTracks,
+        };
+      });
+
+      const { nextCertificationTrack, nextSubjectTrack } = this.pickNextBestAction(certificationTracks);
+
+      return {
+        id: +jr.id, title: jr.title, slug: jr.slug,
+        image: jr.image, color: jr.color, description: jr.description,
+        summary: {
+          score: jrScore,
+          accuracy: jrAccuracy,
+          triviaCompletion: jrTriviaCompletion,
+          lessonCompletion: jrLessonCompletion,
+          userLevel: jrUserLevel,
+          certTracksTotal: certMap.size,
+          certTracksAchieved: jrCertsAchieved,
+          certTracksInProgress: jrCertsInProgress,
+        },
+        certificationTracks,
+        badges: badgesByRole.get(+jr.id) ?? [],
+        nextCertificationTrack,
+        nextSubjectTrack,
+      };
+    });
+
+    // Overall summary — computed from unique subjects (not double-counted per role)
+    let sumScore = 0, sumAttempted = 0, sumCorrect = 0, sumNumTrivia = 0;
+    for (const subjectId of allSubjectIds) {
+      const raw = subjectStatsMap.get(subjectId) ?? {};
+      const attempted = +raw.attempted || 0;
+      const correct = +raw.correct || 0;
+      const wrong = +raw.wrong || 0;
+      sumScore += generateScore(attempted, correct, wrong);
+      sumAttempted += attempted;
+      sumCorrect += correct;
+      sumNumTrivia += +raw.numTrivia || 0;
+    }
+    const overallScore = allSubjectIds.length ? +(sumScore / allSubjectIds.length).toFixed(0) : 0;
+    const overallAccuracy = sumAttempted > 0 ? +(sumCorrect * 100 / sumAttempted).toFixed(1) : 0;
+    const overallTriviaCompletion = sumNumTrivia > 0 ? +((sumAttempted / sumNumTrivia) * 100).toFixed(1) : 0;
+    const totalLessons = lessons.length;
+    const completedLessons = lessons.filter((l) => l.status === 'Completed').length;
+    const lessonCompletion = totalLessons > 0 ? +((completedLessons / totalLessons) * 100).toFixed(1) : 0;
+
+    return {
+      summary: {
+        totalJobRoles: jobRoles.length,
+        totalSubjects,
+        totalLessons,
+        completedLessons,
+        lessonCompletion,
+        totalCertTracks,
+        certTracksAchieved,
+        certTracksInProgress,
+        certTracksNotStarted: totalCertTracks - certTracksAchieved - certTracksInProgress,
+        overallScore,
+        overallAccuracy,
+        overallTriviaCompletion,
+      },
+      lessons,
+      jobRoles: jobRoleDashboards,
+    };
+  }
+
+  // ─── Lessons for subjects (used by enriched career dashboard) ────────────────
+
+  private async fetchLessonsForSubjects(subjectIds: number[], userId?: number) {
+    if (!subjectIds.length) return [];
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('l.id', 'id')
+      .addSelect('l.title', 'title')
+      .addSelect('l.slug', 'slug')
+      .addSelect('l.level', 'level')
+      .addSelect('l.format', 'format')
+      .addSelect('l.subjectId', 'subjectId')
+      .addSelect('s.title', 'subjectName')
+      .addSelect('l.topicId', 'topicId')
+      .addSelect('t.title', 'topicTitle')
+      .addSelect('t.order', 'topicOrder')
+      .addSelect('COUNT(ls.id)', 'numSections')
+      .addSelect('ult.status', 'status')
+      .addSelect('ult.progressPercent', 'progressPercent')
+      .addSelect('ult.views', 'views')
+      .from('lesson', 'l')
+      .innerJoin('subject', 's', 's.id = l.subjectId')
+      .innerJoin('topic', 't', 't.id = l.topicId')
+      .leftJoin('lesson_section', 'ls', 'ls.lessonId = l.id')
+      .leftJoin('user_lesson_tracker', 'ult', 'ult.lessonId = l.id AND ult.userId = :userId', { userId: userId ?? 0 })
+      .where('l.subjectId IN (:...subjectIds)', { subjectIds })
+      .groupBy('l.id')
+      .addGroupBy('s.title')
+      .addGroupBy('t.title')
+      .addGroupBy('t.order')
+      .addGroupBy('ult.status')
+      .addGroupBy('ult.progressPercent')
+      .addGroupBy('ult.views')
+      .orderBy('l.subjectId', 'ASC')
+      .addOrderBy('t.order', 'ASC')
+      .addOrderBy('l.level', 'ASC')
+      .addOrderBy('l.id', 'ASC')
+      .getRawMany();
+
+    return rows.map((r) => ({
+      id: +r.id,
+      title: r.title ?? '',
+      slug: r.slug ?? '',
+      level: +(r.level ?? 1),
+      format: r.format ?? null,
+      subjectId: +(r.subjectId ?? 0),
+      subjectName: r.subjectName ?? '',
+      topicId: +(r.topicId ?? 0),
+      topicTitle: r.topicTitle ?? '',
+      topicOrder: +(r.topicOrder ?? 0),
+      numSections: +(r.numSections ?? 0),
+      status: r.status ?? null,
+      progressPercent: r.progressPercent != null ? +(r.progressPercent) : 0,
+      views: r.views != null ? +(r.views) : 0,
+    }));
   }
 
   // ─── Program Details (public + optional auth) ─────────────────────────────────

@@ -189,6 +189,15 @@ export interface RecentActivityItem {
 // ---------------------
 // Combined Dashboard Data
 // ---------------------
+export interface DashboardMeta {
+  /** true if one or more sections below fell back to zeroed/empty data because their query
+   * failed — the rest of the response is still real data, this just flags that some isn't. */
+  partial: boolean;
+  /** Names of the top-level keys (e.g. "achievements", "trends") that failed and are showing
+   * fallback data. Empty when `partial` is false. */
+  failedSections: string[];
+}
+
 export interface AdminDashboardData {
   overview: OverviewStats;
   people: PeopleStats;
@@ -197,6 +206,7 @@ export interface AdminDashboardData {
   achievements: AchievementStats;
   recentActivity: RecentActivityItem[];
   trends: TrendsStats;
+  meta: DashboardMeta;
 }
 
 export interface AdminDashboardResponse {

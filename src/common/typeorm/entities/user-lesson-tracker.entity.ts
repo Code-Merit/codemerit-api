@@ -5,12 +5,16 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  Unique,
   UpdateDateColumn,
 } from 'typeorm';
 import { AbstractEntity } from './abstract.entity';
 import { Lesson } from './lesson.entity';
 import { User } from './user.entity';
 
+// One tracker row per (userId, lessonId) — enforced below so concurrent "record access" calls
+// can never fork a single user's progress on one lesson into two rows.
+@Unique(['userId', 'lessonId'])
 @Entity('user_lesson_tracker')
 export class UserLessonTracker extends AbstractEntity {
   @Column({
@@ -39,6 +43,13 @@ export class UserLessonTracker extends AbstractEntity {
     default: UserLessonTrackerStatusEnum.Pending,
   })
   status: UserLessonTrackerStatusEnum;
+
+  @Column({
+    type: 'int',
+    nullable: false,
+    default: 0,
+  })
+  progressPercent: number;
 
   @Column({
     type: 'text',

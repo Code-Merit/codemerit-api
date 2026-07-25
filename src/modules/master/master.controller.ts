@@ -72,6 +72,12 @@ export class MasterController {
     return this.programService.getCareerDashboard(req.user.id);
   }
 
+  @UseGuards(AuthGuard('jwt'))
+  @Get('career-dashboard')
+  async getEnrichedCareerDashboard(@Request() req: any) {
+    return this.programService.getEnrichedCareerDashboard(req.user.id);
+  }
+
   @Get('userQuizStats')
   async getUserStats(@Request() req) {
     const userId = req.user?.id;
