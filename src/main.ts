@@ -20,6 +20,9 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       const allowedOrigins = [
+        'http://www.services.codemerit.in',
+        'https://www.services.codemerit.in',
+        'https://www.codemerit.in',
         'http://services.codemerit.in',
         'https://services.codemerit.in',
         'https://codemerit.in'
