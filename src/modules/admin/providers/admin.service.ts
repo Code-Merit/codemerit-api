@@ -6,12 +6,14 @@ import { AdminPeopleService } from './admin-people.service';
 import { AdminContentService } from './admin-content.service';
 import { AdminEngagementService } from './admin-engagement.service';
 import { AdminAchievementsService } from './admin-achievements.service';
+import { AdminInterviewsService } from './admin-interviews.service';
 import { AdminTrendsService } from './admin-trends.service';
 import {
   PeopleStats,
   ContentStats,
   EngagementStats,
   AchievementStats,
+  InterviewStats,
   RecentActivityItem,
   TrendsStats,
 } from '../dtos/admin-dashboard.model';
@@ -71,7 +73,18 @@ const EMPTY_ACHIEVEMENTS: AchievementStats = {
   },
 };
 
-const EMPTY_TREND_SERIES = { users: [], questions: [], quizzes: [], attempts: [], certificates: [], badges: [] };
+const EMPTY_INTERVIEWS: InterviewStats = {
+  total: 0,
+  byStatus: { scheduled: 0, inProgress: 0, completed: 0, cancelled: 0 },
+  roundsByStatus: { assigned: 0, started: 0, completed: 0, declined: 0, cancelled: 0 },
+  scheduledThisWeek: 0,
+  scheduledThisMonth: 0,
+  completionRate: 0,
+  declineRate: 0,
+  topInterviewers: [],
+};
+
+const EMPTY_TREND_SERIES = { users: [], questions: [], quizzes: [], attempts: [], certificates: [], badges: [], interviews: [] };
 const EMPTY_TRENDS: TrendsStats = { daily: { ...EMPTY_TREND_SERIES }, weekly: { ...EMPTY_TREND_SERIES } };
 
 @Injectable()
@@ -86,6 +99,7 @@ export class AdminService {
     private readonly contentService: AdminContentService,
     private readonly engagementService: AdminEngagementService,
     private readonly achievementsService: AdminAchievementsService,
+    private readonly interviewsService: AdminInterviewsService,
     private readonly trendsService: AdminTrendsService,
   ) {}
 
@@ -95,6 +109,7 @@ export class AdminService {
       { value: content, failed: contentFailed },
       { value: engagement, failed: engagementFailed },
       { value: achievements, failed: achievementsFailed },
+      { value: interviews, failed: interviewsFailed },
       { value: recentActivity, failed: recentActivityFailed },
       { value: trends, failed: trendsFailed },
     ] = await Promise.all([
@@ -102,6 +117,7 @@ export class AdminService {
       this.settle('content', this.contentService.getContentStats(), EMPTY_CONTENT),
       this.settle('engagement', this.engagementService.getEngagementStats(), EMPTY_ENGAGEMENT),
       this.settle('achievements', this.achievementsService.getAchievementStats(), EMPTY_ACHIEVEMENTS),
+      this.settle('interviews', this.interviewsService.getInterviewStats(), EMPTY_INTERVIEWS),
       this.settle('recentActivity', this.getRecentActivity(), [] as RecentActivityItem[]),
       this.settle('trends', this.trendsService.getTrends(), EMPTY_TRENDS),
     ]);
@@ -122,6 +138,7 @@ export class AdminService {
       totalQuestionAttempts: engagement.questionAttempts.total,
       certificatesIssued: achievements.certificates.totalIssued,
       badgesAwarded: achievements.badges.totalAwarded,
+      totalInterviews: interviews.total,
     };
 
     const failedSections = [
@@ -129,6 +146,7 @@ export class AdminService {
       contentFailed && 'content',
       engagementFailed && 'engagement',
       achievementsFailed && 'achievements',
+      interviewsFailed && 'interviews',
       recentActivityFailed && 'recentActivity',
       trendsFailed && 'trends',
     ].filter((s): s is string => !!s);
@@ -139,6 +157,7 @@ export class AdminService {
       content,
       engagement,
       achievements,
+      interviews,
       recentActivity,
       trends,
       meta: { partial: failedSections.length > 0, failedSections },
@@ -192,7 +211,7 @@ export class AdminService {
       userId: +r.userId,
       userName: [r.firstName, r.lastName].filter(Boolean).join(' ') || null,
       dataType: r.dataType ?? null,
-      dataId: r.dataId !== null ? +r.dataId : null,
+      dataId: r.dataId ?? null,
       createdAt: r.createdAt,
     }));
   }

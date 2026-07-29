@@ -19,7 +19,7 @@ export class ActivityService {
     userId: number,
     title: string,
     message: string,
-    dataId?: number,
+    dataId?: string,
     dataType?: string,
   ): Promise<Activity> {
     try {

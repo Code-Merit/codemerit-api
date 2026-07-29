@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Equal, In, IsNull, Or, Repository } from 'typeorm';
 import { Permission } from '../typeorm/entities/permission.entity';
 import { UserPermission } from '../typeorm/entities/user-permission.entity';
+import { User } from '../typeorm/entities/user.entity';
 import { UserPermissionTitleEnum } from './user-permission.enum';
 
 @Injectable()
@@ -39,6 +40,24 @@ export class PermissionsService {
             relations: ['permission'],
         });
         return Boolean(result);
+    }
+
+    /** Distinct users holding any of the given global ("Role:"-style) permissions —
+     * e.g. sourcing an SME picker for an assign-round UI. Unscoped (resourceType/
+     * resourceId ignored), matching how hasGlobalPermission checks these grants. */
+    async findUsersByPermissions(permissions: string[]): Promise<User[]> {
+        const grants = await this.userPermissionRepo.find({
+            where: { permission: { permission: In(permissions) } },
+            relations: ['user', 'permission'],
+        });
+
+        const usersById = new Map<number, User>();
+        for (const grant of grants) {
+            if (grant.user) {
+                usersById.set(grant.user.id, grant.user);
+            }
+        }
+        return Array.from(usersById.values());
     }
 
     //add utility

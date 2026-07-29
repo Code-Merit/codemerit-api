@@ -34,6 +34,13 @@ export class SkillRatingController {
     );
   }
 
+  // Registered before ':id' — otherwise Nest would match this path as {id: 'skill-metrics'}.
+  @Get('skill-metrics')
+  async findSkillMetrics(): Promise<ApiResponse<any>> {
+    const result = await this.skillRatingService.findActiveSkillMetrics();
+    return new ApiResponse('Skill metrics fetched successfully', result);
+  }
+
   @Get(':id')
   async findOne(
     @Param(

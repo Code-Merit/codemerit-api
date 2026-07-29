@@ -1,0 +1,7 @@
+export enum AssessmentSessionStatusEnum {
+  ASSIGNED = 'ASSIGNED',
+  STARTED = 'STARTED',
+  COMPLETED = 'COMPLETED',
+  DECLINED = 'DECLINED',
+  CANCELLED = 'CANCELLED',
+}

@@ -505,7 +505,7 @@ export class AchievementService {
         userId,
         'Certificate Earned',
         `You earned the "${track?.title ?? 'Certification'}" certificate.`,
-        certificationTrackId,
+        String(certificationTrackId),
         'certification_track',
       );
 
@@ -543,7 +543,7 @@ export class AchievementService {
       userId,
       'Badge Earned',
       `You earned the "${badge.name}" badge.`,
-      badge.id,
+      String(badge.id),
       'badge',
     );
   }
@@ -714,7 +714,7 @@ export class AchievementService {
       dto.userId,
       'Badge Earned',
       `You earned the "${badge.name}" badge.`,
-      badge.id,
+      String(badge.id),
       'badge',
     );
 

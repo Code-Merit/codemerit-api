@@ -20,11 +20,15 @@ export class Interview extends AbstractEntity {
   @Column()
   userId: number;
 
-  //extrernal tracking Id
+  // Assigned interviewer (SME) user id. DB column is still named `externalId`
+  // (kept as-is to avoid a column-rename migration); the TS property was
+  // renamed to reflect its actual purpose.
   @Column({
+    name: 'externalId',
+    type: 'int',
     nullable: true,
   })
-  externalId?: string;
+  interviewerId?: number;
 
   @Column()
   jobRoleId: number;
@@ -56,6 +60,11 @@ export class Interview extends AbstractEntity {
   @Column({
     nullable: true,
   })
+  startedAt?: Date;
+
+  @Column({
+    nullable: true,
+  })
   completedAt?: Date;
 
   @CreateDateColumn()
@@ -79,6 +88,12 @@ export class Interview extends AbstractEntity {
     name: 'jobRoleId',
   })
   jobRole: JobRole;
+
+  @ManyToOne(() => User)
+  @JoinColumn({
+    name: 'externalId',
+  })
+  interviewer?: User;
 
   @OneToMany(
     () => AssessmentSession,

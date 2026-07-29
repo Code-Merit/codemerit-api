@@ -10,6 +10,7 @@ import { uiRoutes } from '../routes/ui.routes';
 import { userRoutes } from '../routes/user.routes';
 import { smeRoutes, smeInterviewRoutes } from '../routes/sme.routes';
 import { footerRoutes } from '../routes/footer.routes';
+import { interviewRoutes, interviewManagerRoutes } from '../routes/interview.routes';
 
 @Injectable()
 export class RouteService {
@@ -53,23 +54,33 @@ export class RouteService {
 
     let routes: any[] = [
       ...welcomeRoutes,
-      ...adminRoutes,
+      ...interviewRoutes
     ];
 
     const permissionNames = userPermissions.map((p) => p.permissionName);
-    if (permissionNames.includes(UserPermissionEnum.LmsManager)) {
-      routes = [...routes, ...lmsRoutes, ...quizRoutes, ...smeRoutes];
-    }
     if (permissionNames.includes(UserPermissionEnum.Sme)) {
       routes = [...routes, ...smeInterviewRoutes];
     }
-    // Admins already saw this via adminRoutes historically; Talent Partners get it purely via
-    // permission, regardless of their own base role (which is typically 'User', not 'Admin').
+    if (permissionNames.includes(UserPermissionEnum.LmsManager)) {
+      routes = [...routes, ...lmsRoutes, ...quizRoutes, ...smeRoutes];
+    }
+    // Mirrors InterviewManagerGuard's own access check (Admin role OR Role:InterviewManager
+    // permission) so the nav item only shows up for users who can actually use the page.
     if (
       this.normalizeRole(userRole) === UserRoleEnum.ADMIN ||
-      permissionNames.includes(UserPermissionEnum.TalentPartner)
+      permissionNames.includes(UserPermissionEnum.InterviewManager)
+    ) {
+      routes = [...routes, ...interviewManagerRoutes];
+    }
+
+    if (permissionNames.includes(UserPermissionEnum.TalentPartner)
     ) {
       routes = [...routes, ...manageUsersRoutes];
+    }
+    if (
+      this.normalizeRole(userRole) === UserRoleEnum.ADMIN
+    ) {
+      routes = [...routes, ...adminRoutes];
     }
     routes = [...routes,
       ...uiRoutes,

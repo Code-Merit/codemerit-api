@@ -17,13 +17,6 @@ export class UpdateInterviewDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   title?: string;
 
-  @ApiPropertyOptional({ example: 'EXT-1001' })
-  @IsOptional()
-  @IsString()
-  @Length(1, 100)
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-  externalId?: string;
-
   @ApiPropertyOptional({ example: 101 })
   @IsOptional()
   @IsInt()

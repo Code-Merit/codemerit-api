@@ -26,11 +26,16 @@ export class Activity extends AbstractEntity {
   })
   message: string;
 
+  // Was `int` — widened to varchar so this can hold either a numeric id's string form (badge,
+  // certification track, user) or a non-numeric public code (interviewCode for INTERVIEW-type
+  // activities, since there's no lookup-by-numeric-id endpoint for interviews). See
+  // migrate-activity-dataid-varchar.js.
   @Column({
-    type: 'int',
+    type: 'varchar',
+    length: 64,
     nullable: true,
   })
-  dataId?: number;
+  dataId?: string;
 
   @Column({
     type: 'varchar',

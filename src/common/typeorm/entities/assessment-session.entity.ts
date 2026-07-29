@@ -1,4 +1,5 @@
 import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
+import { AssessmentSessionStatusEnum } from 'src/common/enum/assessment-session-status.enum';
 import {
   Column,
   CreateDateColumn,
@@ -87,6 +88,51 @@ export class AssessmentSession
     default: null,
   })
   interviewerId?: number;
+
+  // Interview "round" fields — only meaningful when ratingType === INTERVIEW.
+  // Each round of a multi-round interview gets its own row here.
+  @Column({
+    type: 'int',
+    nullable: true,
+  })
+  roundNumber?: number;
+
+  @Column({
+    type: 'enum',
+    enum: AssessmentSessionStatusEnum,
+    nullable: true,
+  })
+  status?: AssessmentSessionStatusEnum;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  scheduledAt?: Date;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  startedAt?: Date;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+  })
+  completedAt?: Date;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  feedback?: string;
+
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  declineReason?: string;
 
   @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })

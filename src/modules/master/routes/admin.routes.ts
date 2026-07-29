@@ -1,5 +1,17 @@
 export const adminRoutes = [
   {
+    path: "",
+    title: "Administration",
+    iconType: "",
+    icon: "",
+    class: "",
+    groupTitle: true,
+    badge: "",
+    badgeClass: "",
+    role: ['User', 'Admin'],
+    submenu: []
+  },
+  {
     path: '',
     title: 'Dashboard',
     iconType: 'material-icons-outlined',
@@ -37,6 +49,18 @@ export const adminRoutes = [
     ],
   },
   {
+    path: '/users/list',
+    title: 'Manage Users',
+    iconType: 'material-icons-outlined',
+    icon: 'supervised_user_circle',
+    class: '',
+    groupTitle: false,
+    badge: '',
+    badgeClass: '',
+    role: ['All'],
+    submenu: [],
+  },
+  {
     path: '/admin/permissions/list',
     title: 'User Permissions',
     iconType: 'material-icons-outlined',
@@ -55,9 +79,21 @@ export const adminRoutes = [
 // here because visibility is already fully decided by that injection condition, not by the
 // caller's actual UserRoleEnum value (a Talent Partner's own role is typically 'User', not 'Admin').
 export const manageUsersRoutes = [
+    {
+    path: "",
+    title: "Talent Partner Tools",
+    iconType: "",
+    icon: "",
+    class: "",
+    groupTitle: true,
+    badge: "",
+    badgeClass: "",
+    role: ['User', 'Admin'],
+    submenu: []
+  },
   {
     path: '/users/list',
-    title: 'Manage Users',
+    title: 'Tech Talents',
     iconType: 'material-icons-outlined',
     icon: 'supervised_user_circle',
     class: '',

@@ -172,6 +172,255 @@ export function streakMilestoneTemplate(
   };
 }
 
+export function interviewRescheduledTemplate(
+  name: string,
+  title: string,
+  scheduledAt: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeWhen = escapeHtml(scheduledAt);
+  return {
+    subject: `Your interview "${title}" has been rescheduled`,
+    html: renderEmailLayout({
+      preheader: `Your interview is now scheduled for ${scheduledAt}.`,
+      heading: 'Interview rescheduled',
+      bodyHtml: `
+        <p>Hi ${safeName}, your interview <strong>${safeTitle}</strong> has been rescheduled.</p>
+        <p>New date &amp; time: <strong>${safeWhen}</strong></p>
+      `,
+      ctaLabel: 'View interview details',
+      ctaUrl: '{{FRONTEND_URL}}',
+    }),
+  };
+}
+
+export function interviewAssignedTemplate(
+  name: string,
+  title: string,
+  scheduledAt: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeWhen = escapeHtml(scheduledAt);
+  return {
+    subject: `You've been assigned to conduct "${title}"`,
+    html: renderEmailLayout({
+      preheader: `You're assigned to conduct an interview on ${scheduledAt}.`,
+      heading: 'New interview assigned',
+      bodyHtml: `
+        <p>Hi ${safeName}, you've been assigned to conduct the interview <strong>${safeTitle}</strong>.</p>
+        <p>Scheduled for: <strong>${safeWhen}</strong></p>
+      `,
+      ctaLabel: 'View interview details',
+      ctaUrl: '{{FRONTEND_URL}}',
+    }),
+  };
+}
+
+export function interviewScheduledTemplate(
+  name: string,
+  title: string,
+  scheduledAt: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeWhen = escapeHtml(scheduledAt);
+  return {
+    subject: `Your interview "${title}" is scheduled`,
+    html: renderEmailLayout({
+      preheader: `You're booked in for ${scheduledAt}.`,
+      heading: "You're booked in!",
+      bodyHtml: `
+        <p>Hi ${safeName}, thanks for scheduling your interview <strong>${safeTitle}</strong>.</p>
+        <p>Target date &amp; time: <strong>${safeWhen}</strong></p>
+        <p>We'll email you again as soon as an interviewer is assigned and confirmed. If your plans
+        change before then, you can reschedule or cancel from your dashboard.</p>
+      `,
+      ctaLabel: 'View interview details',
+      ctaUrl: '{{FRONTEND_URL}}',
+    }),
+  };
+}
+
+export function interviewCancelledTemplate(
+  name: string,
+  title: string,
+  reason: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeReason = escapeHtml(reason);
+  return {
+    subject: `Your interview "${title}" has been cancelled`,
+    html: renderEmailLayout({
+      preheader: `Your interview "${title}" has been cancelled.`,
+      heading: 'Interview cancelled',
+      bodyHtml: `
+        <p>Hi ${safeName}, your interview <strong>${safeTitle}</strong> has been cancelled.</p>
+        <p>Reason: <strong>${safeReason}</strong></p>
+        <p>No further action is needed on your end. If you have questions about this or would like to
+        schedule a new interview, please get in touch.</p>
+      `,
+    }),
+  };
+}
+
+export function interviewCompletedTemplate(
+  name: string,
+  title: string,
+  feedback?: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const feedbackHtml = feedback
+    ? `<p>Summary from the panel: <strong>${escapeHtml(feedback)}</strong></p>`
+    : '';
+  return {
+    subject: `Your interview "${title}" has been completed`,
+    html: renderEmailLayout({
+      preheader: `Your interview "${title}" is complete — your report is ready.`,
+      heading: 'Interview complete',
+      bodyHtml: `
+        <p>Hi ${safeName}, your interview <strong>${safeTitle}</strong> has now been completed and
+        reviewed across all its rounds.</p>
+        ${feedbackHtml}
+        <p>You can view the full report — including feedback from every round — any time.</p>
+      `,
+      ctaLabel: 'View your full report',
+      ctaUrl: '{{FRONTEND_URL}}',
+    }),
+  };
+}
+
+export function interviewRoundScheduledTemplate(
+  name: string,
+  title: string,
+  roundNumber: number,
+  scheduledAt: string,
+  interviewerName: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeWhen = escapeHtml(scheduledAt);
+  const safeInterviewer = escapeHtml(interviewerName);
+  return {
+    subject: `Round ${roundNumber} of "${title}" is scheduled`,
+    html: renderEmailLayout({
+      preheader: `Round ${roundNumber} is scheduled for ${scheduledAt}.`,
+      heading: 'Your next interview round is set',
+      bodyHtml: `
+        <p>Hi ${safeName}, round ${roundNumber} of your interview <strong>${safeTitle}</strong> has
+        been scheduled.</p>
+        <p>Date &amp; time: <strong>${safeWhen}</strong></p>
+        <p>You'll be meeting with: <strong>${safeInterviewer}</strong></p>
+      `,
+      ctaLabel: 'View interview details',
+      ctaUrl: '{{FRONTEND_URL}}',
+    }),
+  };
+}
+
+export function interviewRoundCancelledTemplate(
+  name: string,
+  title: string,
+  roundNumber: number,
+  reason: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeReason = escapeHtml(reason);
+  return {
+    subject: `Round ${roundNumber} of "${title}" has been cancelled`,
+    html: renderEmailLayout({
+      preheader: `Round ${roundNumber} you were assigned has been cancelled.`,
+      heading: 'Interview round cancelled',
+      bodyHtml: `
+        <p>Hi ${safeName}, round ${roundNumber} of <strong>${safeTitle}</strong>, which you were
+        assigned to conduct, has been cancelled.</p>
+        <p>Reason: <strong>${safeReason}</strong></p>
+        <p>No action is needed from you — nothing further is scheduled for this round.</p>
+      `,
+    }),
+  };
+}
+
+export function interviewRoundCompletedTemplate(
+  name: string,
+  title: string,
+  roundNumber: number,
+  feedback?: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const feedbackHtml = feedback
+    ? `<p>Interviewer feedback: <strong>${escapeHtml(feedback)}</strong></p>`
+    : '';
+  return {
+    subject: `Round ${roundNumber} of "${title}" is complete`,
+    html: renderEmailLayout({
+      preheader: `Round ${roundNumber} of "${title}" has been completed and reviewed.`,
+      heading: 'Round complete',
+      bodyHtml: `
+        <p>Hi ${safeName}, round ${roundNumber} of your interview <strong>${safeTitle}</strong> has
+        been completed and reviewed.</p>
+        ${feedbackHtml}
+        <p>If another round is needed, we'll be in touch to schedule it. Otherwise, you'll hear from
+        us once the overall interview has been finalized.</p>
+      `,
+      ctaLabel: 'View interview details',
+      ctaUrl: '{{FRONTEND_URL}}',
+    }),
+  };
+}
+
+export function interviewRoundDeclinedTemplate(
+  name: string,
+  title: string,
+  roundNumber: number,
+  reason: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeReason = escapeHtml(reason);
+  return {
+    subject: `Update on round ${roundNumber} of "${title}"`,
+    html: renderEmailLayout({
+      preheader: `There's an update on round ${roundNumber} of "${title}".`,
+      heading: 'Round update',
+      bodyHtml: `
+        <p>Hi ${safeName}, round ${roundNumber} of your interview <strong>${safeTitle}</strong> was
+        marked as declined by the interviewer.</p>
+        <p>Reason given: <strong>${safeReason}</strong></p>
+        <p>If you believe this was recorded in error, please get in touch so we can look into it.</p>
+      `,
+    }),
+  };
+}
+
+export function interviewCancelledSmeNoticeTemplate(
+  name: string,
+  title: string,
+  reason: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeReason = escapeHtml(reason);
+  return {
+    subject: `Interview "${title}" has been cancelled`,
+    html: renderEmailLayout({
+      preheader: `The interview "${title}" you were assigned to has been cancelled.`,
+      heading: 'Interview cancelled',
+      bodyHtml: `
+        <p>Hi ${safeName}, the interview <strong>${safeTitle}</strong> you were assigned to has been
+        cancelled.</p>
+        <p>Reason: <strong>${safeReason}</strong></p>
+        <p>No action is needed from you — nothing further is scheduled for this interview.</p>
+      `,
+    }),
+  };
+}
+
 export function levelUpTemplate(
   name: string,
   level: number,

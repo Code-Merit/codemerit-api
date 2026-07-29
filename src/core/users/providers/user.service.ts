@@ -531,7 +531,7 @@ export class UserService {
           user.id,
           'Password Changed',
           'Your account password was updated successfully.',
-          user.id,
+          String(user.id),
           'USER',
         );
       } catch (err) {
@@ -684,7 +684,7 @@ export class UserService {
               user.id,
               'User Registration',
               'Your account has been verified and created successfully.',
-              user.id,
+              String(user.id),
               'USER',
             );
           } catch (err) {
@@ -707,7 +707,7 @@ export class UserService {
               user.id,
               'Password Changed',
               'Your account password was updated successfully.',
-              user.id,
+              String(user.id),
               'USER',
             );
           } catch (err) {

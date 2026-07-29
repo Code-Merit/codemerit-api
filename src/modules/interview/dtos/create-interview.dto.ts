@@ -9,6 +9,7 @@ import {
   Length,
   IsNotEmpty,
   Matches,
+  Min,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
@@ -65,4 +66,10 @@ export class CreateInterviewDto {
   @IsString()
   @Matches(/^\d{10,15}$/)
   mobile?: string;
+
+  @ApiPropertyOptional({ example: 3, description: "Candidate's years of experience — stored on their Profile." })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  yearsExperience?: number;
 }

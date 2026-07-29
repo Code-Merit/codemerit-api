@@ -6,6 +6,16 @@ import {
   accountVerifiedTemplate,
   badgeEarnedTemplate,
   certificateIssuedTemplate,
+  interviewAssignedTemplate,
+  interviewCancelledTemplate,
+  interviewCancelledSmeNoticeTemplate,
+  interviewCompletedTemplate,
+  interviewRescheduledTemplate,
+  interviewRoundCancelledTemplate,
+  interviewRoundCompletedTemplate,
+  interviewRoundDeclinedTemplate,
+  interviewRoundScheduledTemplate,
+  interviewScheduledTemplate,
   levelUpTemplate,
   otpTemplate,
   passwordChangedTemplate,
@@ -105,6 +115,113 @@ export class MailService {
     days: number,
   ): Promise<void> {
     await this.dispatch(to, streakMilestoneTemplate(name, days));
+  }
+
+  async sendInterviewRescheduledEmail(
+    to: string,
+    name: string,
+    title: string,
+    scheduledAt: string,
+  ): Promise<void> {
+    await this.dispatch(to, interviewRescheduledTemplate(name, title, scheduledAt));
+  }
+
+  async sendInterviewAssignedEmail(
+    to: string,
+    name: string,
+    title: string,
+    scheduledAt: string,
+  ): Promise<void> {
+    await this.dispatch(to, interviewAssignedTemplate(name, title, scheduledAt));
+  }
+
+  async sendInterviewScheduledEmail(
+    to: string,
+    name: string,
+    title: string,
+    scheduledAt: string,
+  ): Promise<void> {
+    await this.dispatch(to, interviewScheduledTemplate(name, title, scheduledAt));
+  }
+
+  async sendInterviewCancelledEmail(
+    to: string,
+    name: string,
+    title: string,
+    reason: string,
+  ): Promise<void> {
+    await this.dispatch(to, interviewCancelledTemplate(name, title, reason));
+  }
+
+  async sendInterviewCancelledSmeNoticeEmail(
+    to: string,
+    name: string,
+    title: string,
+    reason: string,
+  ): Promise<void> {
+    await this.dispatch(to, interviewCancelledSmeNoticeTemplate(name, title, reason));
+  }
+
+  async sendInterviewCompletedEmail(
+    to: string,
+    name: string,
+    title: string,
+    feedback?: string,
+  ): Promise<void> {
+    await this.dispatch(to, interviewCompletedTemplate(name, title, feedback));
+  }
+
+  async sendInterviewRoundScheduledEmail(
+    to: string,
+    name: string,
+    title: string,
+    roundNumber: number,
+    scheduledAt: string,
+    interviewerName: string,
+  ): Promise<void> {
+    await this.dispatch(
+      to,
+      interviewRoundScheduledTemplate(name, title, roundNumber, scheduledAt, interviewerName),
+    );
+  }
+
+  async sendInterviewRoundCancelledEmail(
+    to: string,
+    name: string,
+    title: string,
+    roundNumber: number,
+    reason: string,
+  ): Promise<void> {
+    await this.dispatch(
+      to,
+      interviewRoundCancelledTemplate(name, title, roundNumber, reason),
+    );
+  }
+
+  async sendInterviewRoundCompletedEmail(
+    to: string,
+    name: string,
+    title: string,
+    roundNumber: number,
+    feedback?: string,
+  ): Promise<void> {
+    await this.dispatch(
+      to,
+      interviewRoundCompletedTemplate(name, title, roundNumber, feedback),
+    );
+  }
+
+  async sendInterviewRoundDeclinedEmail(
+    to: string,
+    name: string,
+    title: string,
+    roundNumber: number,
+    reason: string,
+  ): Promise<void> {
+    await this.dispatch(
+      to,
+      interviewRoundDeclinedTemplate(name, title, roundNumber, reason),
+    );
   }
 
   async sendLevelUpEmail(

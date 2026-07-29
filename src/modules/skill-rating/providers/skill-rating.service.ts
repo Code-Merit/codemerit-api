@@ -14,6 +14,7 @@ import { AssessmentSessionResponseDto } from '../dtos/assessment-session-respons
 import { SkillTypeEnum } from 'src/common/enum/skill-type.enum';
 import { TopicsService } from 'src/modules/topics/providers/topics.service';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
+import { SkillMetric } from 'src/common/typeorm/entities/skill-metric.entity';
 
 @Injectable()
 export class SkillRatingService {
@@ -29,8 +30,20 @@ export class SkillRatingService {
     @InjectRepository(Subject)
     private readonly subjectRepo: Repository<Subject>,
 
+    @InjectRepository(SkillMetric)
+    private readonly skillMetricRepo: Repository<SkillMetric>,
+
     private readonly dataSource: DataSource,
   ) {}
+
+  // Lookup list for building a rating form when skillType === 'SkillMetric' —
+  // skillId in a SkillRating of that type refers to one of these rows.
+  async findActiveSkillMetrics(): Promise<SkillMetric[]> {
+    return this.skillMetricRepo.find({
+      where: { isActive: true },
+      order: { category: 'ASC', title: 'ASC' },
+    });
+  }
 
   async create(dto: CreateAssessmentSessionDto): Promise<AssessmentSession> {
     const queryRunner = this.dataSource.createQueryRunner();

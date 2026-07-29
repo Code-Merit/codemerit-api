@@ -18,6 +18,7 @@ export interface TrendSeries {
   attempts: DailySeriesItem[] | WeeklySeriesItem[];
   certificates: DailySeriesItem[] | WeeklySeriesItem[];
   badges: DailySeriesItem[] | WeeklySeriesItem[];
+  interviews: DailySeriesItem[] | WeeklySeriesItem[];
 }
 
 export interface TrendsStats {
@@ -44,6 +45,7 @@ export interface OverviewStats {
   totalQuestionAttempts: number;
   certificatesIssued: number;
   badgesAwarded: number;
+  totalInterviews: number;
 }
 
 // ---------------------
@@ -173,6 +175,20 @@ export interface AchievementStats {
 }
 
 // ---------------------
+// Interviews
+// ---------------------
+export interface InterviewStats {
+  total: number;
+  byStatus: { scheduled: number; inProgress: number; completed: number; cancelled: number };
+  roundsByStatus: { assigned: number; started: number; completed: number; declined: number; cancelled: number };
+  scheduledThisWeek: number;
+  scheduledThisMonth: number;
+  completionRate: number;
+  declineRate: number;
+  topInterviewers: { id: number; name: string; roundsCompleted: number }[];
+}
+
+// ---------------------
 // Recent Activity
 // ---------------------
 export interface RecentActivityItem {
@@ -182,7 +198,7 @@ export interface RecentActivityItem {
   userId: number;
   userName: string | null;
   dataType: string | null;
-  dataId: number | null;
+  dataId: string | null;
   createdAt: Date;
 }
 
@@ -204,6 +220,7 @@ export interface AdminDashboardData {
   content: ContentStats;
   engagement: EngagementStats;
   achievements: AchievementStats;
+  interviews: InterviewStats;
   recentActivity: RecentActivityItem[];
   trends: TrendsStats;
   meta: DashboardMeta;

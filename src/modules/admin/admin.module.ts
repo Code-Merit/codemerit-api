@@ -6,6 +6,7 @@ import { AdminPeopleService } from './providers/admin-people.service';
 import { AdminContentService } from './providers/admin-content.service';
 import { AdminEngagementService } from './providers/admin-engagement.service';
 import { AdminAchievementsService } from './providers/admin-achievements.service';
+import { AdminInterviewsService } from './providers/admin-interviews.service';
 import { AdminTrendsService } from './providers/admin-trends.service';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { Question } from 'src/common/typeorm/entities/question.entity';
@@ -25,6 +26,8 @@ import { Badge } from 'src/common/typeorm/entities/badge.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { Activity } from 'src/common/typeorm/entities/activity.entity';
+import { Interview } from 'src/common/typeorm/entities/interview.entity';
+import { AssessmentSession } from 'src/common/typeorm/entities/assessment-session.entity';
 
 @Module({
   imports: [
@@ -46,6 +49,8 @@ import { Activity } from 'src/common/typeorm/entities/activity.entity';
       UserBadge,
       UserStreak,
       Activity,
+      Interview,
+      AssessmentSession,
     ]),
   ],
   providers: [
@@ -54,6 +59,7 @@ import { Activity } from 'src/common/typeorm/entities/activity.entity';
     AdminContentService,
     AdminEngagementService,
     AdminAchievementsService,
+    AdminInterviewsService,
     AdminTrendsService,
   ],
   controllers: [AdminController],

@@ -55,12 +55,23 @@ export class ProgramService {
       .filter((st: any) => !st.isCompleted)
       .sort((a: any, b: any) => (b.progressPercent ?? 0) - (a.progressPercent ?? 0));
 
+    const nextSt = incompleteTracks[0] ?? null;
+
     return {
       nextCertificationTrack: {
         id: nextCt.id, title: nextCt.title, progressPercent: nextCt.progressPercent,
       },
-      nextSubjectTrack: incompleteTracks[0]
-        ? { id: incompleteTracks[0].id, title: incompleteTracks[0].title, progressPercent: incompleteTracks[0].progressPercent }
+      nextSubjectTrack: nextSt
+        ? {
+            id: nextSt.id, title: nextSt.title, progressPercent: nextSt.progressPercent,
+            // Lets a dashboard launch a quiz directly against the underlying subject instead
+            // of just pointing at the subjectTrack. subjectTracks carry a nested `subject`
+            // on the enriched/program-detail call sites; the legacy getCareerDashboard call
+            // site only has flat subjectId/subjectName (no slug) — subjectSlug stays null there.
+            subjectId: nextSt.subject?.id ?? nextSt.subjectId ?? null,
+            subjectTitle: nextSt.subject?.title ?? nextSt.subjectName ?? null,
+            subjectSlug: nextSt.subject?.slug ?? null,
+          }
         : null,
     };
   }
@@ -459,27 +470,50 @@ export class ProgramService {
       }
     }
 
-    // Subjects per job role (stats only — no full detail; frontend drills via programDetails)
+    // Subjects per job role — used both to compute the role-level aggregates below and
+    // (with title/slug/image/score attached) returned as-is so the dashboard can show a
+    // per-subject breakdown, not just the job-role rollup.
     const subjectsByJobRole = new Map<number, any[]>();
     for (const rs of roleSubjectRows) {
       const jrId = +rs.jobRoleId;
       if (!subjectsByJobRole.has(jrId)) subjectsByJobRole.set(jrId, []);
       const raw = subjectStatsMap.get(+rs.subjectId) ?? {};
+      const attempted = +raw.attempted || 0;
+      const correct = +raw.correct || 0;
+      const wrong = +raw.wrong || 0;
+      const numTrivia = +raw.numTrivia || 0;
+      const attemptedEasy = +raw.attemptedEasy || 0;
+      const attemptedMedium = +raw.attemptedMedium || 0;
+      const attemptedHard = +raw.attemptedHard || 0;
+      const correctEasy = +raw.correctEasy || 0;
+      const correctMedium = +raw.correctMedium || 0;
+      const correctHard = +raw.correctHard || 0;
+      const numEasyTrivia = +raw.numEasyTrivia || 0;
+      const numIntTrivia = +raw.numIntTrivia || 0;
+      const numAdvTrivia = +raw.numAdvTrivia || 0;
+      const coverage = numTrivia > 0 ? +((attempted / numTrivia) * 100).toFixed(1) : 0;
+      const correctCoverage = numTrivia > 0 ? +((correct / numTrivia) * 100).toFixed(1) : 0;
+      // Coverage per difficulty band — how much of each band the learner has actually
+      // attempted, distinct from `coverage` above which blends all three bands together.
+      const easyCoverage = numEasyTrivia > 0 ? +((attemptedEasy / numEasyTrivia) * 100).toFixed(1) : 0;
+      const intCoverage = numIntTrivia > 0 ? +((attemptedMedium / numIntTrivia) * 100).toFixed(1) : 0;
+      const advCoverage = numAdvTrivia > 0 ? +((attemptedHard / numAdvTrivia) * 100).toFixed(1) : 0;
+      const lessonTotal = lessonTotalBySubject.get(+rs.subjectId) ?? 0;
+      const lessonCompleted = lessonCompletedBySubject.get(+rs.subjectId) ?? 0;
       subjectsByJobRole.get(jrId)!.push({
-        id: +rs.subjectId,
-        tag: rs.tag,
-        attempted: +raw.attempted || 0,
-        correct: +raw.correct || 0,
-        wrong: +raw.wrong || 0,
-        numTrivia: +raw.numTrivia || 0,
-        attemptedEasy: +raw.attemptedEasy || 0,
-        attemptedMedium: +raw.attemptedMedium || 0,
-        attemptedHard: +raw.attemptedHard || 0,
-        correctEasy: +raw.correctEasy || 0,
-        correctMedium: +raw.correctMedium || 0,
-        correctHard: +raw.correctHard || 0,
-        lessonTotal: lessonTotalBySubject.get(+rs.subjectId) ?? 0,
-        lessonCompleted: lessonCompletedBySubject.get(+rs.subjectId) ?? 0,
+        id: +rs.subjectId, title: rs.sTitle, slug: rs.sSlug, image: rs.sImage,
+        color: rs.sColor, tag: rs.tag, sortOrder: +rs.sortOrder,
+        score: +generateScore(attempted, correct, wrong).toFixed(0),
+        accuracy: attempted > 0 ? +(correct * 100 / attempted).toFixed(1) : 0,
+        coverage, correctCoverage, easyCoverage, intCoverage, advCoverage,
+        userLevel: getAggregateUserLevel(
+          attemptedEasy, correctEasy, attemptedMedium, correctMedium, attemptedHard, correctHard, correctCoverage,
+        ),
+        lessonCompletion: lessonTotal > 0 ? +((lessonCompleted / lessonTotal) * 100).toFixed(1) : 0,
+        attempted, correct, wrong, numTrivia,
+        attemptedEasy, attemptedMedium, attemptedHard,
+        correctEasy, correctMedium, correctHard,
+        lessonTotal, lessonCompleted,
       });
     }
 
@@ -562,6 +596,18 @@ export class ProgramService {
 
       const { nextCertificationTrack, nextSubjectTrack } = this.pickNextBestAction(certificationTracks);
 
+      // Public per-subject breakdown — same subjects used to compute jrScore/jrAccuracy
+      // above, just stripped of the raw counters (attempted/correct/wrong/etc.) that only
+      // matter for those aggregates, sorted the same way the subject picker orders them.
+      const subjectsOut = [...subjects]
+        .sort((a: any, b: any) => a.sortOrder - b.sortOrder)
+        .map((s: any) => ({
+          id: s.id, title: s.title, slug: s.slug, image: s.image, color: s.color,
+          tag: s.tag, score: s.score, accuracy: s.accuracy, coverage: s.coverage,
+          correctCoverage: s.correctCoverage, userLevel: s.userLevel, lessonCompletion: s.lessonCompletion,
+          easyCoverage: s.easyCoverage, intCoverage: s.intCoverage, advCoverage: s.advCoverage,
+        }));
+
       return {
         id: +jr.id, title: jr.title, slug: jr.slug,
         image: jr.image, color: jr.color, description: jr.description,
@@ -575,6 +621,7 @@ export class ProgramService {
           certTracksAchieved: jrCertsAchieved,
           certTracksInProgress: jrCertsInProgress,
         },
+        subjects: subjectsOut,
         certificationTracks,
         badges: badgesByRole.get(+jr.id) ?? [],
         nextCertificationTrack,

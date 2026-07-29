@@ -38,4 +38,5 @@ export enum UserPermissionEnum {
   SmeLead = 'Role:SMELead',
   OrganizationOwner = 'Role:OrganizationOwner',
   ProLearner = 'Role:ProLearner',
+  InterviewManager = 'Role:InterviewManager',
 }
