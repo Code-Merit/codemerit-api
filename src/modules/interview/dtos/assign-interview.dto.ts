@@ -7,6 +7,8 @@ import {
   IsPositive,
   IsString,
   Length,
+  Max,
+  Min,
 } from 'class-validator';
 
 export class AssignInterviewDto {
@@ -22,6 +24,19 @@ export class AssignInterviewDto {
   @IsNotEmpty()
   @IsDateString()
   scheduledAt: string;
+
+  @ApiPropertyOptional({
+    example: 60,
+    default: 60,
+    description:
+      "How long this round is booked for, in minutes. Used to detect overlaps against the " +
+      "SME's and candidate's other rounds — defaults to 60 if omitted.",
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(15)
+  @Max(480)
+  durationMinutes?: number;
 
   @ApiPropertyOptional({ example: 'Assigning based on Node.js expertise' })
   @IsOptional()

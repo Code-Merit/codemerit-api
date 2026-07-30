@@ -45,6 +45,7 @@ export async function seedPrograms(
   const trackBySlug = new Map(subjectTracks.map((t) => [t.slug, t]));
 
   let jrsCreated = 0;
+  let jrsUpdated = 0;
   for (const j of data.jobRoleSubjects) {
     const jobRole = jobRoleBySlug.get(j.jobRoleSlug);
     const subject = subjectBySlug.get(j.subjectSlug);
@@ -61,6 +62,9 @@ export async function seedPrograms(
         }),
       );
       jrsCreated++;
+    } else if (exists.tag !== j.tag || exists.sortOrder !== j.sortOrder) {
+      await jrsRepo.save({ ...exists, tag: j.tag as SubjectTagEnum, sortOrder: j.sortOrder, note: j.note });
+      jrsUpdated++;
     }
   }
 
@@ -112,7 +116,7 @@ export async function seedPrograms(
     }
   }
 
-  console.log(`  ✔ Job-role subjects        : ${data.jobRoleSubjects.length} declared (${jrsCreated} created)`);
+  console.log(`  ✔ Job-role subjects        : ${data.jobRoleSubjects.length} declared (${jrsCreated} created, ${jrsUpdated} updated)`);
   console.log(`  ✔ Certification tracks     : ${certTracks.length} records (${ctCreated} created)`);
   console.log(`  ✔ Cert-track-job-role links: ${data.certificationTrackJobRoles.length} declared (${ctJobRoleCreated} created)`);
   console.log(`  ✔ Cert-track-subject links : ${data.certificationTrackSubjectTracks.length} declared (${linksCreated} created)`);

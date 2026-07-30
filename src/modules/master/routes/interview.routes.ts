@@ -2,7 +2,7 @@
 export const interviewRoutes = [
   {
     path: '/assessment/schedule',
-    title: 'Schedule an Interview',
+    title: 'Schedule Interview',
     iconType: 'material-icons-outlined',
     icon: 'event_available',
     class: '',

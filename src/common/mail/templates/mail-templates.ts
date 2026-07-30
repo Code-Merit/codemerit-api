@@ -321,6 +321,31 @@ export function interviewRoundScheduledTemplate(
   };
 }
 
+export function interviewRoundRescheduledTemplate(
+  name: string,
+  title: string,
+  roundNumber: number,
+  scheduledAt: string,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  const safeTitle = escapeHtml(title);
+  const safeWhen = escapeHtml(scheduledAt);
+  return {
+    subject: `Round ${roundNumber} of "${title}" has a new time`,
+    html: renderEmailLayout({
+      preheader: `Round ${roundNumber} you're assigned to has moved to ${scheduledAt}.`,
+      heading: 'Interview round rescheduled',
+      bodyHtml: `
+        <p>Hi ${safeName}, round ${roundNumber} of <strong>${safeTitle}</strong>, which you're
+        assigned to conduct, has been rescheduled.</p>
+        <p>New date &amp; time: <strong>${safeWhen}</strong></p>
+      `,
+      ctaLabel: 'View interview details',
+      ctaUrl: '{{FRONTEND_URL}}',
+    }),
+  };
+}
+
 export function interviewRoundCancelledTemplate(
   name: string,
   title: string,

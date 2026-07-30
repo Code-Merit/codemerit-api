@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { SkillRatingService } from './providers/skill-rating.service';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { CreateAssessmentSessionDto } from './dtos/create-assessment-session.dto';
 import { ApiResponse } from 'src/common/utils/api-response';
 
@@ -34,6 +34,12 @@ export class SkillRatingController {
     );
   }
 
+  @ApiOperation({
+    summary: 'List active skill metrics available for rating',
+    description:
+      'The full catalog of skill metrics an SME can score a candidate on during a round — used to ' +
+      'render the rating form. Only currently-active metrics are returned.',
+  })
   // Registered before ':id' — otherwise Nest would match this path as {id: 'skill-metrics'}.
   @Get('skill-metrics')
   async findSkillMetrics(): Promise<ApiResponse<any>> {

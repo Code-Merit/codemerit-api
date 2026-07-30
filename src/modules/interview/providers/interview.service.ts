@@ -7,7 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, EntityManager } from 'typeorm';
 import { Interview } from 'src/common/typeorm/entities/interview.entity';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { InterviewStatusHistory } from 'src/common/typeorm/entities/interview-status-history.entity';
@@ -62,6 +62,30 @@ export class InterviewService {
     return rounds.some((r) => r.status === AssessmentSessionStatusEnum.STARTED);
   }
 
+  // The round that currently represents "what's actually happening next/now"
+  // for this interview: a round in progress, else one waiting to start, else
+  // (for a fully resolved interview) the most recent round — else none, if no
+  // round has ever been assigned.
+  private getActiveRound(rounds: AssessmentSession[]): AssessmentSession | undefined {
+    return (
+      rounds.find((r) => r.status === AssessmentSessionStatusEnum.STARTED) ??
+      rounds.find((r) => r.status === AssessmentSessionStatusEnum.ASSIGNED) ??
+      [...rounds].sort((a, b) => b.roundNumber - a.roundNumber)[0]
+    );
+  }
+
+  // The single date/time a UI should show for "when is this interview
+  // happening." Interview.scheduledAt is the candidate's original preference
+  // and is never overwritten once a round exists — it and a round's own
+  // scheduledAt are different concepts that can legitimately differ (the
+  // round is what actually got arranged). This is the one field that
+  // resolves that ambiguity: the active round's real time once one exists,
+  // falling back to the preference only when nothing's been scheduled yet.
+  private getEffectiveScheduledAt(interview: Interview): Date {
+    const activeRound = this.getActiveRound(interview.assessmentSessions ?? []);
+    return activeRound?.scheduledAt ?? interview.scheduledAt;
+  }
+
   // Manager actions (update/assign/cancel) are only allowed before the SME has
   // taken (started) the current round — once STARTED, that round belongs to
   // the assessment flow, not the manager.
@@ -79,6 +103,94 @@ export class InterviewService {
       throw new BadRequestException(
         'Cannot modify this interview while a round is in progress. Interview managers can only manage an interview before the SME takes it.',
       );
+    }
+  }
+
+  // Finds a still-live (ASSIGNED/STARTED) round for the given person — either
+  // as SME (`interviewerId`) or candidate (`userId`) — whose [scheduledAt,
+  // scheduledAt+durationMinutes) window overlaps the proposed one. Used to
+  // block double-booking either side of a new round assignment.
+  private async findOverlappingRound(
+    matchColumn: 'interviewerId' | 'userId',
+    personId: number,
+    proposedStart: Date,
+    proposedDurationMinutes: number,
+  ): Promise<AssessmentSession | null> {
+    const proposedEnd = new Date(proposedStart.getTime() + proposedDurationMinutes * 60000);
+
+    return this.assessmentSessionRepo
+      .createQueryBuilder('round')
+      .where(`round.${matchColumn} = :personId`, { personId })
+      .andWhere('round.scheduledAt IS NOT NULL')
+      .andWhere('round.status IN (:...statuses)', {
+        statuses: [AssessmentSessionStatusEnum.ASSIGNED, AssessmentSessionStatusEnum.STARTED],
+      })
+      .andWhere('round.scheduledAt < :proposedEnd', { proposedEnd })
+      .andWhere(
+        'DATE_ADD(round.scheduledAt, INTERVAL round.durationMinutes MINUTE) > :proposedStart',
+        { proposedStart },
+      )
+      .getOne();
+  }
+
+  private formatRoundWindow(round: AssessmentSession): string {
+    const start = round.scheduledAt;
+    const end = new Date(start.getTime() + (round.durationMinutes ?? 60) * 60000);
+    return `${start.toLocaleString()} to ${end.toLocaleString()}`;
+  }
+
+  // Default window used to compare a bare preference (no round, no duration
+  // yet) against other bookings — matches AssignInterviewDto's default.
+  private static readonly DEFAULT_DURATION_MINUTES = 60;
+
+  // Rejects if this candidate already has ANOTHER active interview (any
+  // status except CANCELLED/COMPLETED) whose window overlaps the proposed
+  // one. "Window" is the active round's real [scheduledAt, +duration) if one
+  // exists, else the other interview's bare preference treated as a
+  // default-length slot — this is what closes the gap the round-level
+  // overlap check (findOverlappingRound) doesn't cover: two *preferences*
+  // clashing before either has ever been assigned a round.
+  private async assertNoCandidatePreferenceOverlap(
+    candidateUserId: number,
+    proposedStart: Date,
+    excludeInterviewId?: number,
+    manager?: EntityManager,
+  ): Promise<void> {
+    const repo = manager ? manager.getRepository(Interview) : this.interviewRepo;
+    const duration = InterviewService.DEFAULT_DURATION_MINUTES;
+    const proposedEnd = new Date(proposedStart.getTime() + duration * 60000);
+
+    const otherInterviews = await repo.find({
+      where: { userId: candidateUserId },
+      relations: ['assessmentSessions'],
+    });
+
+    for (const other of otherInterviews) {
+      if (excludeInterviewId && other.id === excludeInterviewId) continue;
+      if (
+        other.status === InterviewStatusEnum.CANCELLED ||
+        other.status === InterviewStatusEnum.COMPLETED
+      ) {
+        continue;
+      }
+
+      const rounds = other.assessmentSessions ?? [];
+      const activeRound = rounds.find(
+        (r) =>
+          r.status === AssessmentSessionStatusEnum.ASSIGNED ||
+          r.status === AssessmentSessionStatusEnum.STARTED,
+      );
+      const windowStart = activeRound?.scheduledAt ?? other.scheduledAt;
+      const windowDuration = activeRound?.durationMinutes ?? duration;
+      const windowEnd = new Date(windowStart.getTime() + windowDuration * 60000);
+
+      if (windowStart < proposedEnd && proposedStart < windowEnd) {
+        throw new BadRequestException(
+          `This candidate already has another interview ("${other.title}", code ` +
+            `${other.interviewCode}) around ${windowStart.toLocaleString()} to ` +
+            `${windowEnd.toLocaleString()}. Choose a different time.`,
+        );
+      }
     }
   }
 
@@ -164,6 +276,12 @@ export class InterviewService {
             userId = newUser.id;
           }
         }
+
+        // A brand-new registration can't possibly conflict (zero prior
+        // interviews) — this only ever finds something for an existing
+        // candidate (dto.userId, or an email that matched an existing
+        // account above).
+        await this.assertNoCandidatePreferenceOverlap(userId, scheduledAt, undefined, manager);
 
         const interview = manager.create(Interview, {
           title: dto.title,
@@ -269,7 +387,20 @@ export class InterviewService {
         );
       }
 
+      // This edits Interview.scheduledAt only — the candidate's preferred
+      // date/time. It's deliberately independent of any round's own
+      // scheduledAt (a different concept — see assignInterview). To move an
+      // already-assigned round's actual time, cancel and reassign it.
       isReschedule = scheduledAt.getTime() !== interview.scheduledAt.getTime();
+
+      if (isReschedule) {
+        await this.assertNoCandidatePreferenceOverlap(
+          interview.userId,
+          scheduledAt,
+          interview.id,
+        );
+      }
+
       interview.scheduledAt = scheduledAt;
     }
 
@@ -394,6 +525,34 @@ export class InterviewService {
       );
     }
 
+    const durationMinutes = dto.durationMinutes ?? 60;
+
+    const smeConflict = await this.findOverlappingRound(
+      'interviewerId',
+      dto.interviewerId,
+      scheduledAt,
+      durationMinutes,
+    );
+    if (smeConflict) {
+      throw new BadRequestException(
+        `${interviewer.firstName} is already booked for another interview round from ` +
+          `${this.formatRoundWindow(smeConflict)}. Choose a different time.`,
+      );
+    }
+
+    const candidateConflict = await this.findOverlappingRound(
+      'userId',
+      interview.userId,
+      scheduledAt,
+      durationMinutes,
+    );
+    if (candidateConflict) {
+      throw new BadRequestException(
+        `This candidate already has another interview round scheduled from ` +
+          `${this.formatRoundWindow(candidateConflict)}. Choose a different time.`,
+      );
+    }
+
     const roundNumber = rounds.length + 1;
     const previousStatus = interview.status;
 
@@ -411,12 +570,17 @@ export class InterviewService {
         // rather than continuing to guess at the ORM-level cause.
         interview.interviewerId = dto.interviewerId;
         interview.status = InterviewStatusEnum.IN_PROGRESS;
+        // Interview.scheduledAt is intentionally left untouched — it's the
+        // candidate's original preferred date/time, distinct from this
+        // round's actual scheduledAt. Screens/filters should read the
+        // computed `effectiveScheduledAt` (see getEffectiveScheduledAt)
+        // rather than either raw field directly.
         const savedInterview = await manager.save(Interview, interview);
 
         const insertRs: { insertId: number } = await manager.query(
           `INSERT INTO assessment_session
-             (userId, interviewId, interviewerId, ratingType, assessmentTitle, roundNumber, status, scheduledAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+             (userId, interviewId, interviewerId, ratingType, assessmentTitle, roundNumber, status, scheduledAt, durationMinutes)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             interview.userId,
             interview.id,
@@ -426,6 +590,7 @@ export class InterviewService {
             roundNumber,
             AssessmentSessionStatusEnum.ASSIGNED,
             scheduledAt,
+            durationMinutes,
           ],
         );
         const newRoundId = insertRs.insertId;
@@ -1183,16 +1348,41 @@ export class InterviewService {
       );
     }
 
-    return interview;
+    return { ...interview, effectiveScheduledAt: this.getEffectiveScheduledAt(interview) };
   }
 
   async getInterviews(
-    userId?: number,
+    currentUser: { id: number; role: string },
     fetchAll?: boolean,
     interviewerId?: number,
     when?: 'upcoming' | 'past',
     status?: string,
   ) {
+    // userId is deliberately NOT a parameter here — this used to take a client-supplied
+    // userId query param straight from the URL with no check that it matched the caller,
+    // letting any authenticated user read anyone else's interview list. The candidate's
+    // own id now always comes from the verified token (currentUser.id) below instead.
+    const isPrivileged =
+      currentUser.role === UserRoleEnum.ADMIN ||
+      (await this.permissionsService.hasGlobalPermission(
+        currentUser.id,
+        UserPermissionEnum.InterviewManager,
+      ));
+
+    // Only an Interview Manager/Admin may list every interview in the system — anyone
+    // else always gets scoped results below regardless of what they request.
+    if (fetchAll && !isPrivileged) {
+      throw new ForbiddenException(
+        'You do not have permission to list all interviews.',
+      );
+    }
+
+    // A privileged caller may look up a specific SME's queue by id; everyone else can
+    // only ever see their own — same "id comes from the token, not the query" rule.
+    const effectiveInterviewerId = interviewerId
+      ? (isPrivileged ? interviewerId : currentUser.id)
+      : undefined;
+
     const query = this.interviewRepo
       .createQueryBuilder('interview')
       .leftJoinAndSelect('interview.user', 'user')
@@ -1201,9 +1391,17 @@ export class InterviewService {
       // Round data is included on every list response (not just the detail
       // endpoint) — otherwise an SME's "pending queue" response wouldn't say
       // which round/date matched, forcing a second call per row to find out.
-      .leftJoinAndSelect('interview.assessmentSessions', 'assessmentSession');
+      .leftJoinAndSelect('interview.assessmentSessions', 'assessmentSession')
+      // Each round's own interviewer — previously only the top-level
+      // denormalized interview.interviewer (the *current* round's SME) was
+      // populated here; a client reading the per-round interviewer (the only
+      // place it lives once there's more than one round) got nothing back.
+      .leftJoinAndSelect('assessmentSession.interviewer', 'roundInterviewer')
+      // Needed so the Interview Manager console can show a completed interview's actual
+      // verdict in the list itself, not just after a separate "View Report" click-through.
+      .leftJoinAndSelect('assessmentSession.skillRatings', 'skillRating');
 
-    if (interviewerId) {
+    if (effectiveInterviewerId) {
       // "Assigned to me" means: I hold a round on this interview — checked
       // against AssessmentSession, not just the denormalized current pointer,
       // so past rounds by this SME on a now-multi-round interview still match.
@@ -1211,14 +1409,16 @@ export class InterviewService {
       // purely for filtering (WHERE), it doesn't affect what's selected.
       query
         .innerJoin('interview.assessmentSessions', 'myRound')
-        .andWhere('myRound.interviewerId = :interviewerId', { interviewerId });
+        .andWhere('myRound.interviewerId = :interviewerId', { interviewerId: effectiveInterviewerId });
 
       if (status) {
         query.andWhere('myRound.status = :roundStatus', { roundStatus: status });
       }
     } else {
-      if (!fetchAll && userId) {
-        query.andWhere('interview.userId = :userId', { userId });
+      // Candidate's own list — scoped to the verified caller, never a client-supplied
+      // id, unless this is an already-authorized fetchAll request for everyone's.
+      if (!fetchAll) {
+        query.andWhere('interview.userId = :userId', { userId: currentUser.id });
       }
 
       if (status) {
@@ -1226,18 +1426,33 @@ export class InterviewService {
       }
     }
 
-    if (when === 'upcoming') {
-      query.andWhere('interview.scheduledAt >= :now', { now: new Date() });
-      query.orderBy('interview.scheduledAt', 'ASC');
-    } else if (when === 'past') {
-      query.andWhere('interview.scheduledAt < :now', { now: new Date() });
-      query.orderBy('interview.scheduledAt', 'DESC');
-    }
-
-    // addOrderBy (not orderBy) — appends as a secondary key so it composes
-    // with whichever primary sort was set above instead of overwriting it.
     query.addOrderBy('assessmentSession.roundNumber', 'ASC');
 
-    return await query.getMany();
+    const interviews = await query.getMany();
+
+    // upcoming/past is filtered here, not in SQL, because "when is this
+    // interview happening" is the computed effectiveScheduledAt (active
+    // round's real time, falling back to the candidate's preference only
+    // when no round exists yet) — not the raw Interview.scheduledAt column,
+    // which stays a stale preference after a round moves it. See
+    // getEffectiveScheduledAt.
+    const now = new Date();
+    const withEffectiveDate = interviews.map((interview) => ({
+      ...interview,
+      effectiveScheduledAt: this.getEffectiveScheduledAt(interview),
+    }));
+
+    let results = withEffectiveDate;
+    if (when === 'upcoming') {
+      results = withEffectiveDate
+        .filter((iv) => iv.effectiveScheduledAt >= now)
+        .sort((a, b) => a.effectiveScheduledAt.getTime() - b.effectiveScheduledAt.getTime());
+    } else if (when === 'past') {
+      results = withEffectiveDate
+        .filter((iv) => iv.effectiveScheduledAt < now)
+        .sort((a, b) => b.effectiveScheduledAt.getTime() - a.effectiveScheduledAt.getTime());
+    }
+
+    return results;
   }
 }

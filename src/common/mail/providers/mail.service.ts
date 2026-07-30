@@ -14,6 +14,7 @@ import {
   interviewRoundCancelledTemplate,
   interviewRoundCompletedTemplate,
   interviewRoundDeclinedTemplate,
+  interviewRoundRescheduledTemplate,
   interviewRoundScheduledTemplate,
   interviewScheduledTemplate,
   levelUpTemplate,
@@ -24,6 +25,8 @@ import {
   streakMilestoneTemplate,
   EmailTemplate,
 } from '../templates/mail-templates';
+
+const SUPPRESSED_EMAIL_DOMAIN = '@codemerit.test';
 
 @Injectable()
 export class MailService {
@@ -41,6 +44,13 @@ export class MailService {
   }
 
   private async dispatch(to: string, template: EmailTemplate): Promise<void> {
+    if (to?.toLowerCase().endsWith(SUPPRESSED_EMAIL_DOMAIN)) {
+      this.logger.log(
+        `Email suppressed (${SUPPRESSED_EMAIL_DOMAIN} test account) (${template.subject}) => ${to}`,
+      );
+      return;
+    }
+
     const html = template.html.replace(/\{\{FRONTEND_URL\}\}/g, this.frontendUrl);
     try {
       await this.resend.emails.send({
@@ -182,6 +192,19 @@ export class MailService {
     await this.dispatch(
       to,
       interviewRoundScheduledTemplate(name, title, roundNumber, scheduledAt, interviewerName),
+    );
+  }
+
+  async sendInterviewRoundRescheduledEmail(
+    to: string,
+    name: string,
+    title: string,
+    roundNumber: number,
+    scheduledAt: string,
+  ): Promise<void> {
+    await this.dispatch(
+      to,
+      interviewRoundRescheduledTemplate(name, title, roundNumber, scheduledAt),
     );
   }
 

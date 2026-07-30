@@ -194,7 +194,7 @@
       "icon": "dvr",
       "class": "menu-toggle",
       "groupTitle": false,
-      "badge": "Dev",
+      "badge": "doc",
       "badgeClass": "badge bg-blue sidebar-badge float-end",
       "role": [
         "Admin"

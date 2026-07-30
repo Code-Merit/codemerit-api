@@ -110,6 +110,16 @@ export class AssessmentSession
   })
   scheduledAt?: Date;
 
+  // How long this round is booked for, from scheduledAt — needed to detect
+  // overlaps against an SME's/candidate's other rounds. Only meaningful
+  // alongside scheduledAt (interview rounds), unused for SELF/QUIZ ratings.
+  @Column({
+    type: 'int',
+    nullable: true,
+    default: 60,
+  })
+  durationMinutes?: number;
+
   @Column({
     type: 'datetime',
     nullable: true,

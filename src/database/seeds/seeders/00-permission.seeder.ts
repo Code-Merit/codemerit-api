@@ -10,6 +10,7 @@ const TOPIC_ACCESS_GROUP = 'Topic Access';
 const BADGE_GROUP = 'Badge Manager';
 const SME_GROUP = 'SME Access';
 const TALENT_GROUP = 'Talent Partner';
+const INTERVIEW_GROUP = 'Interview Manager';
 const ORGANIZATION_GROUP = 'Organization';
 const LEARNER_GROUP = 'Learner Tier';
 
@@ -45,6 +46,7 @@ const PERMISSION_META: Record<UserPermissionEnum, PermissionMeta> = {
   [UserPermissionEnum.SmeLead]:                  { description: 'Senior SME who can oversee other SMEs\' interview activity', group: SME_GROUP },
 
   [UserPermissionEnum.TalentPartner]:            { description: 'Manage job roles and candidate pipeline for hiring', group: TALENT_GROUP },
+  [UserPermissionEnum.InterviewManager]:         { description: 'Schedule, reschedule, assign SMEs to, and cancel candidate interviews', group: INTERVIEW_GROUP },
   [UserPermissionEnum.OrganizationOwner]:        { description: 'Full ownership access across the organization\'s account and settings', group: ORGANIZATION_GROUP },
   [UserPermissionEnum.ProLearner]:               { description: 'Access to premium/pro learner features and content', group: LEARNER_GROUP },
 };

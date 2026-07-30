@@ -33,8 +33,15 @@ export class Interview extends AbstractEntity {
   @Column()
   jobRoleId: number;
 
+  // datetime, not timestamp — MySQL's TIMESTAMP type auto-attaches
+  // DEFAULT/ON UPDATE CURRENT_TIMESTAMP to the first such column in a table
+  // when explicit_defaults_for_timestamp is off (true on this server), which
+  // silently reset this to "now" on every single interview update
+  // (assign/cancel/finalize/anything), regardless of what the application
+  // set. DATETIME never gets that behavior. See
+  // migrate-interview-scheduledat-timestamp.js.
   @Column({
-    type: 'timestamp',
+    type: 'datetime',
   })
   scheduledAt: Date;
 
