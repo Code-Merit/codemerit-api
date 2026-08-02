@@ -58,5 +58,20 @@ export const welcomeRoutes = [
     badgeClass: '',
     role: ['All'],
     submenu: [],
+  },
+  {
+    // Public global XP leaderboard — standalone route (see codemerit's app.routes.ts), not
+    // scoped to any job role, so it belongs in the base nav rather than under a specific
+    // dashboard/role area.
+    path: '/leaderboard',
+    title: 'Leaderboard',
+    iconType: 'material-icons-outlined',
+    icon: 'leaderboard',
+    class: '',
+    groupTitle: false,
+    badge: '',
+    badgeClass: '',
+    role: ['All'],
+    submenu: [],
   }
 ];

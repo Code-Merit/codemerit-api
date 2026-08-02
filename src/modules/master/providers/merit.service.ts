@@ -185,6 +185,58 @@ export class MeritService {
     return this.shapeAndRankMasteryRows(rows, userId, limit);
   }
 
+  /** Bulk version of getJobRoleMasteryLeaderboard — one query bucketed by jobRoleId (via
+   * job_role_subject) instead of one query per role, for dashboards showing several enrolled
+   * roles at once (e.g. career dashboard). Same double-counting caveat as elsewhere: a subject
+   * shared by two roles contributes to both roles' rankings independently. */
+  async getJobRoleMasteryLeaderboards(
+    jobRoleIds: number[],
+    userId?: number,
+    limit = 10,
+  ): Promise<{ meritLists: Map<number, any[]>; userRanks: Map<number, number | null> }> {
+    if (!jobRoleIds.length) return { meritLists: new Map(), userRanks: new Map() };
+
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('jrs.jobRoleId', 'jobRoleId')
+      .addSelect('u.id', 'userId')
+      .addSelect("CONCAT(u.firstName, ' ', u.lastName)", 'name')
+      .addSelect('u.username', 'username')
+      .addSelect('u.image', 'image')
+      .addSelect('jr.title', 'designationName')
+      .addSelect('COUNT(DISTINCT qa.questionId)', 'masteryCount')
+      .from('job_role_subject', 'jrs')
+      .innerJoin(
+        'question', 'q',
+        'q.subjectId = jrs.subjectId AND q.status = :active AND q.questionType = :trivia',
+        { active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
+      )
+      .innerJoin('question_attempt', 'qa', 'qa.questionId = q.id AND qa.isCorrect = 1')
+      .innerJoin('user', 'u', 'u.id = qa.userId')
+      .leftJoin('job_role', 'jr', 'jr.id = u.designation')
+      .where('jrs.jobRoleId IN (:...jobRoleIds)', { jobRoleIds })
+      .groupBy('jrs.jobRoleId')
+      .addGroupBy('u.id')
+      .getRawMany();
+
+    const buckets = new Map<number, any[]>();
+    for (const row of rows) {
+      const jrId = +row.jobRoleId;
+      const arr = buckets.get(jrId) || [];
+      arr.push(row);
+      buckets.set(jrId, arr);
+    }
+
+    const meritLists = new Map<number, any[]>();
+    const userRanks = new Map<number, number | null>();
+    for (const jrId of jobRoleIds) {
+      const { meritList, userRank } = this.shapeAndRankMasteryRows(buckets.get(jrId) ?? [], userId, limit);
+      meritLists.set(jrId, meritList);
+      userRanks.set(jrId, userRank);
+    }
+    return { meritLists, userRanks };
+  }
+
   // ─── Popular Topics ───────────────────────────────────────────────────────────
 
   async getPopularTopicsBySubject(subjectIds: number[], limit = 5): Promise<Map<number, any[]>> {

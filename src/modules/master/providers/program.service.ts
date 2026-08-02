@@ -2,9 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CERT_ACHIEVED } from 'src/common/constants/completion-thresholds';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
+import { CertificateStatusEnum } from 'src/common/enum/certificate-status.enum';
+import { InterviewStatusEnum } from 'src/common/enum/interview-status.enum';
+import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
+import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
+import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
+import { Interview } from 'src/common/typeorm/entities/interview.entity';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
+import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { generateScore, getAggregateUserLevel } from 'src/common/utils/common-functions';
 import { DataSource, Repository } from 'typeorm';
 import { MeritService } from './merit.service';
@@ -96,13 +103,182 @@ export class ProgramService {
       .addSelect('jr.image', 'image')
       .addSelect('jr.color', 'color')
       .addSelect('jr.description', 'description')
+      .addSelect('jr.scope', 'scope')
       .addSelect('jr.orderId', 'orderId')
+      .addSelect('ujr.createdAt', 'enrolledAt')
       .from(JobRole, 'jr')
       .innerJoin('user_job_role', 'ujr', 'ujr.jobRoleId = jr.id')
       .where('ujr.userId = :userId', { userId })
       .andWhere('jr.isPublished = 1')
       .orderBy('jr.orderId', 'ASC')
       .getRawMany();
+  }
+
+  // ─── User performance stats (career-dashboard summary) ────────────────────────
+
+  /** Whole-account totals — deliberately not scoped to this user's enrolled job roles, since
+   * badges/certificates earned via one role are still part of the learner's overall record. */
+  private async fetchUserBadgeAndCertificateTotals(userId: number) {
+    const [badgeRow, certRow] = await Promise.all([
+      this.dataSource
+        .createQueryBuilder()
+        .select('COUNT(ub.id)', 'count')
+        .from(UserBadge, 'ub')
+        .where('ub.userId = :userId', { userId })
+        .getRawOne(),
+      this.dataSource
+        .createQueryBuilder()
+        .select('COUNT(c.id)', 'count')
+        .from(Certificate, 'c')
+        .where('c.userId = :userId', { userId })
+        .andWhere('c.status = :status', { status: CertificateStatusEnum.ISSUED })
+        .getRawOne(),
+    ]);
+    return {
+      totalBadgesEarned: +(badgeRow?.count ?? 0),
+      totalCertificatesIssued: +(certRow?.count ?? 0),
+    };
+  }
+
+  /** Formally issued certificates for the given cert tracks — distinct from
+   * certificationTracks[].isAchieved (which is just progress crossing CERT_ACHIEVED); a track
+   * can be 100% complete without a Certificate row yet existing if issuance is a separate step. */
+  private async fetchCertificatesForTracks(userId: number, certificationTrackIds: number[]) {
+    const map = new Map<number, { certificateNumber: string; status: string; issuedAt: Date; expiresAt: Date | null }>();
+    if (!certificationTrackIds.length) return map;
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('c.certificationTrackId', 'certificationTrackId')
+      .addSelect('c.certificateNumber', 'certificateNumber')
+      .addSelect('c.status', 'status')
+      .addSelect('c.issuedAt', 'issuedAt')
+      .addSelect('c.expiresAt', 'expiresAt')
+      .from(Certificate, 'c')
+      .where('c.userId = :userId', { userId })
+      .andWhere('c.certificationTrackId IN (:...certificationTrackIds)', { certificationTrackIds })
+      .getRawMany();
+    for (const r of rows) {
+      map.set(+r.certificationTrackId, {
+        certificateNumber: r.certificateNumber,
+        status: r.status,
+        issuedAt: r.issuedAt,
+        expiresAt: r.expiresAt ?? null,
+      });
+    }
+    return map;
+  }
+
+  /** Interview activity per job role (Interview.jobRoleId), for the "readiness" story SME/manager
+   * interviews add on top of quiz-based scoring. `upcoming` requires both SCHEDULED status and a
+   * still-future scheduledAt, since a SCHEDULED round whose time has simply passed isn't upcoming. */
+  private async fetchInterviewStatsByJobRole(userId: number, jobRoleIds: number[]) {
+    const map = new Map<number, {
+      total: number; completed: number; upcoming: number;
+      lastStatus: string | null; lastScheduledAt: Date | null;
+    }>();
+    if (!jobRoleIds.length) return map;
+
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('i.jobRoleId', 'jobRoleId')
+      .addSelect('i.status', 'status')
+      .addSelect('i.scheduledAt', 'scheduledAt')
+      .from(Interview, 'i')
+      .where('i.userId = :userId', { userId })
+      .andWhere('i.jobRoleId IN (:...jobRoleIds)', { jobRoleIds })
+      .orderBy('i.scheduledAt', 'DESC')
+      .getRawMany();
+
+    const now = new Date();
+    for (const row of rows) {
+      const jrId = +row.jobRoleId;
+      const entry = map.get(jrId) ?? { total: 0, completed: 0, upcoming: 0, lastStatus: null, lastScheduledAt: null };
+      entry.total++;
+      if (row.status === InterviewStatusEnum.COMPLETED) entry.completed++;
+      if (row.status === InterviewStatusEnum.SCHEDULED && new Date(row.scheduledAt) > now) entry.upcoming++;
+      // Rows arrive scheduledAt DESC, so the first one seen per jobRoleId is the most recent.
+      if (!entry.lastScheduledAt) {
+        entry.lastStatus = row.status;
+        entry.lastScheduledAt = row.scheduledAt;
+      }
+      map.set(jrId, entry);
+    }
+    return map;
+  }
+
+  /** Interview *quality* signal, separate from the status counts above — the average
+   * SkillRating.rating (0–5 scale) across all rounds of this role's interviews, plus how many
+   * distinct rounds actually got rated (a completed/cancelled round may have no ratings at all).
+   * Numeric only; the "No interview taken" / "Rated X in Y interviews" style message is left to
+   * the frontend to compose from these fields plus the status counts. */
+  private async fetchInterviewRatingsByJobRole(userId: number, jobRoleIds: number[]) {
+    const map = new Map<number, { averageRating: number | null; ratedInterviewCount: number }>();
+    if (!jobRoleIds.length) return map;
+
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('i.jobRoleId', 'jobRoleId')
+      .addSelect('AVG(sr.rating)', 'avgRating')
+      .addSelect('COUNT(DISTINCT sr.assessmentSessionId)', 'ratedSessions')
+      .from(Interview, 'i')
+      .innerJoin('assessment_session', 'ases', 'ases.interviewId = i.id')
+      .innerJoin('skill_rating', 'sr', 'sr.assessmentSessionId = ases.id')
+      .where('i.userId = :userId', { userId })
+      .andWhere('i.jobRoleId IN (:...jobRoleIds)', { jobRoleIds })
+      .groupBy('i.jobRoleId')
+      .getRawMany();
+
+    for (const r of rows) {
+      map.set(+r.jobRoleId, {
+        averageRating: r.avgRating != null ? +(+r.avgRating).toFixed(1) : null,
+        ratedInterviewCount: +r.ratedSessions || 0,
+      });
+    }
+    return map;
+  }
+
+  /** How many other learners are pursuing each role — single grouped query for every enrolled
+   * role at once rather than one COUNT per role. */
+  private async fetchJobRoleLearnerCounts(jobRoleIds: number[]) {
+    const map = new Map<number, number>();
+    if (!jobRoleIds.length) return map;
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('ujr.jobRoleId', 'jobRoleId')
+      .addSelect('COUNT(ujr.id)', 'count')
+      .from('user_job_role', 'ujr')
+      .where('ujr.jobRoleId IN (:...jobRoleIds)', { jobRoleIds })
+      .groupBy('ujr.jobRoleId')
+      .getRawMany();
+    for (const r of rows) map.set(+r.jobRoleId, +r.count);
+    return map;
+  }
+
+  /** Minutes spent answering this role's subjects' trivia questions — summed over every attempt
+   * ever (retries included), same "journey" convention as journeyAccuracy elsewhere, since time
+   * invested is about effort, not just the latest/best attempt. One grouped query across every
+   * enrolled role via job_role_subject, not one query per role. Note: a subject shared by two
+   * enrolled roles has its time counted under both — same double-counting convention already
+   * used for score/accuracy elsewhere on this dashboard. */
+  private async fetchTimeInvestedByJobRole(userId: number, jobRoleIds: number[]) {
+    const map = new Map<number, number>();
+    if (!jobRoleIds.length) return map;
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('jrs.jobRoleId', 'jobRoleId')
+      .addSelect('COALESCE(SUM(qa.timeTaken), 0)', 'totalSeconds')
+      .from('job_role_subject', 'jrs')
+      .innerJoin(
+        'question', 'q',
+        'q.subjectId = jrs.subjectId AND q.status = :active AND q.questionType = :trivia',
+        { active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
+      )
+      .innerJoin('question_attempt', 'qa', 'qa.questionId = q.id AND qa.userId = :userId', { userId })
+      .where('jrs.jobRoleId IN (:...jobRoleIds)', { jobRoleIds })
+      .groupBy('jrs.jobRoleId')
+      .getRawMany();
+    for (const r of rows) map.set(+r.jobRoleId, Math.round((+r.totalSeconds || 0) / 60));
+    return map;
   }
 
   private async fetchRoleSubjects(jobRoleIds: number[]) {
@@ -392,6 +568,7 @@ export class ProgramService {
         totalLessons: 0, completedLessons: 0, lessonCompletion: 0,
         totalCertTracks: 0, certTracksAchieved: 0, certTracksInProgress: 0, certTracksNotStarted: 0,
         overallScore: 0, overallAccuracy: 0, overallTriviaCompletion: 0,
+        totalBadgesEarned: 0, totalCertificatesIssued: 0,
       },
       lessons: [],
       jobRoles: [],
@@ -418,7 +595,10 @@ export class ProgramService {
     const roleSubjectRows = await this.fetchRoleSubjects(jobRoleIds);
     const allSubjectIds = [...new Set(roleSubjectRows.map((rs) => +rs.subjectId))];
 
-    const [subjectStatsMap, certRows, lessons, badgesByRole] = await Promise.all([
+    const [
+      subjectStatsMap, certRows, lessons, badgesByRole, badgeCertTotals, interviewsByRole,
+      interviewRatingsByRole, learnerCountsByRole, timeInvestedByRole, jobRoleMastery,
+    ] = await Promise.all([
       this.subjectStats.getSubjectStatsMap(userId),
       this.fetchCertTrackHierarchy(jobRoleIds),
       this.fetchLessonsForSubjects(allSubjectIds, userId),
@@ -430,7 +610,16 @@ export class ProgramService {
             .catch((): [number, ScopedBadgeDto[]] => [jrId, []]),
         ),
       ).then((entries) => new Map(entries)),
+      this.fetchUserBadgeAndCertificateTotals(userId),
+      this.fetchInterviewStatsByJobRole(userId, jobRoleIds),
+      this.fetchInterviewRatingsByJobRole(userId, jobRoleIds),
+      this.fetchJobRoleLearnerCounts(jobRoleIds),
+      this.fetchTimeInvestedByJobRole(userId, jobRoleIds),
+      this.meritService.getJobRoleMasteryLeaderboards(jobRoleIds, userId),
     ]);
+
+    const certTrackIds = [...new Set(certRows.map((r) => +r.ctId))];
+    const certificatesByTrack = await this.fetchCertificatesForTracks(userId, certTrackIds);
 
     // Build subject-track map needed for cert progress (mirrors getCareerDashboard exactly;
     // fetchSubjectTracksWithTopicsByIds and getSubjectTrackMasteryLeaderboards both handle empty arrays)
@@ -591,10 +780,24 @@ export class ProgramService {
           totalSubjectTracks: total, completedSubjectTracks: completed,
           progressPercent, isAchieved, achievementThreshold: CERT_ACHIEVED,
           subjectTracks,
+          // Formal issuance record, distinct from isAchieved above (progress can hit 100%
+          // before a Certificate row is actually created) — null until one exists.
+          certificate: certificatesByTrack.get(+ct.id) ?? null,
         };
       });
 
       const { nextCertificationTrack, nextSubjectTrack } = this.pickNextBestAction(certificationTracks);
+
+      // Positive counterpart to nextSubjectTrack above — the subject they're already best at,
+      // not the one closest to done. Only considers subjects with at least one attempt, since
+      // generateScore() returns 0 for untouched subjects (that's "no data", not "weakest").
+      const attemptedSubjects = subjects.filter((s: any) => s.attempted > 0);
+      const strongestSubject = attemptedSubjects.length
+        ? [...attemptedSubjects].sort((a: any, b: any) => b.score - a.score)[0]
+        : null;
+
+      const roleBadges = badgesByRole.get(+jr.id) ?? [];
+      const peerRank = jobRoleMastery.userRanks.get(+jr.id) ?? null;
 
       // Public per-subject breakdown — same subjects used to compute jrScore/jrAccuracy
       // above, just stripped of the raw counters (attempted/correct/wrong/etc.) that only
@@ -611,21 +814,51 @@ export class ProgramService {
       return {
         id: +jr.id, title: jr.title, slug: jr.slug,
         image: jr.image, color: jr.color, description: jr.description,
+        scope: jr.scope ?? null,
+        enrolledAt: jr.enrolledAt ?? null,
         summary: {
           score: jrScore,
           accuracy: jrAccuracy,
           triviaCompletion: jrTriviaCompletion,
           lessonCompletion: jrLessonCompletion,
+          lessonsTotal: jrLessonTotal,
+          lessonsCompleted: jrLessonCompleted,
           userLevel: jrUserLevel,
           certTracksTotal: certMap.size,
           certTracksAchieved: jrCertsAchieved,
           certTracksInProgress: jrCertsInProgress,
+          badgesTotal: roleBadges.length,
+          badgesUnlocked: roleBadges.filter((b: any) => b.unlocked).length,
+          // Minutes spent answering this role's subjects' trivia questions, all-time —
+          // see fetchTimeInvestedByJobRole for the "journey" (retries-included) convention.
+          timeInvestedMinutes: timeInvestedByRole.get(+jr.id) ?? 0,
+          // Mastery-leaderboard rank among everyone else active in this role's subjects, and
+          // how many people are formally enrolled in the role — two distinct "how do I compare"
+          // signals. Both null/0 rather than omitted when there's no data yet.
+          peerRank,
+          totalLearners: learnerCountsByRole.get(+jr.id) ?? 0,
+          // SME/manager interview activity for this role — separate signal from the
+          // quiz-derived score/accuracy above. See fetchInterviewStatsByJobRole and
+          // fetchInterviewRatingsByJobRole. averageRating/ratedInterviewCount are numeric only —
+          // any "No interview taken" / "Rated X in Y interviews" copy is left to the frontend.
+          interviews: {
+            ...(interviewsByRole.get(+jr.id) ?? {
+              total: 0, completed: 0, upcoming: 0, lastStatus: null, lastScheduledAt: null,
+            }),
+            ...(interviewRatingsByRole.get(+jr.id) ?? { averageRating: null, ratedInterviewCount: 0 }),
+          },
         },
         subjects: subjectsOut,
         certificationTracks,
-        badges: badgesByRole.get(+jr.id) ?? [],
+        badges: roleBadges,
         nextCertificationTrack,
         nextSubjectTrack,
+        strongestSubject: strongestSubject
+          ? {
+              id: strongestSubject.id, title: strongestSubject.title, slug: strongestSubject.slug,
+              image: strongestSubject.image, score: strongestSubject.score, accuracy: strongestSubject.accuracy,
+            }
+          : null,
       };
     });
 
@@ -662,6 +895,9 @@ export class ProgramService {
         overallScore,
         overallAccuracy,
         overallTriviaCompletion,
+        // Cross-role achievement totals — see fetchUserBadgeAndCertificateTotals.
+        totalBadgesEarned: badgeCertTotals.totalBadgesEarned,
+        totalCertificatesIssued: badgeCertTotals.totalCertificatesIssued,
       },
       lessons,
       jobRoles: jobRoleDashboards,

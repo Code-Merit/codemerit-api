@@ -7,6 +7,7 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiResponse as ApiResponseDoc } from '@nestjs/swagger';
 import { ApiResponse } from 'src/common/utils/api-response';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
@@ -17,6 +18,8 @@ import { LmsService } from './providers/lms.service';
 import { AuthGuard } from '@nestjs/passport';
 import { UserPermissionService } from '../user-permission/providers/user-permission.service';
 
+@ApiTags('LMS')
+@ApiBearerAuth('access-token')
 @Controller('apis/lms')
 export class LmsController {
   constructor(
@@ -42,6 +45,14 @@ export class LmsController {
     }
   }
 
+  @ApiOperation({
+    summary: "Get the caller's LMS content-authoring dashboard",
+    description:
+      'Aggregates stats on the questions/quizzes/lessons the authenticated caller has authored ' +
+      '(via `req.user.id`), plus a daily/weekly time series of their question and quiz creation ' +
+      'activity. Question stats are scoped to the caller; quiz, lesson, and time-series stats ' +
+      'return zeroed placeholders if the caller id is missing.',
+  })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRoleEnum.USER)
   @Get('dashboard')
@@ -53,6 +64,18 @@ export class LmsController {
     return new ApiResponse('Error fetching data.', null);
   }
 
+  @ApiOperation({
+    summary: 'Get a user\'s created Standard quizzes with attempt stats (LMS Manager only)',
+    description:
+      'Returns every Standard-type quiz `userId` created, each with its total attempt count and ' +
+      'average score. Restricted to callers holding the LmsManager permission (checked against ' +
+      'the caller from the JWT, not `userId`) — 403 for anyone else, regardless of role.',
+  })
+  @ApiParam({ name: 'userId', description: 'Id of the quiz author to look up', type: Number })
+  @ApiResponseDoc({
+    status: 403,
+    description: 'Caller does not hold the LmsManager permission.',
+  })
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(UserRoleEnum.USER)
   @Get('user-standard-quiz/:userId')
