@@ -44,8 +44,6 @@ const PERMISSION_META: Record<UserPermissionEnum, PermissionMeta> = {
   // Ladder: AssociateSme < Sme (above) < SmeLead — same group as Sme for the same reason.
   [UserPermissionEnum.AssociateSme]:             { description: 'Supervised/junior subject matter expert access to interviews', group: SME_GROUP },
   [UserPermissionEnum.SmeLead]:                  { description: 'Senior SME who can oversee other SMEs\' interview activity', group: SME_GROUP },
-  [UserPermissionEnum.InterviewManager]:        { description: 'Manage interviews and related interview workflows', group: INTERVIEW_GROUP },
-
   [UserPermissionEnum.TalentPartner]:            { description: 'Manage job roles and candidate pipeline for hiring', group: TALENT_GROUP },
   [UserPermissionEnum.InterviewManager]:         { description: 'Schedule, reschedule, assign SMEs to, and cancel candidate interviews', group: INTERVIEW_GROUP },
   [UserPermissionEnum.OrganizationOwner]:        { description: 'Full ownership access across the organization\'s account and settings', group: ORGANIZATION_GROUP },
