@@ -11,7 +11,6 @@ const BADGE_GROUP = 'Badge Manager';
 const SME_GROUP = 'SME Access';
 const INTERVIEW_GROUP = 'Interview Manager';
 const TALENT_GROUP = 'Talent Partner';
-const INTERVIEW_GROUP = 'Interview Manager';
 const ORGANIZATION_GROUP = 'Organization';
 const LEARNER_GROUP = 'Learner Tier';
 
