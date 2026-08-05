@@ -19,15 +19,7 @@ async function bootstrap() {
   // Enable CORS for localhost dev
   app.enableCors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        'http://www.services.codemerit.in',
-        'https://www.services.codemerit.in',
-        'https://www.codemerit.in',
-        'http://services.codemerit.in',
-        'https://services.codemerit.in',
-        'https://codemerit.in'
-      ];
-
+      const allowedOrigins = process.env.CORS_ORIGINS?.split(',').map((url) => url.trim()) || [];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {

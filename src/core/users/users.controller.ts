@@ -206,24 +206,29 @@ export class UsersController {
   }
 
   @ApiOperation({
-    summary: 'Update a user\'s Profile fields by profile id',
+    summary: "Update the caller's own Profile fields",
     description:
-      'Note: although the route path carries `:id`, the handler actually reads the id from the ' +
-      '`id` query-string parameter (`?id=`), not the path segment — pass it both places to be safe. ' +
-      'No ownership/role check is currently enforced — any authenticated caller can update any ' +
-      'profile row by id. Only the fields present on `UpdateUserProfileDto` (linkedinUrl, about, ' +
-      'social ids, selfRatingDone/takenInterview/level1Assessment/level2Assessment flags) are ' +
-      'merged in; rejects with 400 if no Profile row exists for that id.',
+      "Resolves the profile purely from the verified JWT (`req.user.id`) — there is no id " +
+      "parameter, so this can never update anyone else's profile. Only the fields present on " +
+      '`UpdateUserProfileDto` (linkedinUrl, about, social ids, workStatus, and the ' +
+      'workStatus-dependent education fields [collegeName, stream, passingYear, ' +
+      'hasCompletedInternship, internshipDuration] or experience fields [experience, ' +
+      'isCurrentlyEmployed, companyName]) are merged in; rejects with 400 if no Profile row ' +
+      "exists for the caller. This is a partial patch: when `workStatus` is included in the " +
+      'request, its full set of dependent fields for that branch must be included too (all ' +
+      'required together), and the fields belonging to the other branch must be omitted. ' +
+      'Omitting `workStatus` entirely leaves existing values untouched. Submitting `workStatus` ' +
+      '(with its required branch fields) also flips `profileCompleted` to true on the returned ' +
+      'profile — a server-managed flag frontend can check (here, on `GET /apis/users/me`, or in ' +
+      'the login response) to know whether this post-registration form still needs to be shown.',
   })
-  @ApiParam({ name: 'id', description: 'Present in the route but not actually read — see description.', type: Number })
-  @ApiQuery({ name: 'id', required: true, type: Number, description: 'Profile id to update — this is the value actually used.' })
-  @Put('/profile-update/:id')
+  @Put('/profile-update')
   async updateUserProfile(
-    @Query('id', ParseIntPipe) id: number,
+    @Request() req,
     @Body() updateProfileDto: UpdateUserProfileDto,
   ): Promise<ApiResponse<any>> {
     const result = await this.userProfileService.updateProfile(
-      id,
+      req.user.id,
       updateProfileDto,
     );
     return new ApiResponse('User profile updated successfully.', result);

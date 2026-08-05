@@ -19,6 +19,9 @@ export interface IUser {
   points?: number;
   token?: string;
   accountStatus: AccountStatusEnum;
+  ipAddress?: string;
+  userAgent?: string;
+  referrerSource?: string;
   createdBy: number;
   updatedBy: number;
   createdAt: Date;

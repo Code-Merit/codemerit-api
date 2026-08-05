@@ -1,8 +1,11 @@
-import { Entity, Column, JoinColumn, OneToOne, ManyToOne } from 'typeorm';
+import { Entity, Column, JoinColumn, OneToOne } from 'typeorm';
 import { User } from './user.entity';
-import { SubjectTrack } from './subject-track.entity';
 import { AbstractEntity } from './abstract.entity';
 import { IProfile } from '../interface/profile.interface';
+import { WorkStatusEnum } from 'src/core/users/enums/work-status.enum';
+import { IntentEnum } from 'src/core/users/enums/intent.enum';
+import { TimelineEnum } from 'src/core/users/enums/timeline.enum';
+import { ReferralSourceEnum } from 'src/core/users/enums/referral-source.enum';
 
 @Entity()
 export class Profile extends AbstractEntity implements IProfile {
@@ -47,30 +50,6 @@ export class Profile extends AbstractEntity implements IProfile {
   auth_provider: string;
 
   @Column({
-    type: 'boolean',
-    default: false,
-  })
-  selfRatingDone: boolean;
-
-  @Column({
-    type: 'boolean',
-    default: false,
-  })
-  takenInterview: boolean;
-
-  @Column({
-    type: 'boolean',
-    default: false,
-  })
-  level1Assessment: boolean;
-
-  @Column({
-    type: 'boolean',
-    default: false,
-  })
-  level2Assessment: boolean;
-
-  @Column({
     type: 'int',
     nullable: true,
     default: null,
@@ -78,16 +57,115 @@ export class Profile extends AbstractEntity implements IProfile {
   experience: number;
 
   @Column({
+    type: 'enum',
+    enum: WorkStatusEnum,
+    nullable: true,
+    default: null,
+  })
+  workStatus: WorkStatusEnum;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    default: null,
+  })
+  collegeName: string;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    default: null,
+  })
+  stream: string;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+    default: null,
+  })
+  passingYear: string;
+
+  @Column({
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  hasCompletedInternship: boolean;
+
+  @Column({
     type: 'int',
     nullable: true,
     default: null,
-    name: 'subject_track_id',
+  })
+  internshipDuration: number;
+
+  @Column({
+    type: 'boolean',
+    nullable: true,
+    default: null,
+  })
+  isCurrentlyEmployed: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    default: null,
+  })
+  companyName: string;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    default: null,
   })
   subjectTrackId: number;
 
-  @ManyToOne(() => SubjectTrack, { nullable: true })
-  @JoinColumn({ name: 'subject_track_id', referencedColumnName: 'id' })
-  subjectTrack: SubjectTrack;
+  @Column({
+    type: 'int',
+    nullable: true,
+    default: null,
+  })
+  masteryLevel: number;
+
+  // Onboarding "Goals" step — all three optional/skippable, unlike the workStatus branch
+  // fields above which are conditionally required. No @ValidateIf gating on these in the DTO.
+  @Column({
+    type: 'enum',
+    enum: IntentEnum,
+    nullable: true,
+    default: null,
+  })
+  intent: IntentEnum;
+
+  @Column({
+    type: 'enum',
+    enum: TimelineEnum,
+    nullable: true,
+    default: null,
+  })
+  timeline: TimelineEnum;
+
+  @Column({
+    type: 'enum',
+    enum: ReferralSourceEnum,
+    nullable: true,
+    default: null,
+  })
+  referralSource: ReferralSourceEnum;
+
+  // Server-managed only — flips to true the moment a valid workStatus branch is submitted via
+  // UserProfileService.updateProfile. Never settable directly by the client (see the explicit
+  // strip in updateProfile), so the frontend can trust it as "has this user actually completed
+  // the post-registration profile form," not "did they claim to."
+  @Column({
+    type: 'boolean',
+    default: false,
+  })
+  profileCompleted: boolean;
 
   @Column({
     type: 'integer',

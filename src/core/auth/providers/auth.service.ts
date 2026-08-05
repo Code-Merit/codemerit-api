@@ -327,9 +327,13 @@ export class AuthService {
    * unauthenticated endpoint gets createdBy forced to null, same as plain self-signup always has,
    * even if a token happened to be attached.
    */
-  async signup(createUserDto: CreateUserDto, callerId?: number) {
+  async signup(
+    createUserDto: CreateUserDto,
+    callerId?: number,
+    requestMeta?: { ipAddress?: string; userAgent?: string },
+  ) {
     const createdBy = createUserDto.flow === 'UserRegistration' ? (callerId ?? null) : null;
-    return this.usersService.create(createUserDto, createdBy);
+    return this.usersService.create(createUserDto, createdBy, requestMeta);
   }
 
   async accountVerification(accountVerificationDto: AccountVerificationDto) {

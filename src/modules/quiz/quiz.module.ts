@@ -16,7 +16,6 @@ import { QuizResultService } from './providers/quiz-result.service';
 import { QuizService } from './providers/quiz.service';
 import { QuizController } from './quiz.controller';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
-import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { ActivityModule } from '../activity/activity.module';
 import { AchievementModule } from '../achievement/achievement.module';
 
@@ -31,7 +30,6 @@ import { AchievementModule } from '../achievement/achievement.module';
       QuizTopic,
       QuizSettings,
       Subject,
-      Profile,
     ]),
     QuestionModule,
     MasterModule,

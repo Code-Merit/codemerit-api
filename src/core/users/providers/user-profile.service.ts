@@ -4,6 +4,7 @@ import { EntityManager, Repository } from 'typeorm';
 import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
+import { WorkStatusEnum } from '../enums/work-status.enum';
 
 @Injectable()
 export class UserProfileService {
@@ -41,10 +42,18 @@ export class UserProfileService {
         'googleId',
         'linkedinId',
         'auth_provider',
-        'selfRatingDone',
-        'takenInterview',
-        'level1Assessment',
-        'level2Assessment',
+        'experience',
+        'workStatus',
+        'collegeName',
+        'stream',
+        'passingYear',
+        'hasCompletedInternship',
+        'internshipDuration',
+        'isCurrentlyEmployed',
+        'companyName',
+        'subjectTrackId',
+        'masteryLevel',
+        'profileCompleted',
       ],
     });
     if (!profile) return undefined;
@@ -63,13 +72,74 @@ export class UserProfileService {
     return this.profileRepository.find();
   }
 
-  async updateProfile(id: number, dto: Partial<Profile>): Promise<Profile> {
-    const user = await this.findOne(id);
-    if (!user) {
-      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'User not found.');
+  async updateProfile(userId: number, dto: Partial<Profile>): Promise<Profile> {
+    const profile = await this.profileRepository.findOne({ where: { userId } });
+    if (!profile) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'Profile not found.');
     }
-    Object.assign(user, dto);
-    return this.profileRepository.save(user);
+    this.assertWorkStatusConsistency(dto);
+
+    // profileCompleted is server-managed, never client-writable — strip it even though
+    // UpdateUserProfileDto doesn't declare it (the global ValidationPipe isn't whitelisted, so
+    // an unknown body property would otherwise pass straight through to Object.assign below).
+    const safeDto: Partial<Profile> = { ...dto };
+    delete safeDto.profileCompleted;
+    Object.assign(profile, safeDto);
+
+    // A workStatus branch only ever reaches here fully populated — assertWorkStatusConsistency
+    // plus UpdateUserProfileDto's @ValidateIf rules already guarantee that. So submitting
+    // workStatus at all is exactly the "user has gone through the post-registration profile
+    // form" signal the frontend needs; once true, later unrelated edits (e.g. `about`) never
+    // flip it back.
+    if (dto.workStatus) {
+      profile.profileCompleted = true;
+    }
+
+    return this.profileRepository.save(profile);
+  }
+
+  // DTO-level @ValidateIf only enforces "required when workStatus is X" — it can't
+  // express "forbidden when workStatus is not X", so combos like sending
+  // education fields alongside EXPERIENCED, or internshipDuration alongside
+  // hasCompletedInternship === false, would otherwise pass request validation.
+  private assertWorkStatusConsistency(dto: Partial<Profile>): void {
+    if (dto.workStatus === WorkStatusEnum.EXPERIENCED) {
+      if (
+        dto.collegeName !== undefined ||
+        dto.stream !== undefined ||
+        dto.passingYear !== undefined ||
+        dto.hasCompletedInternship !== undefined ||
+        dto.internshipDuration !== undefined
+      ) {
+        throw new AppCustomException(
+          HttpStatus.BAD_REQUEST,
+          'Education/internship fields cannot be set when workStatus is Experienced.',
+        );
+      }
+    }
+
+    if (
+      dto.workStatus === WorkStatusEnum.PURSUING ||
+      dto.workStatus === WorkStatusEnum.FRESHER
+    ) {
+      if (
+        dto.experience !== undefined ||
+        dto.isCurrentlyEmployed !== undefined ||
+        dto.companyName !== undefined
+      ) {
+        throw new AppCustomException(
+          HttpStatus.BAD_REQUEST,
+          'Experience/employment fields cannot be set when workStatus is Pursuing or Fresher.',
+        );
+      }
+    }
+
+    if (dto.hasCompletedInternship === false && dto.internshipDuration !== undefined) {
+      throw new AppCustomException(
+        HttpStatus.BAD_REQUEST,
+        'internshipDuration cannot be set when hasCompletedInternship is false.',
+      );
+    }
   }
 
   async updateSocialProfile(

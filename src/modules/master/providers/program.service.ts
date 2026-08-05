@@ -12,7 +12,7 @@ import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
-import { generateScore, getAggregateUserLevel } from 'src/common/utils/common-functions';
+import { computeAttemptMetrics, generateScore, getAggregateUserLevel } from 'src/common/utils/common-functions';
 import { DataSource, Repository } from 'typeorm';
 import { MeritService } from './merit.service';
 import { SubjectStatsService } from './subject-stats.service';
@@ -468,10 +468,14 @@ export class ProgramService {
       const wrong = +raw.wrong || 0;
       const skipped = +raw.skipped || 0;
       const numTrivia = +raw.numTrivia || 0;
-      const coverage = numTrivia > 0 ? +((attempted / numTrivia) * 100).toFixed(1) : 0;
-      const correctCoverage = numTrivia > 0 ? +((correct / numTrivia) * 100).toFixed(1) : 0;
-      const accuracy = attempted > 0 ? +(correct * 100 / attempted).toFixed(1) : 0;
-      const score = +generateScore(attempted, correct, wrong).toFixed(0);
+      // computeAttemptMetrics() is the one shared implementation of this formula —
+      // every level (subject/topic/subjectTrack/job-role) calls it instead of reimplementing it.
+      const { coverage, correctCoverage, currentAccuracy: accuracy, score } = computeAttemptMetrics({
+        numTrivia, attempted, correct, wrong,
+        journeyAttempts: +raw.journeyAttempts || 0,
+        journeyCorrect: +raw.journeyCorrect || 0,
+        journeyWrong: +raw.journeyWrong || 0,
+      });
       const attemptedEasy = +raw.attemptedEasy || 0;
       const attemptedMedium = +raw.attemptedMedium || 0;
       const attemptedHard = +raw.attemptedHard || 0;
@@ -500,7 +504,10 @@ export class ProgramService {
 
     // Assemble
     let totalSubjects = 0, totalCerts = 0, certsAchieved = 0, certsInProgress = 0;
-    const allReadiness: number[] = [];
+    // Pooled (not averaged) across every scoreSrc subject across every job role — sum raw
+    // counts first, one generateScore() call at the end. Averaging per-subject scores instead
+    // would silently weight a subject with 2 questions the same as one with 200.
+    let readinessAttempted = 0, readinessCorrect = 0, readinessWrong = 0;
 
     const jobRoleDashboards = jobRoles.map((jr) => {
       const subjects = subjectsByJobRole.get(+jr.id) ?? [];
@@ -508,10 +515,13 @@ export class ProgramService {
 
       const mandatory = subjects.filter((s) => s.tag === 'MANDATORY');
       const scoreSrc = mandatory.length ? mandatory : subjects;
-      const readinessScore = scoreSrc.length
-        ? +((scoreSrc.reduce((s: number, sub: any) => s + sub.score, 0) / scoreSrc.length)).toFixed(0)
-        : 0;
-      allReadiness.push(...scoreSrc.map((s: any) => s.score));
+      const jrAttempted = scoreSrc.reduce((s: number, sub: any) => s + sub.attempted, 0);
+      const jrCorrect = scoreSrc.reduce((s: number, sub: any) => s + sub.correct, 0);
+      const jrWrong = scoreSrc.reduce((s: number, sub: any) => s + sub.wrong, 0);
+      const readinessScore = +generateScore(jrAttempted, jrCorrect, jrWrong).toFixed(0);
+      readinessAttempted += jrAttempted;
+      readinessCorrect += jrCorrect;
+      readinessWrong += jrWrong;
 
       const certMap = certByJobRole.get(+jr.id) ?? new Map<number, CertEntry>();
       const certificationTracks = [...certMap.values()].map(({ meta: ct, stIds }) => {
@@ -543,9 +553,7 @@ export class ProgramService {
       };
     });
 
-    const overallReadiness = allReadiness.length
-      ? +((allReadiness.reduce((a, b) => a + b, 0) / allReadiness.length)).toFixed(0)
-      : 0;
+    const overallReadiness = +generateScore(readinessAttempted, readinessCorrect, readinessWrong).toFixed(0);
 
     return {
       overallSummary: {
@@ -680,8 +688,14 @@ export class ProgramService {
       const numEasyTrivia = +raw.numEasyTrivia || 0;
       const numIntTrivia = +raw.numIntTrivia || 0;
       const numAdvTrivia = +raw.numAdvTrivia || 0;
-      const coverage = numTrivia > 0 ? +((attempted / numTrivia) * 100).toFixed(1) : 0;
-      const correctCoverage = numTrivia > 0 ? +((correct / numTrivia) * 100).toFixed(1) : 0;
+      // computeAttemptMetrics() is the one shared implementation of this formula —
+      // every level (subject/topic/subjectTrack/job-role) calls it instead of reimplementing it.
+      const { coverage, correctCoverage, currentAccuracy: accuracy, score } = computeAttemptMetrics({
+        numTrivia, attempted, correct, wrong,
+        journeyAttempts: +raw.journeyAttempts || 0,
+        journeyCorrect: +raw.journeyCorrect || 0,
+        journeyWrong: +raw.journeyWrong || 0,
+      });
       // Coverage per difficulty band — how much of each band the learner has actually
       // attempted, distinct from `coverage` above which blends all three bands together.
       const easyCoverage = numEasyTrivia > 0 ? +((attemptedEasy / numEasyTrivia) * 100).toFixed(1) : 0;
@@ -692,8 +706,7 @@ export class ProgramService {
       subjectsByJobRole.get(jrId)!.push({
         id: +rs.subjectId, title: rs.sTitle, slug: rs.sSlug, image: rs.sImage,
         color: rs.sColor, tag: rs.tag, sortOrder: +rs.sortOrder,
-        score: +generateScore(attempted, correct, wrong).toFixed(0),
-        accuracy: attempted > 0 ? +(correct * 100 / attempted).toFixed(1) : 0,
+        score, accuracy,
         coverage, correctCoverage, easyCoverage, intCoverage, advCoverage,
         userLevel: getAggregateUserLevel(
           attemptedEasy, correctEasy, attemptedMedium, correctMedium, attemptedHard, correctHard, correctCoverage,
@@ -720,12 +733,14 @@ export class ProgramService {
       const jrAccuracy = jrTotalAttempted > 0 ? +(jrTotalCorrect * 100 / jrTotalAttempted).toFixed(1) : 0;
       const jrTriviaCompletion = jrTotalNumTrivia > 0 ? +((jrTotalAttempted / jrTotalNumTrivia) * 100).toFixed(1) : 0;
 
-      // Score: average over MANDATORY subjects (fallback: all subjects)
+      // Score: pooled over MANDATORY subjects (fallback: all subjects) — sum raw counts
+      // first, one generateScore() call, same pooling jrAccuracy above already uses.
       const mandatory = subjects.filter((s: any) => s.tag === 'MANDATORY');
       const scoreSrc = mandatory.length ? mandatory : subjects;
-      const jrScore = scoreSrc.length
-        ? +(scoreSrc.reduce((s: number, sub: any) => s + generateScore(sub.attempted, sub.correct, sub.wrong), 0) / scoreSrc.length).toFixed(0)
-        : 0;
+      const jrScoreAttempted = scoreSrc.reduce((s: number, sub: any) => s + sub.attempted, 0);
+      const jrScoreCorrect = scoreSrc.reduce((s: number, sub: any) => s + sub.correct, 0);
+      const jrScoreWrong = scoreSrc.reduce((s: number, sub: any) => s + sub.wrong, 0);
+      const jrScore = +generateScore(jrScoreAttempted, jrScoreCorrect, jrScoreWrong).toFixed(0);
 
       // Lesson completion
       const jrLessonTotal = subjects.reduce((s: number, sub: any) => s + sub.lessonTotal, 0);
@@ -862,19 +877,21 @@ export class ProgramService {
       };
     });
 
-    // Overall summary — computed from unique subjects (not double-counted per role)
-    let sumScore = 0, sumAttempted = 0, sumCorrect = 0, sumNumTrivia = 0;
+    // Overall summary — computed from unique subjects (not double-counted per role). Pooled
+    // (sum raw counts, one generateScore() call) rather than averaging each subject's score,
+    // so this stays consistent with overallAccuracy right below and jrScore/jrAccuracy above.
+    let sumAttempted = 0, sumCorrect = 0, sumWrong = 0, sumNumTrivia = 0;
     for (const subjectId of allSubjectIds) {
       const raw = subjectStatsMap.get(subjectId) ?? {};
       const attempted = +raw.attempted || 0;
       const correct = +raw.correct || 0;
       const wrong = +raw.wrong || 0;
-      sumScore += generateScore(attempted, correct, wrong);
       sumAttempted += attempted;
       sumCorrect += correct;
+      sumWrong += wrong;
       sumNumTrivia += +raw.numTrivia || 0;
     }
-    const overallScore = allSubjectIds.length ? +(sumScore / allSubjectIds.length).toFixed(0) : 0;
+    const overallScore = +generateScore(sumAttempted, sumCorrect, sumWrong).toFixed(0);
     const overallAccuracy = sumAttempted > 0 ? +(sumCorrect * 100 / sumAttempted).toFixed(1) : 0;
     const overallTriviaCompletion = sumNumTrivia > 0 ? +((sumAttempted / sumNumTrivia) * 100).toFixed(1) : 0;
     const totalLessons = lessons.length;
@@ -1030,10 +1047,14 @@ export class ProgramService {
       const wrong = +raw.wrong || 0;
       const skipped = +raw.skipped || 0;
       const numTrivia = +raw.numTrivia || 0;
-      const coverage = numTrivia > 0 ? +((attempted / numTrivia) * 100).toFixed(1) : 0;
-      const correctCoverage = numTrivia > 0 ? +((correct / numTrivia) * 100).toFixed(1) : 0;
-      const accuracy = attempted > 0 ? +(correct * 100 / attempted).toFixed(1) : 0;
-      const score = +generateScore(attempted, correct, wrong).toFixed(0);
+      // computeAttemptMetrics() is the one shared implementation of this formula —
+      // every level (subject/topic/subjectTrack/job-role) calls it instead of reimplementing it.
+      const { coverage, correctCoverage, currentAccuracy: accuracy, score } = computeAttemptMetrics({
+        numTrivia, attempted, correct, wrong,
+        journeyAttempts: +raw.journeyAttempts || 0,
+        journeyCorrect: +raw.journeyCorrect || 0,
+        journeyWrong: +raw.journeyWrong || 0,
+      });
 
       const subjectTrackIds = stIdsBySubject.get(+rs.subjectId) ?? [];
       const subjectTracks = subjectTrackIds

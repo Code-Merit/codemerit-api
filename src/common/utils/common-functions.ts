@@ -14,6 +14,12 @@ export const getTitleByTopicIds = (topics: Topic[]): string => {
    return topics && topics.length > 0 ? topics.map((t: Topic) => t.title).join(' ') : '';
 };
 
+// The single place the negative-marking penalty is defined. Every score calculation in
+// the app must derive from this constant (via generateScore/computeAttemptMetrics) rather
+// than hardcoding its own copy of "0.2" — that duplication is exactly how quiz/subject/
+// job-role scores drifted out of sync with each other.
+export const NEGATIVE_MARKING_RATIO = 0.2;
+
 export const generateScore = (
   attempted: number,
   correct: number,
@@ -21,9 +27,9 @@ export const generateScore = (
 ): number => {
   if (attempted === 0) return 0;
   // Correct answers = +1 point each
-  // Wrong answers = -0.2 penalty each (20% negative marking)
+  // Wrong answers = -NEGATIVE_MARKING_RATIO penalty each
   // Skipped = 0
-  const rawScore = correct - wrong * 0.2;
+  const rawScore = correct - wrong * NEGATIVE_MARKING_RATIO;
   const normalized = (rawScore / attempted) * 100;
   return Math.max(0, Math.min(100, Number(normalized.toFixed(1))));
 };

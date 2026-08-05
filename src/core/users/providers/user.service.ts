@@ -71,7 +71,11 @@ export class UserService {
    * (native + Google/LinkedIn) always leaves it null: nobody "added" a user who signed up
    * themselves.
    */
-  async create(data: Partial<CreateUserDto>, createdBy: number | null = null): Promise<User> {
+  async create(
+    data: Partial<CreateUserDto>,
+    createdBy: number | null = null,
+    requestMeta?: { ipAddress?: string; userAgent?: string },
+  ): Promise<User> {
     const existingEmail = await this.findByEmail(data.email);
     console.log('existingEmail', existingEmail);
 
@@ -102,6 +106,12 @@ export class UserService {
       user.createdBy = createdBy;
       if (data.image) {
         user.image = data.image;
+      }
+      if (requestMeta?.ipAddress) {
+        user.ipAddress = requestMeta.ipAddress;
+      }
+      if (requestMeta?.userAgent) {
+        user.userAgent = requestMeta.userAgent;
       }
 
       const isSocialLogin =
@@ -156,9 +166,6 @@ export class UserService {
       //validate on client
       if (data.about) {
         profile.about = data.about;
-      }
-      if (data.subjectTrackId) {
-        profile.subjectTrackId = Number(data.subjectTrackId);
       }
       if (data.yearsExperience !== undefined && data.yearsExperience !== null) {
         profile.experience = Number(data.yearsExperience);
@@ -742,9 +749,11 @@ export class UserService {
   /**
    * `caller` is omitted for trusted, system-initiated calls (e.g. auth.service.ts auto-activating
    * a user's own account right after a Google/LinkedIn callback) — those aren't a "manage someone
-   * else's account" action at all, so they skip the gate below entirely. The HTTP-facing
-   * controller path always supplies `caller`, and only that path is subject to the Talent-Partner
-   * restrictions (can't touch an already-Active user, can't change role/accountStatus).
+   * else's account" action at all, so they skip the gate below entirely. A caller editing their
+   * own account (e.g. the onboarding page setting `designation`) similarly isn't "managing users"
+   * and skips the Talent-Partner/Admin gate — it just can't touch its own role/accountStatus.
+   * Editing anyone else always goes through the Talent-Partner restrictions (can't touch an
+   * already-Active user, can't change role/accountStatus, must be a user they added).
    */
   async updateUser(
     userId: number,
@@ -765,7 +774,20 @@ export class UserService {
       throw new AppCustomException(HttpStatus.BAD_REQUEST, 'User not found');
     }
 
-    if (caller) {
+    if (caller && caller.id === userId) {
+      if (updateUserDto.role !== undefined) {
+        throw new AppCustomException(
+          HttpStatus.FORBIDDEN,
+          'You cannot change your own role.',
+        );
+      }
+      if (updateUserDto.accountStatus !== undefined) {
+        throw new AppCustomException(
+          HttpStatus.FORBIDDEN,
+          'You cannot change your own account status.',
+        );
+      }
+    } else if (caller) {
       const { isAdmin } = await this.ensureCanManageUsers(caller);
       if (!isAdmin) {
         if (user.createdBy !== caller.id) {
