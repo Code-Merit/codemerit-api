@@ -1,4 +1,5 @@
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
+import { ValidationError } from 'class-validator';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { configDotenv } from 'dotenv';
@@ -11,6 +12,30 @@ import { IAppConfig, appConfig } from './config/app-config';
 configDotenv({
   path: `.env`,
 });
+
+// A ValidationError for a nested DTO (e.g. CreateQuizDto.settings) has no `constraints`
+// of its own — only `children`, one level per nesting depth. Reading
+// error.constraints[...] directly (as this pipe used to) throws "Cannot convert
+// undefined or null to object" on any nested-field failure instead of returning a 400,
+// so this walks `children` recursively and reports each leaf with its full dotted path
+// (e.g. "settings.numQuestions") instead of assuming every error is top-level.
+function flattenValidationErrors(
+  errors: ValidationError[],
+  parentPath = '',
+): { property: string; message: string }[] {
+  const result: { property: string; message: string }[] = [];
+  for (const error of errors) {
+    const property = parentPath ? `${parentPath}.${error.property}` : error.property;
+    if (error.constraints) {
+      const firstKey = Object.keys(error.constraints)[0];
+      result.push({ property, message: error.constraints[firstKey] });
+    }
+    if (error.children?.length) {
+      result.push(...flattenValidationErrors(error.children, property));
+    }
+  }
+  return result;
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -49,12 +74,11 @@ async function bootstrap() {
     new ValidationPipe({
       forbidUnknownValues: false,
       exceptionFactory: (errors) => {
-        const result = errors.map((error) => ({
-          property: error.property,
-          message: error.constraints[Object.keys(error.constraints)[0]],
-        }));
+        const result = flattenValidationErrors(errors);
         Logger.log('GlobalPipe', JSON.stringify(result));
-        return new BadRequestException(result);
+        return new BadRequestException(
+          result.length ? result : [{ property: '', message: 'Validation failed' }],
+        );
       },
       stopAtFirstError: true,
     }),
