@@ -15,6 +15,7 @@ import {
   generateScore,
   getTitleBySubjectIds,
   getTitleByTopicIds,
+  shuffleArray,
 } from 'src/common/utils/common-functions';
 import {
   generateSlug,
@@ -24,7 +25,7 @@ import { MasterService } from 'src/modules/master/providers/master.service';
 import { NotificationService } from 'src/modules/notification/providers/notification.service';
 import { GetQuestionsByIdsDto } from 'src/modules/question/dtos/get-questions-by-ids.dto';
 import { QuestionService } from 'src/modules/question/providers/question.service';
-import { UserQuestionService } from 'src/modules/question/providers/user-question.service';
+import { QuestionGeneratorService } from 'src/modules/question/providers/question-generator.service';
 import { DataSource, In, Repository } from 'typeorm';
 import { CreateQuizDto } from '../dtos/create-quiz.dto';
 import { UpdateQuizDto } from '../dtos/update-quiz.dto';
@@ -37,6 +38,11 @@ import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.ent
 import { MailService } from 'src/common/mail/providers/mail.service';
 import { AchievementService } from 'src/modules/achievement/providers/achievement.service';
 import { NewlyEarnedDto } from 'src/modules/achievement/dtos/newly-earned.dto';
+import {
+  DEFAULT_QUIZ_LENGTH,
+  MAX_QUIZ_LENGTH,
+  INITIAL_ASSESSMENT_LENGTH,
+} from 'src/common/constants/quiz-generation.constants';
 
 // Marks a Quiz (Quiz.tag) as the one-time, system-generated initial skill check,
 // distinguishing it from every other UserQuiz a user creates for themselves.
@@ -57,7 +63,7 @@ export class QuizService {
     private quizTopicRepo: Repository<QuizTopic>,
     @InjectRepository(QuizResult)
     private quizResultRepository: Repository<QuizResult>,
-    private readonly userQuestionService: UserQuestionService,
+    private readonly questionGeneratorService: QuestionGeneratorService,
     private readonly questionService: QuestionService,
     private readonly masterService: MasterService,
     private readonly notificationService: NotificationService,
@@ -91,8 +97,16 @@ export class QuizService {
     // Step 2: Use QuestionService
     const ids = new GetQuestionsByIdsDto();
     ids.questionIds = questionIds;
-    ids.numQuestions = 10;
-    const questions = await this.questionService.getQuestionsFromQIds(ids);
+    let questions = await this.questionService.getQuestionsFromQIds(ids);
+
+    // getQuestionsFromQIds() doesn't preserve any particular order — for a UserQuiz,
+    // shuffle then stable-sort by level so the user always sees Easy questions first,
+    // then Intermediate, then Advanced (random order within a level). Derived purely
+    // from each question's own level at read time, so this works retroactively for
+    // quizzes generated before this ordering existed. Standard quizzes are untouched.
+    if (quiz.quizType === QuizTypeEnum.UserQuiz) {
+      questions = shuffleArray(questions).sort((a: any, b: any) => a.level - b.level);
+    }
 
     // Step 3: Return quiz with questions
     return {
@@ -163,7 +177,7 @@ export class QuizService {
     }
 
     // All three scopes are resolved down to one topic-level pool by
-    // UserQuestionService — they combine (union), they don't override each other,
+    // QuestionGeneratorService — they combine (union), they don't override each other,
     // so a quiz can legitimately span e.g. one whole subject plus a couple of
     // specific extra topics. `quizCategory` above only picks a label for the
     // auto-generated title when multiple scopes are given at once, most-specific wins.
@@ -180,13 +194,11 @@ export class QuizService {
         ? Math.min(requestedNumQuestions, questionIds.length)
         : questionIds.length;
     } else if (createQuizDto?.quizType === QuizTypeEnum.UserQuiz) {
-      if (requestedNumQuestions !== undefined && requestedNumQuestions <= 0) {
-        throw new AppCustomException(
-          HttpStatus.BAD_REQUEST,
-          'For UserQuiz, numQuestions must be a positive number.',
-        );
-      }
-      ids.numQuestions = requestedNumQuestions ?? 10;
+      // Server-side cap — no client request can produce a quiz longer than
+      // MAX_QUIZ_LENGTH, regardless of what numQuestions asks for. This is what
+      // stops a "practice this topic" request from silently returning every
+      // question in the topic.
+      ids.numQuestions = Math.min(requestedNumQuestions ?? DEFAULT_QUIZ_LENGTH, MAX_QUIZ_LENGTH);
     } else if (requestedNumQuestions && requestedNumQuestions > 0) {
       ids.numQuestions = requestedNumQuestions;
     } else {
@@ -200,24 +212,12 @@ export class QuizService {
     if (createQuizDto?.quizType === QuizTypeEnum.Standard) {
       questions = await this.questionService.getQuestionsFromQIds(ids);
     } else {
-      questionObj = await this.userQuestionService.getUniqueQuizForQuestions(
+      questionObj = await this.questionGeneratorService.generateUserQuiz(
         userId,
         ids,
       );
       questions = questionObj?.questions ?? [];
     }
-
-    /*
-    if (!questions || questions.length === 0) {
-      throw new AppCustomException(
-        HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE,
-        "No unique questions found to generate quiz."
-      );
-    }
-    */
-
-    //#Task2: Ensure Quiz creates with unique questions but if there are no unique questions, generate random quiz
-    //Implement specification with an easy to debug flow and proper response
 
     // Save quiz in DB if at least 3 questions are available
     if (!questions || questions.length === 0) {
@@ -428,7 +428,7 @@ export class QuizService {
       userId,
       quizType: QuizTypeEnum.UserQuiz,
       subjectIds: subjectIds.join(','),
-      numQuestions: 20,
+      numQuestions: INITIAL_ASSESSMENT_LENGTH,
       title: `Initial Assessment - ${jobRoleTitle} - ${firstName}`,
       tag: INITIAL_ASSESSMENT_TAG,
       category: 'InitialAssessment',

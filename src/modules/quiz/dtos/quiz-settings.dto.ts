@@ -1,4 +1,4 @@
-import { IsNumber, IsEnum, IsBoolean, IsOptional } from 'class-validator';
+import { IsNumber, IsEnum, IsBoolean, IsOptional, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderingEnum, ModeEnum } from 'src/common/enum/quiz-settings.enum';
@@ -8,6 +8,7 @@ export class QuizSettingsDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
+  @Min(1)
   numQuestions?: number = 10;
 
   @ApiPropertyOptional({ enum: OrderingEnum, default: OrderingEnum.DEFAULT })

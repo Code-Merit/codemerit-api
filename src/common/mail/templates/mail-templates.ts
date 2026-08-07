@@ -14,13 +14,24 @@ export function registrationWelcomeTemplate(
   return {
     subject: 'Welcome to CodeMerit — verify your account',
     html: renderEmailLayout({
-      preheader: 'Use this code to verify your CodeMerit account.',
+      preheader: 'Use this code to verify your CodeMerit account and get started.',
       heading: `Welcome, ${safeName}!`,
       bodyHtml: `
-        <p>Thanks for signing up for CodeMerit. Use the code below to verify your account and get started.</p>
+        <p>Thanks for joining CodeMerit. We’re excited to help you learn faster, practice smarter, and build momentum toward your goals.</p>
+        <p>To get started, please verify your account using the one-time code below.</p>
         ${otpBlock(otp)}
-        <p>This code expires shortly, so verify soon. If you didn't create this account, you can ignore this e-mail.</p>
+        <p>This code will expire soon, so please verify your account as soon as possible. If you didn’t create this account, you can safely ignore this email.</p>
       `,
+      highlightHtml: '<strong>What happens next?</strong><p>Verify your account, explore your dashboard, and start your first learning session.</p>',
+      sectionTitle: 'What you can expect',
+      sectionHtml: '<p>Personalized recommendations, progress tracking, streaks, badges, certificates, and career-focused learning paths.</p>',
+      bulletPoints: [
+        'Verify your account in one step',
+        'Start quizzes and track your growth',
+        'Stay motivated with streaks and achievements',
+      ],
+      ctaLabel: 'Open CodeMerit',
+      ctaUrl: '{{FRONTEND_URL}}',
     }),
   };
 }
@@ -38,9 +49,10 @@ export function otpTemplate(
         preheader: 'Use this code to reset your CodeMerit password.',
         heading: 'Reset your password',
         bodyHtml: `
-          <p>Hi ${safeName}, use the code below to reset your CodeMerit password.</p>
+          <p>Hi ${safeName}, we received a request to reset your CodeMerit password.</p>
+          <p>Please use the one-time code below to continue.</p>
           ${otpBlock(otp)}
-          <p>If you didn't request a password reset, you can safely ignore this e-mail — your password won't change.</p>
+          <p>If you didn’t make this request, you can safely ignore this email. Your password will remain unchanged.</p>
         `,
       }),
     };
@@ -51,9 +63,9 @@ export function otpTemplate(
       preheader: 'Use this code to verify your CodeMerit account.',
       heading: 'Verify your account',
       bodyHtml: `
-        <p>Hi ${safeName}, use the code below to verify your CodeMerit account.</p>
+        <p>Hi ${safeName}, please use the one-time code below to verify your CodeMerit account.</p>
         ${otpBlock(otp)}
-        <p>If you didn't request this, you can safely ignore this e-mail.</p>
+        <p>If you didn’t request this, you can safely ignore this email.</p>
       `,
     }),
   };
@@ -65,10 +77,11 @@ export function accountVerifiedTemplate(name: string): EmailTemplate {
     subject: 'Your CodeMerit account is verified',
     html: renderEmailLayout({
       preheader: 'Your account is verified and ready to go.',
-      heading: `You're all set, ${safeName}!`,
+      heading: `You’re all set, ${safeName}!`,
       bodyHtml: `
-        <p>Your CodeMerit account is now verified. You can sign in and start taking quizzes, tracking your progress, and earning certificates.</p>
+        <p>Your CodeMerit account is now verified. You can sign in and start learning, practicing, and building your achievements right away.</p>
       `,
+      highlightHtml: '<strong>Your learning journey is ready.</strong><p>Open your dashboard to continue your streak, explore new lessons, and move toward your next milestone.</p>',
       ctaLabel: 'Go to CodeMerit',
       ctaUrl: '{{FRONTEND_URL}}',
     }),
@@ -83,8 +96,8 @@ export function passwordChangedTemplate(name: string): EmailTemplate {
       preheader: 'Your password was just changed.',
       heading: 'Password changed',
       bodyHtml: `
-        <p>Hi ${safeName}, this confirms your CodeMerit password was just changed.</p>
-        <p>If you didn't make this change, please reset your password immediately and contact support.</p>
+        <p>Hi ${safeName}, this confirms that your CodeMerit password was successfully updated.</p>
+        <p>If you did not make this change, please reset your password immediately and contact support so we can help secure your account.</p>
       `,
     }),
   };
@@ -97,12 +110,13 @@ export function roleEnrolledTemplate(
   const safeName = escapeHtml(name);
   const safeRole = escapeHtml(jobRoleTitle);
   return {
-    subject: `You're enrolled in ${jobRoleTitle}`,
+    subject: `You’re enrolled in ${jobRoleTitle}`,
     html: renderEmailLayout({
-      preheader: `You're now on the ${jobRoleTitle} career track.`,
+      preheader: `You’re now on the ${jobRoleTitle} career track.`,
       heading: `Welcome to ${safeRole}`,
       bodyHtml: `
-        <p>Hi ${safeName}, you're now enrolled in the <strong>${safeRole}</strong> career track. Your progress across its subjects and subject tracks will now count toward this role's certifications.</p>
+        <p>Hi ${safeName}, you’re now enrolled in the <strong>${safeRole}</strong> career track.</p>
+        <p>Your progress across the related subjects and learning paths will now contribute to your journey toward this role’s certifications and milestones.</p>
       `,
       ctaLabel: 'View your career dashboard',
       ctaUrl: '{{FRONTEND_URL}}',
@@ -124,9 +138,11 @@ export function certificateIssuedTemplate(
       preheader: `Congratulations on earning the ${trackTitle} certificate.`,
       heading: 'Congratulations! 🎉',
       bodyHtml: `
-        <p>Hi ${safeName}, you've earned the <strong>${safeTrack}</strong> certificate.</p>
-        <p>Certificate number: <strong>${safeCertNumber}</strong></p>
+        <p>Hi ${safeName}, you’ve earned the <strong>${safeTrack}</strong> certificate.</p>
+        <p>Your certificate reference number is <strong>${safeCertNumber}</strong>.</p>
       `,
+      sectionTitle: 'Certificate details',
+      sectionHtml: '<p>Share your achievement with your network and keep the momentum going by taking on your next challenge.</p>',
       ctaLabel: 'View your certificate',
       ctaUrl: '{{FRONTEND_URL}}',
     }),
@@ -145,8 +161,10 @@ export function badgeEarnedTemplate(
       preheader: `You earned the ${badgeName} badge.`,
       heading: 'New badge earned!',
       bodyHtml: `
-        <p>Hi ${safeName}, you just earned the <strong>${safeBadge}</strong> badge.</p>
+        <p>Hi ${safeName}, you’ve just earned the <strong>${safeBadge}</strong> badge.</p>
+        <p>This recognition reflects your consistency and progress, and it’s a great sign that your effort is paying off.</p>
       `,
+      highlightHtml: '<strong>Keep the momentum going.</strong><p>Your next lesson or quiz is waiting—keep building on this success.</p>',
       ctaLabel: 'View your badges',
       ctaUrl: '{{FRONTEND_URL}}',
     }),
@@ -161,11 +179,13 @@ export function streakMilestoneTemplate(
   return {
     subject: `${days}-day streak! Keep it up`,
     html: renderEmailLayout({
-      preheader: `You're on a ${days}-day streak.`,
-      heading: `You're on a ${days}-day streak!`,
+      preheader: `You’re on a ${days}-day streak.`,
+      heading: `You’re on a ${days}-day streak!`,
       bodyHtml: `
-        <p>Hi ${safeName}, you've been active on CodeMerit for ${days} days in a row. Keep the streak alive by practicing today.</p>
+        <p>Hi ${safeName}, you’ve been active on CodeMerit for ${days} days in a row.</p>
+        <p>That consistency is building real momentum, and one small session today can keep it going.</p>
       `,
+      highlightHtml: '<strong>Small daily effort adds up.</strong><p>A short session today can help you build toward your next milestone and keep the streak alive.</p>',
       ctaLabel: 'Keep the streak going',
       ctaUrl: '{{FRONTEND_URL}}',
     }),

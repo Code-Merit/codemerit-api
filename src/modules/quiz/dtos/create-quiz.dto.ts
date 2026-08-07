@@ -10,6 +10,7 @@ import {
   IsInt,
   IsNumber,
   IsNotEmpty,
+  Min,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -83,6 +84,7 @@ export class CreateQuizDto {
   @ApiPropertyOptional({ example: 10 })
   @IsOptional()
   @IsNumber()
+  @Min(1)
   numQuestions?: number;
 
   @ApiPropertyOptional({

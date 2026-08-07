@@ -418,6 +418,7 @@ export class SubjectStatsService {
       .addSelect('l.title', 'title')
       .addSelect('l.slug', 'slug')
       .addSelect('l.level', 'level')
+      .addSelect('l.format', 'format')
       .addSelect('l.topicId', 'topicId')
       .addSelect('t.title', 'topicTitle')
       .addSelect('t.slug', 'topicSlug')
@@ -435,6 +436,8 @@ export class SubjectStatsService {
       qb.leftJoin('user_lesson_tracker', 'ult', 'ult.lessonId = l.id AND ult.userId = :userId', { userId })
         .addSelect('ult.status', 'status')
         .addSelect('ult.views', 'views')
+        .addSelect('ult.progressPercent', 'progressPercent')
+        .addSelect('ult.updatedAt', 'lastActivityAt')
         .addGroupBy('ult.id');
     }
 
@@ -445,23 +448,37 @@ export class SubjectStatsService {
       title: r.title,
       slug: r.slug,
       level: +r.level,
+      format: r.format,
       topicId: r.topicId ? +r.topicId : null,
       topicTitle: r.topicTitle ?? null,
       topicSlug: r.topicSlug ?? null,
       numSections: +r.numSections || 0,
       status: userId ? (r.status ?? UserLessonTrackerStatusEnum.Pending) : null,
       views: userId ? +r.views || 0 : 0,
+      progressPercent: userId ? +r.progressPercent || 0 : 0,
+      lastActivityAt: userId ? (r.lastActivityAt ?? null) : null,
     }));
 
     const completed = userId
       ? list.filter((l) => l.status === UserLessonTrackerStatusEnum.Completed).length
       : 0;
+    const inProgress = userId
+      ? list.filter((l) => l.status === UserLessonTrackerStatusEnum.Read).length
+      : 0;
+    const totalViews = userId ? list.reduce((sum, l) => sum + l.views, 0) : 0;
+    const lastActivityAt = userId
+      ? list.reduce<Date | null>((latest, l) => {
+          if (!l.lastActivityAt) return latest;
+          const ts = new Date(l.lastActivityAt);
+          return !latest || ts > latest ? ts : latest;
+        }, null)
+      : null;
 
     // Same numerator/denominator*100, .toFixed(1) convention computeAttemptMetrics() uses for
     // question coverage — kept inline here since it's a single field, not shared across levels.
     const learningCompleteness = list.length > 0 ? +((completed / list.length) * 100).toFixed(1) : 0;
 
-    return { total: list.length, completed, learningCompleteness, list };
+    return { total: list.length, completed, inProgress, totalViews, learningCompleteness, lastActivityAt, list };
   }
 
   // ─── Related Job Roles ────────────────────────────────────────────────────────
