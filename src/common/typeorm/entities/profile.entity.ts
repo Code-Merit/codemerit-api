@@ -42,6 +42,20 @@ export class Profile extends AbstractEntity implements IProfile {
   linkedinId: string;
 
   @Column({
+    type: 'text',
+    nullable: true,
+    default: null,
+  })
+  linkedinAccessToken: string;
+
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    default: null,
+  })
+  linkedinTokenExpiresAt: Date;
+
+  @Column({
     type: 'varchar',
     length: 50,
     nullable: true,

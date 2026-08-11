@@ -17,9 +17,11 @@ import { CreateUserDto } from '../auth/dto/create-user.dto';
 import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
+import { LinkedinShareDto } from './dtos/linkedin-share.dto';
 import { UserProfileService } from './providers/user-profile.service';
 import { UserProfileAggregatorService } from './providers/user-profile-aggregator.service';
 import { UserService } from './providers/user.service';
+import { LinkedinShareService } from './providers/linkedin-share.service';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -38,15 +40,16 @@ export class UsersController {
     private readonly userProfileService: UserProfileService,
     private readonly userProfileAggregatorService: UserProfileAggregatorService,
     private readonly quizService: QuizService,
+    private readonly linkedinShareService: LinkedinShareService,
   ) {}
 
   @ApiOperation({
     summary: "Get the caller's own profile",
     description:
-      "Resolves the user purely from the verified JWT (`req.user.id`) — there is no id parameter, " +
+      'Resolves the user purely from the verified JWT (`req.user.id`) — there is no id parameter, ' +
       "so this can never read anyone else's data. Bundles the base user row with their Profile " +
-      "(bio, social links, self-rating/interview flags) and their full granted-permission list. " +
-      "Returns a 200 with `null` data (not a 404) if the account row is somehow missing.",
+      '(bio, social links, self-rating/interview flags) and their full granted-permission list. ' +
+      'Returns a 200 with `null` data (not a 404) if the account row is somehow missing.',
   })
   @Get('me')
   async getProfile(@Request() req): Promise<ApiResponse<any>> {
@@ -58,16 +61,18 @@ export class UsersController {
   }
 
   @ApiOperation({
-    summary: 'Generate (or fetch) the caller\'s one-time initial assessment quiz',
+    summary:
+      "Generate (or fetch) the caller's one-time initial assessment quiz",
     description:
       'Idempotent — if an initial-assessment quiz already exists for this user it is returned as-is ' +
       'instead of generating a duplicate. Otherwise builds a new 20-question UserQuiz sourced from ' +
-      'every subject attached to the caller\'s earliest job-role enrollment. Rejects with 400 if the ' +
+      "every subject attached to the caller's earliest job-role enrollment. Rejects with 400 if the " +
       'caller has never enrolled in a job role, or if that job role has no subjects configured yet.',
   })
   @ApiResponseDoc({
     status: 400,
-    description: 'Caller has no job-role enrollment, or the enrolled job role has no subjects configured.',
+    description:
+      'Caller has no job-role enrollment, or the enrolled job role has no subjects configured.',
   })
   @Post('initial-assessment')
   async generateInitialAssessment(@Request() req): Promise<ApiResponse<any>> {
@@ -101,14 +106,15 @@ export class UsersController {
     summary: 'List manageable users (Admin or Talent Partner only)',
     description:
       'Admins get every user in the system; a Talent Partner (permission `Role:TalentPartner`) only ' +
-      "sees users they personally created (`createdBy`) — 403 for anyone with neither. Each row is " +
+      'sees users they personally created (`createdBy`) — 403 for anyone with neither. Each row is ' +
       'annotated with job-role titles, and quiz/assessment/API-usage counts aggregated with cheap ' +
       'grouped queries rather than a fan-out join. Returns `data: null` (not an empty array) when ' +
       'the caller manages nobody yet.',
   })
   @ApiResponseDoc({
     status: 403,
-    description: 'Caller is neither an Admin nor a Talent-Partner-permission holder.',
+    description:
+      'Caller is neither an Admin nor a Talent-Partner-permission holder.',
   })
   @Get()
   async getAllUsers(@Request() req: any): Promise<ApiResponse<any>> {
@@ -127,7 +133,8 @@ export class UsersController {
    * caller here, not from the request body, so it's trustworthy enough to gate "users I added"
    * (findUserList's Talent-Partner filter, updateUser's ownership check). */
   @ApiOperation({
-    summary: 'Create a user on someone else\'s behalf (Admin or Talent Partner only)',
+    summary:
+      "Create a user on someone else's behalf (Admin or Talent Partner only)",
     description:
       'The "Manage Users" add-user form — distinct from public self-signup (`POST /auth/register`). ' +
       '403 for callers who are neither Admin nor a Talent-Partner-permission holder. `createdBy` is ' +
@@ -138,11 +145,13 @@ export class UsersController {
   })
   @ApiResponseDoc({
     status: 400,
-    description: 'E-mail (or mobile, if supplied) is already registered to another account.',
+    description:
+      'E-mail (or mobile, if supplied) is already registered to another account.',
   })
   @ApiResponseDoc({
     status: 403,
-    description: 'Caller is neither an Admin nor a Talent-Partner-permission holder.',
+    description:
+      'Caller is neither an Admin nor a Talent-Partner-permission holder.',
   })
   @Post()
   async createUser(
@@ -159,33 +168,44 @@ export class UsersController {
   // @UseGuards(RolesGuard)
   // @Roles(UserRoleEnum.ADMIN)
   @ApiOperation({
-    summary: 'Get a user\'s full public-facing profile by username',
+    summary: "Get a user's full public-facing profile by username",
     description:
       'Aggregates the user row with course dashboards, granted permissions, the 10 most recent quiz ' +
       'results (with score/avg summary), self- and interview-assessment sessions (5 most recent of ' +
       'each, with skill ratings + avg summary), issued certificates, earned badges (subject/global), ' +
       'the last 20 activity entries, and gamification (points/level/streak). No role check is ' +
       'currently enforced beyond being logged in — this is the same aggregator used to render any ' +
-      'user\'s public profile page. Throws 400 if the username does not exist.',
+      "user's public profile page. Throws 400 if the username does not exist.",
   })
-  @ApiParam({ name: 'username', description: 'Target user\'s username (not id)', type: String })
+  @ApiParam({
+    name: 'username',
+    description: "Target user's username (not id)",
+    type: String,
+  })
   @Get('profile/:username')
   async getUserByUsername(
     @Param('username') username: string,
   ): Promise<ApiResponse<any>> {
-    const result = await this.userProfileAggregatorService.getFullProfile(username);
+    const result =
+      await this.userProfileAggregatorService.getFullProfile(username);
     return new ApiResponse('User found.', result);
   }
   @ApiOperation({
-    summary: 'Update a user\'s core account fields (Admin or Talent Partner only)',
+    summary:
+      "Update a user's core account fields (Admin or Talent Partner only)",
     description:
       'A Talent Partner may only edit users they personally created (`createdBy` match) and only ' +
       'while that user is not yet ACTIVE — 403 otherwise — and may never change `accountStatus` or ' +
       '`role` (403 if attempted); Admins have no such restrictions. Passing `linkedinUrl` also ' +
-      'upserts the user\'s Profile row (creating one if it does not exist yet) alongside the base ' +
+      "upserts the user's Profile row (creating one if it does not exist yet) alongside the base " +
       'user fields.',
   })
-  @ApiQuery({ name: 'userId', required: true, type: Number, description: 'Id of the user to update.' })
+  @ApiQuery({
+    name: 'userId',
+    required: true,
+    type: Number,
+    description: 'Id of the user to update.',
+  })
   @ApiResponseDoc({
     status: 403,
     description:
@@ -208,13 +228,13 @@ export class UsersController {
   @ApiOperation({
     summary: "Update the caller's own Profile fields",
     description:
-      "Resolves the profile purely from the verified JWT (`req.user.id`) — there is no id " +
+      'Resolves the profile purely from the verified JWT (`req.user.id`) — there is no id ' +
       "parameter, so this can never update anyone else's profile. Only the fields present on " +
       '`UpdateUserProfileDto` (linkedinUrl, about, social ids, workStatus, and the ' +
       'workStatus-dependent education fields [collegeName, stream, passingYear, ' +
       'hasCompletedInternship, internshipDuration] or experience fields [experience, ' +
       'isCurrentlyEmployed, companyName]) are merged in; rejects with 400 if no Profile row ' +
-      "exists for the caller. This is a partial patch: when `workStatus` is included in the " +
+      'exists for the caller. This is a partial patch: when `workStatus` is included in the ' +
       'request, its full set of dependent fields for that branch must be included too (all ' +
       'required together), and the fields belonging to the other branch must be omitted. ' +
       'Omitting `workStatus` entirely leaves existing values untouched. Submitting `workStatus` ' +
@@ -235,6 +255,34 @@ export class UsersController {
   }
 
   @ApiOperation({
+    summary: 'Check LinkedIn connection status',
+    description:
+      'Returns whether the authenticated user has a valid LinkedIn connection available for sharing.',
+  })
+  @Get('linkedin/share/status')
+  async linkedinShareStatus(@Request() req): Promise<ApiResponse<any>> {
+    const result = await this.linkedinShareService.getStatus(req.user.id);
+    return new ApiResponse(
+      'LinkedIn share status fetched successfully.',
+      result,
+    );
+  }
+
+  @ApiOperation({
+    summary: 'Share content to LinkedIn',
+    description:
+      "Shares text, an optional URL, and an optional image to the authenticated user's LinkedIn profile.",
+  })
+  @Post('linkedin/share')
+  async shareToLinkedin(
+    @Request() req,
+    @Body() dto: LinkedinShareDto,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.linkedinShareService.share(req.user.id, dto);
+    return new ApiResponse('LinkedIn share processed successfully.', result);
+  }
+
+  @ApiOperation({
     summary: 'Enroll the caller in a job role',
     description:
       'Enrolls the authenticated caller (never a client-supplied user id) in `jobRoleId`. Rejects ' +
@@ -244,7 +292,10 @@ export class UsersController {
       '`POST /apis/users/initial-assessment` builds its quiz from.',
   })
   @ApiResponseDoc({ status: 404, description: 'Job role does not exist.' })
-  @ApiResponseDoc({ status: 409, description: 'Caller is already enrolled in this job role.' })
+  @ApiResponseDoc({
+    status: 409,
+    description: 'Caller is already enrolled in this job role.',
+  })
   @Put('jobRoleEnrollment')
   async enrollJobRole(
     @Request() req,
@@ -258,7 +309,7 @@ export class UsersController {
   }
 
   @ApiOperation({
-    summary: 'Change the caller\'s own password',
+    summary: "Change the caller's own password",
     description:
       'Requires `currentPassword` to bcrypt-match the stored hash — 400 if it does not. Also 400s ' +
       'if `newPassword` equals `currentPassword`, or equals the already-stored hash (i.e. no actual ' +
@@ -267,7 +318,8 @@ export class UsersController {
   })
   @ApiResponseDoc({
     status: 400,
-    description: 'Current password is incorrect, or the new password is not actually different.',
+    description:
+      'Current password is incorrect, or the new password is not actually different.',
   })
   @Put('change-password')
   async changePassword(
@@ -312,15 +364,28 @@ export class UsersController {
       'parameter, not the path segment — pass it both places to be safe. Rejects with 400 if no ' +
       'user with that id exists.',
   })
-  @ApiParam({ name: 'userId', description: 'Present in the route but not actually read — see description.', type: Number })
-  @ApiQuery({ name: 'userId', required: true, type: Number, description: 'Id of the user to delete — this is the value actually used.' })
+  @ApiParam({
+    name: 'userId',
+    description:
+      'Present in the route but not actually read — see description.',
+    type: Number,
+  })
+  @ApiQuery({
+    name: 'userId',
+    required: true,
+    type: Number,
+    description: 'Id of the user to delete — this is the value actually used.',
+  })
   @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @Delete('delete/:userId')
   async remove(
     @Query('userId', ParseIntPipe) userId: number,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    await this.usersService.remove(userId, { id: req.user.id, role: req.user.role });
+    await this.usersService.remove(userId, {
+      id: req.user.id,
+      role: req.user.role,
+    });
     return new ApiResponse('User deleted Successful.', null);
   }
 }
