@@ -860,7 +860,11 @@ export class UserService {
     }
   }
 
-  async enrollJobRole(userId: number, jobRoleId: number): Promise<UserJobRole> {
+  /** Records a career-path *target*, not access — see SkillEnrollment for the
+   * separate, subject-scoped concept that actually gates content. Renamed from
+   * enrollJobRole() to stop that "enroll" ambiguity at the source; same mechanics
+   * (409 on duplicate target, notification, seeds the initial-assessment quiz). */
+  async targetJobRole(userId: number, jobRoleId: number): Promise<UserJobRole> {
     const user = await this.findOne(userId);
     if (!user) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, 'User not found.');
@@ -880,7 +884,7 @@ export class UserService {
     if (existing) {
       throw new AppCustomException(
         HttpStatus.CONFLICT,
-        `User is already enrolled in this job role.`,
+        `User is already targeting this job role.`,
       );
     }
 

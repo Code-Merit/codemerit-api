@@ -13,7 +13,11 @@ configDotenv({
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true exposes req.rawBody (Buffer) alongside the normal parsed req.body,
+  // without disabling JSON parsing anywhere else — needed for Razorpay/Stripe webhook
+  // signature verification, which re-hashes the exact bytes received (see
+  // PaymentController's webhook routes and the corresponding provider classes).
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config: IAppConfig = app.get<IAppConfig>(appConfig.KEY);
 
   // Enable CORS for localhost dev

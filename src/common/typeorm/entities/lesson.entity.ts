@@ -62,6 +62,14 @@ export class Lesson extends AbstractEntity {
   })
   tags: string[] | null;
 
+  // Quality/merchandising signal only — does NOT gate access on its own (Basic-tier
+  // users still see premium lessons, subject to the normal daily cap/ceiling rules).
+  @Column({
+    type: 'boolean',
+    default: false,
+  })
+  isPremium: boolean;
+
   @Column({
     type: 'integer',
     nullable: false,
