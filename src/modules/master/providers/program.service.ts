@@ -19,6 +19,7 @@ import { SubjectStatsService } from './subject-stats.service';
 import { TopicAnalysisService } from './topic-analysis.service';
 import { SubjectTrackAnalysisService } from './subject-track-analysis.service';
 import { BadgeQueryService, ScopedBadgeDto } from '../../achievement/providers/badge-query.service';
+import { SkillEnrollmentService } from '../../skill-enrollment/providers/skill-enrollment.service';
 
 @Injectable()
 export class ProgramService {
@@ -35,6 +36,7 @@ export class ProgramService {
     private readonly meritService: MeritService,
     private readonly subjectTrackAnalyzer: SubjectTrackAnalysisService,
     private readonly badgeQueryService: BadgeQueryService,
+    private readonly skillEnrollmentService: SkillEnrollmentService,
   ) {}
 
   // ─── "Next best action" surfacing ─────────────────────────────────────────────
@@ -58,11 +60,17 @@ export class ProgramService {
     const nextCt = inProgress[0] ?? null;
     if (!nextCt) return { nextCertificationTrack: null, nextSubjectTrack: null };
 
-    const incompleteTracks = (nextCt.subjectTracks ?? [])
-      .filter((st: any) => !st.isCompleted)
-      .sort((a: any, b: any) => (b.progressPercent ?? 0) - (a.progressPercent ?? 0));
+    const incompleteTracks = (nextCt.subjectTracks ?? []).filter((st: any) => !st.isCompleted);
 
-    const nextSt = incompleteTracks[0] ?? null;
+    // Prefer a track the learner has already started (real attempts, real score) over one
+    // they haven't touched yet — otherwise an untouched track earlier in sortOrder always
+    // wins even when they have real, attempted progress on a different track. progressPercent
+    // alone can't distinguish "attempted but hasn't finished a topic yet" (0%) from "never
+    // opened" (also 0%), so isStarted is checked directly. Within each group, still prefer
+    // more progress first so partial topic completion counts for something.
+    const byProgressDesc = (a: any, b: any) => (b.progressPercent ?? 0) - (a.progressPercent ?? 0);
+    const started = incompleteTracks.filter((st: any) => st.isStarted).sort(byProgressDesc);
+    const nextSt = started[0] ?? [...incompleteTracks].sort(byProgressDesc)[0] ?? null;
 
     return {
       nextCertificationTrack: {
@@ -78,6 +86,14 @@ export class ProgramService {
             subjectId: nextSt.subject?.id ?? nextSt.subjectId ?? null,
             subjectTitle: nextSt.subject?.title ?? nextSt.subjectName ?? null,
             subjectSlug: nextSt.subject?.slug ?? null,
+            // Real performance data — already computed on nextSt by SubjectTrackAnalysisService,
+            // just not forwarded before. Lets the "Next Assessment" widget show an actual score/
+            // topics-covered readout instead of only a bare completion percent.
+            score: nextSt.score ?? 0,
+            accuracy: nextSt.currentAccuracy ?? 0,
+            attempted: nextSt.attempted ?? 0,
+            totalTopics: nextSt.totalTopics ?? 0,
+            completedTopics: nextSt.completedTopics ?? 0,
           }
         : null,
     };
@@ -94,8 +110,15 @@ export class ProgramService {
     return jr;
   }
 
+  /** Career Dashboard job-role list: the union of explicitly *targeted* roles
+   * (UserJobRole, shown even at 0% progress — a user should see the goal they
+   * picked) and roles *derived* from real enrollment (>=1 active SkillEnrollment
+   * among the role's subjects, via SkillEnrollmentService.getDerivedJobRoleIds) —
+   * a user can be making real progress on a role's subjects without ever having
+   * explicitly targeted it. `enrolledAt` is the UserJobRole targeting timestamp
+   * where one exists, null for a derived-only role (it was never targeted). */
   private async fetchUserJobRoles(userId: number) {
-    return this.dataSource
+    const targetedRows = await this.dataSource
       .createQueryBuilder()
       .select('jr.id', 'id')
       .addSelect('jr.title', 'title')
@@ -112,6 +135,30 @@ export class ProgramService {
       .andWhere('jr.isPublished = 1')
       .orderBy('jr.orderId', 'ASC')
       .getRawMany();
+
+    const derivedJobRoleIds = await this.skillEnrollmentService.getDerivedJobRoleIds(userId);
+    const targetedIds = new Set(targetedRows.map((r) => +r.id));
+    const derivedOnlyIds = derivedJobRoleIds.filter((id) => !targetedIds.has(id));
+
+    if (!derivedOnlyIds.length) return targetedRows;
+
+    const derivedOnlyRows = await this.dataSource
+      .createQueryBuilder()
+      .select('jr.id', 'id')
+      .addSelect('jr.title', 'title')
+      .addSelect('jr.slug', 'slug')
+      .addSelect('jr.image', 'image')
+      .addSelect('jr.color', 'color')
+      .addSelect('jr.description', 'description')
+      .addSelect('jr.scope', 'scope')
+      .addSelect('jr.orderId', 'orderId')
+      .addSelect('NULL', 'enrolledAt')
+      .from(JobRole, 'jr')
+      .where('jr.id IN (:...derivedOnlyIds)', { derivedOnlyIds })
+      .andWhere('jr.isPublished = 1')
+      .getRawMany();
+
+    return [...targetedRows, ...derivedOnlyRows].sort((a, b) => a.orderId - b.orderId);
   }
 
   // ─── User performance stats (career-dashboard summary) ────────────────────────

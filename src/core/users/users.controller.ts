@@ -254,7 +254,7 @@ export class UsersController {
     return new ApiResponse('User profile updated successfully.', result);
   }
 
-  @ApiOperation({
+   @ApiOperation({
     summary: 'Check LinkedIn connection status',
     description:
       'Returns whether the authenticated user has a valid LinkedIn connection available for sharing.',
@@ -283,13 +283,17 @@ export class UsersController {
   }
 
   @ApiOperation({
-    summary: 'Enroll the caller in a job role',
+    summary: 'Set a career-path target job role for the caller',
     description:
-      'Enrolls the authenticated caller (never a client-supplied user id) in `jobRoleId`. Rejects ' +
-      'with 404 if the job role does not exist, or 409 if the caller is already enrolled in it — ' +
-      'enrollments are not deduplicated silently. Sends an in-app notification confirming the ' +
-      'enrollment. The very first job role a user ever enrolls in also drives which subjects ' +
-      '`POST /apis/users/initial-assessment` builds its quiz from.',
+      'Records that the authenticated caller (never a client-supplied user id) is targeting ' +
+      '`jobRoleId` — a career-path declaration, not access; carries no entitlement to any ' +
+      "subject's content (see the skill-enrollment API for that separate, subject-scoped " +
+      'concept). Rejects with 404 if the job role does not exist, or 409 if the caller is ' +
+      'already targeting it — targets are not deduplicated silently. Sends an in-app ' +
+      'notification confirming the target. The first job role a user ever targets also drives ' +
+      'which subjects `POST /apis/users/initial-assessment` builds its quiz from. Route path ' +
+      'kept as `jobRoleEnrollment` for backward compatibility with existing callers — only the ' +
+      'internal naming changed.',
   })
   @ApiResponseDoc({ status: 404, description: 'Job role does not exist.' })
   @ApiResponseDoc({
@@ -297,15 +301,15 @@ export class UsersController {
     description: 'Caller is already enrolled in this job role.',
   })
   @Put('jobRoleEnrollment')
-  async enrollJobRole(
+  async targetJobRole(
     @Request() req,
     @Body() dto: { jobRoleId: number },
   ): Promise<ApiResponse<any>> {
-    const result = await this.usersService.enrollJobRole(
+    const result = await this.usersService.targetJobRole(
       req.user.id,
       dto.jobRoleId,
     );
-    return new ApiResponse('User enrolled in job role successfully.', result);
+    return new ApiResponse('Job role target set successfully.', result);
   }
 
   @ApiOperation({

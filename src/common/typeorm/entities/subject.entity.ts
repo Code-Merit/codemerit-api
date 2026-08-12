@@ -59,6 +59,16 @@ export class Subject extends AbstractEntity implements ISubject {
   })
   isPublished: boolean;
 
+  // Most subjects default to premium (gated for Basic-tier users — see
+  // SkillTierOffering/EnrollmentTierEnum). Admin explicitly flips specific subjects to
+  // false to make them a fully open showcase — this replaces the old hardcoded
+  // FREE_SAMPLER_SUBJECT_SLUGS allowlist with a per-subject business decision instead.
+  @Column({
+    type: 'boolean',
+    default: true,
+  })
+  isPremium: boolean;
+
   @Column({ name: 'createdBy', default: null, select: false })
   createdBy: number;
 

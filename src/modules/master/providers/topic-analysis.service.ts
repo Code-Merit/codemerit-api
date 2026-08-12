@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TOPIC_DONE } from 'src/common/constants/completion-thresholds';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
+import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
 import { Topic } from 'src/common/typeorm/entities/topic.entity';
@@ -165,7 +166,11 @@ export class TopicAnalysisService {
 
     qb.groupBy('t.id');
 
-    // Non-admin users can only see topics under subscribed subjects.
+    // Non-admin users can only see topics under enrolled subjects — a simple
+    // existence check (not tier-aware), same semantics as when this read UserSubject;
+    // now reads SkillEnrollment since UserSubject is retired. `status != cancelled`
+    // (not the stricter active-and-not-expired check real access gating uses) — a
+    // naturally expired enrollment still counts as "my subjects" here.
     if (
       user &&
       typeof user === 'object' &&
@@ -173,10 +178,10 @@ export class TopicAnalysisService {
       userId
     ) {
       qb.innerJoin(
-        'user_subject',
-        'us',
-        'us.subjectId = t.subjectId AND us.userId = :subscriptionUserId',
-        { subscriptionUserId: userId },
+        'skill_enrollment',
+        'se',
+        'se.subjectId = t.subjectId AND se.userId = :subscriptionUserId AND se.status != :cancelledStatus',
+        { subscriptionUserId: userId, cancelledStatus: EnrollmentStatusEnum.Cancelled },
       );
     }
 
