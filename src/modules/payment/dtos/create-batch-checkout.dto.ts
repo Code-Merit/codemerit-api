@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMinSize, ArrayUnique, IsEnum, IsIn, IsInt, IsOptional } from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsEnum, IsIn, IsInt, IsOptional, Min } from 'class-validator';
 import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 
 export class CreateBatchCheckoutDto {
@@ -10,6 +10,7 @@ export class CreateBatchCheckoutDto {
       'whether this is "all of a job role\'s subjects" or a hand-picked subset.',
   })
   @IsInt({ each: true })
+  @Min(1, { each: true })
   @ArrayMinSize(1)
   @ArrayUnique()
   subjectIds: number[];
@@ -32,5 +33,6 @@ export class CreateBatchCheckoutDto {
   })
   @IsOptional()
   @IsInt()
+  @Min(1)
   jobRoleId?: number;
 }

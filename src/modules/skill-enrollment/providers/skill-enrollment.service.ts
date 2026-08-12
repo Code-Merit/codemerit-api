@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { SkillEnrollment } from 'src/common/typeorm/entities/skill-enrollment.entity';
 import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offering.entity';
@@ -170,10 +170,11 @@ export class SkillEnrollmentService {
       }),
     );
 
-    const enrolled: SkillEnrollment[] = [];
-    for (const subjectId of eligible) {
-      enrolled.push(
-        await this.createEnrollment({
+    // Each subject gets its own (userId, subjectId) lock inside createEnrollment, so
+    // these are independent and safe to run concurrently rather than one-by-one.
+    const enrolled = await Promise.all(
+      eligible.map((subjectId) =>
+        this.createEnrollment({
           userId,
           subjectId,
           tier: EnrollmentTierEnum.Basic,
@@ -185,8 +186,8 @@ export class SkillEnrollmentService {
           note: null,
           batchId: batch.id,
         }),
-      );
-    }
+      ),
+    );
 
     return { batch, enrolled, skipped };
   }
@@ -291,6 +292,19 @@ export class SkillEnrollmentService {
     await this.batchRepo.update(batchId, { status, completedAt: new Date() });
   }
 
+  /** Check-then-insert (existingActive lookup, then save) is a classic TOCTOU race:
+   * two near-simultaneous calls for the same (userId, subjectId) — e.g. a gateway
+   * retrying/duplicating a webhook delivery, or a double-clicked enroll button — can
+   * both pass findActiveEnrollment before either commits its save, producing two
+   * Active rows for the same subject. There's no DB-level unique constraint to fall
+   * back on (MySQL has no partial/filtered unique index, and a plain unique index on
+   * (userId, subjectId) would wrongly block re-enrollment after a cancel/expiry), so
+   * the whole check-then-insert is serialized per (userId, subjectId) with a MySQL
+   * named lock — closes the gap even on the very first enrollment, where there's no
+   * existing row yet to lock with SELECT ... FOR UPDATE. GET_LOCK/RELEASE_LOCK are
+   * scoped to the connection that acquired them, so a dedicated QueryRunner is held
+   * for the duration — a pooled repo.query() call can silently land on a different
+   * physical connection each time, which would break the release. */
   private async createEnrollment(params: {
     userId: number;
     subjectId: number;
@@ -304,15 +318,43 @@ export class SkillEnrollmentService {
     note: string | null;
     batchId?: number | null;
   }): Promise<SkillEnrollment> {
+    const lockKey = `skill_enrollment:${params.userId}:${params.subjectId}`;
+    const queryRunner = this.enrollmentRepo.manager.connection.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      await queryRunner.query('SELECT GET_LOCK(?, 10)', [lockKey]);
+      return await this.createEnrollmentLocked(params, queryRunner.manager);
+    } finally {
+      await queryRunner.query('SELECT RELEASE_LOCK(?)', [lockKey]).catch(() => undefined);
+      await queryRunner.release();
+    }
+  }
+
+  private async createEnrollmentLocked(
+    params: {
+      userId: number;
+      subjectId: number;
+      tier: EnrollmentTierEnum;
+      months?: number;
+      source: EnrollmentSourceEnum;
+      price: number | null;
+      currency: string | null;
+      reference: string | null;
+      grantedBy: number | null;
+      note: string | null;
+      batchId?: number | null;
+    },
+    manager: EntityManager,
+  ): Promise<SkillEnrollment> {
     const isBasic = params.tier === EnrollmentTierEnum.Basic;
 
-    await this.assertSubjectExists(params.subjectId);
+    await this.assertSubjectExists(params.subjectId, manager);
     // Basic needs no SkillTierOffering — every subject is Basic-eligible unconditionally.
     const offering = isBasic
       ? null
-      : await this.assertSubjectOffersTier(params.subjectId, params.tier);
+      : await this.assertSubjectOffersTier(params.subjectId, params.tier, manager);
 
-    const existingActive = await this.findActiveEnrollment(params.userId, params.subjectId);
+    const existingActive = await this.findActiveEnrollment(params.userId, params.subjectId, manager);
     if (existingActive) {
       throw new AppCustomException(
         HttpStatus.CONFLICT,
@@ -331,7 +373,7 @@ export class SkillEnrollmentService {
       expiresAt.setMonth(expiresAt.getMonth() + months);
     }
 
-    const enrollment = this.enrollmentRepo.create({
+    const enrollment = manager.create(SkillEnrollment, {
       userId: params.userId,
       subjectId: params.subjectId,
       tier: params.tier,
@@ -347,11 +389,14 @@ export class SkillEnrollmentService {
       batchId: params.batchId ?? null,
     });
 
-    return this.enrollmentRepo.save(enrollment);
+    return manager.save(SkillEnrollment, enrollment);
   }
 
-  async assertSubjectExists(subjectId: number): Promise<void> {
-    const subject = await this.subjectRepo.findOne({ where: { id: subjectId } });
+  async assertSubjectExists(
+    subjectId: number,
+    manager: EntityManager = this.subjectRepo.manager,
+  ): Promise<void> {
+    const subject = await manager.findOne(Subject, { where: { id: subjectId } });
     if (!subject) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, `Subject ${subjectId} not found.`);
     }
@@ -364,8 +409,9 @@ export class SkillEnrollmentService {
   private async assertSubjectOffersTier(
     subjectId: number,
     tier: EnrollmentTierEnum,
+    manager: EntityManager = this.tierOfferingRepo.manager,
   ): Promise<SkillTierOffering | null> {
-    const offering = await this.tierOfferingRepo.findOne({
+    const offering = await manager.findOne(SkillTierOffering, {
       where: { subjectId, tier, isActive: true },
     });
     if (!offering) {
@@ -724,7 +770,7 @@ export class SkillEnrollmentService {
     });
     const rowByKey = new Map(rows.map((r) => [`${r.subjectId}:${r.tier}`, r]));
 
-    const deactivated: SkillTierOffering[] = [];
+    const toDeactivate: SkillTierOffering[] = [];
     const skipped: TierOfferingBatchSkip[] = [];
 
     for (const subjectId of subjectIds) {
@@ -739,9 +785,13 @@ export class SkillEnrollmentService {
           continue;
         }
         row.isActive = false;
-        deactivated.push(await this.tierOfferingRepo.save(row));
+        toDeactivate.push(row);
       }
     }
+
+    const deactivated = toDeactivate.length
+      ? await this.tierOfferingRepo.save(toDeactivate)
+      : [];
 
     return { deactivated, skipped };
   }
@@ -866,10 +916,11 @@ export class SkillEnrollmentService {
   private async findActiveEnrollment(
     userId: number,
     subjectId: number,
+    manager: EntityManager = this.enrollmentRepo.manager,
   ): Promise<SkillEnrollment | null> {
     const now = new Date();
-    return this.enrollmentRepo
-      .createQueryBuilder('e')
+    return manager
+      .createQueryBuilder(SkillEnrollment, 'e')
       .where('e.userId = :userId', { userId })
       .andWhere('e.subjectId = :subjectId', { subjectId })
       .andWhere('e.status = :status', { status: EnrollmentStatusEnum.Active })

@@ -5,6 +5,7 @@ import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 export class UpsertTierOfferingDto {
   @ApiProperty({ example: 3, description: 'Subject this offering applies to.' })
   @IsInt()
+  @Min(1)
   subjectId: number;
 
   @ApiProperty({

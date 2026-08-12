@@ -8,6 +8,7 @@ export class BatchUpsertTierOfferingsDto {
     description: 'Subjects to declare the tiers below for, in one action.',
   })
   @IsInt({ each: true })
+  @Min(1, { each: true })
   @ArrayMinSize(1)
   @ArrayUnique()
   subjectIds: number[];

@@ -5,10 +5,12 @@ import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 export class GrantEnrollmentDto {
   @ApiProperty({ example: 101, description: 'User to enroll' })
   @IsInt()
+  @Min(1)
   userId: number;
 
   @ApiProperty({ example: 12, description: 'Subject to enroll the user in.' })
   @IsInt()
+  @Min(1)
   subjectId: number;
 
   @ApiProperty({

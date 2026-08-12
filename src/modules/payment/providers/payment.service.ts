@@ -187,9 +187,14 @@ export class PaymentService {
     const founderPricingEnabled =
       this.configService.get<IPaymentConfig>('payment').founderPricingEnabled;
 
+    const offerings = await this.skillEnrollmentService.listTierOfferingsForSubjects(eligible);
+    const offeringBySubjectId = new Map(
+      offerings.filter((o) => o.tier === dto.tier && o.isActive).map((o) => [o.subjectId, o]),
+    );
+
     const eligibleItems: { subjectId: number; amount: number }[] = [];
     for (const subjectId of eligible) {
-      const offering = await this.skillEnrollmentService.getTierOffering(subjectId, dto.tier);
+      const offering = offeringBySubjectId.get(subjectId);
       if (!offering) {
         skipped.push({ subjectId, reason: 'tier_not_offered' });
         continue;
@@ -367,9 +372,10 @@ export class PaymentService {
    * has been attempted. Orders with no batchId (the single-subject case) skip that
    * step entirely — nothing else changes for them. */
   private async fulfillOrders(orders: PaymentOrder[], providerPaymentId: string): Promise<void> {
-    for (const order of orders) {
-      await this.fulfillOrder(order, providerPaymentId);
-    }
+    // Each order touches a distinct (userId, subjectId) row and fulfillOrder() never
+    // rethrows an AppCustomException (it marks the order Failed instead — see above),
+    // so these are safe to run concurrently rather than one-by-one.
+    await Promise.all(orders.map((order) => this.fulfillOrder(order, providerPaymentId)));
 
     const batchId = orders[0]?.batchId;
     if (!batchId) return;
@@ -386,8 +392,13 @@ export class PaymentService {
 
   /** Idempotent — webhooks can and will be retried/duplicated by both gateways. Marks
    * the order Failed (rather than throwing, which would just make the gateway retry
-   * forever) if fulfillment hits a conflict, e.g. the user already got this enrollment
-   * some other way between checkout and webhook delivery. */
+   * forever) on ANY fulfillment error we understand — not just the "already enrolled"
+   * conflict, but also e.g. a tier offering deactivated or a subject deleted between
+   * checkout and webhook delivery. A payment was already captured by this point, so
+   * silently leaving the order stuck in `Created` (which an uncaught throw here would
+   * do, since it propagates out of the webhook handler and makes the gateway retry
+   * indefinitely) is worse than recording a clear Failed state for manual review. Only
+   * a truly unexpected (non-AppCustomException) error still rethrows. */
   private async fulfillOrder(order: PaymentOrder, providerPaymentId: string): Promise<void> {
     if (order.status === PaymentOrderStatusEnum.Paid) return;
 
@@ -408,12 +419,12 @@ export class PaymentService {
       order.enrollmentId = enrollment.id;
       await this.orderRepo.save(order);
     } catch (error) {
-      if (error instanceof AppCustomException && error.status === HttpStatus.CONFLICT) {
+      if (error instanceof AppCustomException) {
         order.status = PaymentOrderStatusEnum.Failed;
-        order.failureReason = 'Payment captured but enrollment already existed at fulfillment time.';
+        order.failureReason = `Payment captured but enrollment could not be fulfilled: ${error.message}`;
         await this.orderRepo.save(order);
         this.logger.error(
-          `Order ${order.id} paid but could not be fulfilled (already enrolled) — needs manual review.`,
+          `Order ${order.id} paid but could not be fulfilled (${error.message}) — needs manual review.`,
         );
         return;
       }

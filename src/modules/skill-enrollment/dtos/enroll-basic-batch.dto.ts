@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { ArrayMinSize, ArrayUnique, IsInt, IsOptional } from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsInt, IsOptional, Min } from 'class-validator';
 
 export class EnrollBasicBatchDto {
   @ApiProperty({
@@ -10,6 +10,7 @@ export class EnrollBasicBatchDto {
       'hand-picked subset — this is the same endpoint either way.',
   })
   @IsInt({ each: true })
+  @Min(1, { each: true })
   @ArrayMinSize(1)
   @ArrayUnique()
   subjectIds: number[];
@@ -23,5 +24,6 @@ export class EnrollBasicBatchDto {
   })
   @IsOptional()
   @IsInt()
+  @Min(1)
   jobRoleId?: number;
 }

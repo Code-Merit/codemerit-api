@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ArrayMinSize, ArrayUnique, IsEnum, IsInt } from 'class-validator';
+import { ArrayMinSize, ArrayUnique, IsEnum, IsInt, Min } from 'class-validator';
 import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 
 export class BatchDeactivateTierOfferingsDto {
@@ -8,6 +8,7 @@ export class BatchDeactivateTierOfferingsDto {
     description: 'Subjects to deactivate the tiers below on, in one action.',
   })
   @IsInt({ each: true })
+  @Min(1, { each: true })
   @ArrayMinSize(1)
   @ArrayUnique()
   subjectIds: number[];
