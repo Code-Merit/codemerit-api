@@ -102,7 +102,9 @@ export class AuthController {
       '`flow: \'QuickRegistration\'` additionally auto-logs-in and returns a JWT straight away — ' +
       'every other flow just returns the created user with no token. `flow: \'UserRegistration\'` ' +
       "(the admin-panel add-user form) is the only case where an attached bearer token's own id " +
-      'is honored as `createdBy`; a token on any other flow is ignored.',
+      'is honored as `createdBy`; a token on any other flow is ignored. `ipAddress`/`userAgent` are ' +
+      'captured server-side from the request, once, at registration (never updated on later logins); ' +
+      '`referrerSource` is a free-text attribution value the client may optionally supply.',
   })
   @Post('register')
   @UseGuards(OptionalJwtAuthGuard)
@@ -110,7 +112,17 @@ export class AuthController {
     @Body() createUserDto: CreateUserDto,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.authService.signup(createUserDto, req.user?.id);
+    // Prefer X-Forwarded-For (set by a reverse proxy/load balancer) over the raw socket
+    // address, since req.ip alone would just be the proxy's own IP in production.
+    const forwardedFor = req.headers?.['x-forwarded-for'];
+    const ipAddress = (
+      typeof forwardedFor === 'string' ? forwardedFor.split(',')[0].trim() : undefined
+    ) || req.ip;
+    const userAgent = req.headers?.['user-agent'];
+    const result = await this.authService.signup(createUserDto, req.user?.id, {
+      ipAddress,
+      userAgent,
+    });
     if (
       createUserDto.flow &&
       createUserDto.flow === 'QuickRegistration' &&

@@ -260,6 +260,8 @@ export class AuthService {
     if (existingUser) {
       await this.userProfileService.updateSocialProfile(existingUser.id, {
         linkedinId: profile.sub,
+        linkedinAccessToken: accessToken,
+        linkedinTokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
         auth_provider: 'LinkedIn',
       });
 
@@ -279,6 +281,13 @@ export class AuthService {
       email: profile.email,
       image: profile.picture || '',
       linkedinId: profile.sub,
+      auth_provider: 'LinkedIn',
+    });
+
+    await this.userProfileService.updateSocialProfile(user.id, {
+      linkedinId: profile.sub,
+      linkedinAccessToken: accessToken,
+      linkedinTokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
       auth_provider: 'LinkedIn',
     });
 
@@ -327,9 +336,14 @@ export class AuthService {
    * unauthenticated endpoint gets createdBy forced to null, same as plain self-signup always has,
    * even if a token happened to be attached.
    */
-  async signup(createUserDto: CreateUserDto, callerId?: number) {
-    const createdBy = createUserDto.flow === 'UserRegistration' ? (callerId ?? null) : null;
-    return this.usersService.create(createUserDto, createdBy);
+  async signup(
+    createUserDto: CreateUserDto,
+    callerId?: number,
+    requestMeta?: { ipAddress?: string; userAgent?: string },
+  ) {
+    const createdBy =
+      createUserDto.flow === 'UserRegistration' ? (callerId ?? null) : null;
+    return this.usersService.create(createUserDto, createdBy, requestMeta);
   }
 
   async accountVerification(accountVerificationDto: AccountVerificationDto) {

@@ -143,6 +143,30 @@ export class User extends AbstractEntity implements IUser {
   })
   accountStatus: AccountStatusEnum;
 
+  @Column({
+    type: 'varchar',
+    length: 45,
+    nullable: true,
+    default: null,
+  })
+  ipAddress: string;
+
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    default: null,
+  })
+  userAgent: string;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    default: null,
+  })
+  referrerSource: string;
+
   @Column({ name: 'createdBy', default: null, select: false })
   createdBy: number;
 

@@ -12,6 +12,7 @@ import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import {
   generate6DigitNumber,
+  generateScore,
   getTitleBySubjectIds,
   getTitleByTopicIds,
 } from 'src/common/utils/common-functions';
@@ -33,7 +34,6 @@ import { PublishedQuizFilterDto } from '../dtos/published-quiz.dto';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
-import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { MailService } from 'src/common/mail/providers/mail.service';
 import { AchievementService } from 'src/modules/achievement/providers/achievement.service';
 import { NewlyEarnedDto } from 'src/modules/achievement/dtos/newly-earned.dto';
@@ -57,8 +57,6 @@ export class QuizService {
     private quizTopicRepo: Repository<QuizTopic>,
     @InjectRepository(QuizResult)
     private quizResultRepository: Repository<QuizResult>,
-    @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>,
     private readonly userQuestionService: UserQuestionService,
     private readonly questionService: QuestionService,
     private readonly masterService: MasterService,
@@ -484,44 +482,53 @@ export class QuizService {
       }
     }
 
+    // total/correct/wrong/unanswered/score must never be trusted from the client — they're
+    // recomputed here from the submitted attempts using the same generateScore() formula
+    // every other scoring surface (subject dashboard, job-role readiness, etc.) uses, so a
+    // quiz's own result and the dashboards built from it can never silently diverge again.
+    const attempts = submitQuizDto?.attempts ?? [];
+    const total = attempts.length;
+    const correct = attempts.filter((a) => a?.isCorrect === true).length;
+    const unanswered = attempts.filter((a) => a?.isSkipped === true).length;
+    const wrong = attempts.filter((a) => a?.isSkipped !== true && a?.isCorrect !== true).length;
+    const score = generateScore(total, correct, wrong);
+
     let questionResult: QuizResult;
     // Populated inside the transaction with the *actual* saved QuestionAttempt ids —
     // the achievement layer needs these to tell "the correct answer I just saved"
     // apart from "a correct answer this user already had on record for this question"
     // (see EvaluateAfterQuizAttempt.id).
     let savedAttempts: { id: number; questionId: number; isCorrect: boolean; isSkipped: boolean; hintUsed: boolean }[] = [];
-    let isInitialAssessment = false;
     try {
       questionResult = await this.dataSource.transaction(async (manager) => {
         const result = manager.create(QuizResult, {
           quizId: submitQuizDto?.quizId,
           userId: submitQuizDto?.userId,
           resultCode: generate6DigitNumber(),
-          total: submitQuizDto?.total,
-          correct: submitQuizDto?.correct,
-          wrong: submitQuizDto?.wrong,
-          unanswered: submitQuizDto?.unanswered,
+          total,
+          correct,
+          wrong,
+          unanswered,
           timeSpent: submitQuizDto?.timeSpent,
-          score: submitQuizDto?.score,
+          score,
         });
 
         const savedResult = await manager.save(QuizResult, result);
 
         const quiz = await manager.findOne(Quiz, {
           where: { id: submitQuizDto?.quizId },
-          select: ['id', 'title', 'tag'],
+          select: ['id', 'title'],
         });
-        isInitialAssessment = quiz?.tag === INITIAL_ASSESSMENT_TAG;
 
         await this.notificationService.notifyQuizCompleted(
           submitQuizDto?.userId,
           quiz?.title ?? 'Quiz',
-          submitQuizDto?.score ?? 0,
+          score,
           submitQuizDto?.quizId,
         );
 
         // 3. Save QuestionAttempts
-        for (const attempt of submitQuizDto?.attempts) {
+        for (const attempt of attempts) {
           const questionAttempt = manager.create(QuestionAttempt, {
             userId: submitQuizDto?.userId,
             quizId: submitQuizDto?.quizId,
@@ -562,22 +569,11 @@ export class QuizService {
     try {
       newlyEarned = await this.achievementService.evaluateAfterQuiz({
         userId: submitQuizDto?.userId,
-        score: submitQuizDto?.score ?? 0,
+        score,
         attempts: savedAttempts,
       });
     } catch (error) {
       console.log('QuizBuilder #6: Achievement evaluation error', error);
-    }
-
-    if (isInitialAssessment) {
-      try {
-        await this.profileRepository.update(
-          { userId: submitQuizDto?.userId },
-          { level1Assessment: true },
-        );
-      } catch (error) {
-        console.log('QuizBuilder #6: Failed to flip level1Assessment', error);
-      }
     }
 
     return { ...questionResult, newlyEarned };

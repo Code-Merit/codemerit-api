@@ -56,10 +56,6 @@ export class CreateUserDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  subjectTrackId?: number;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   yearsExperience?: number;
 
   @ApiPropertyOptional()
@@ -97,4 +93,10 @@ export class CreateUserDto {
   @ApiPropertyOptional()
   @IsOptional()
   flow?: string;
+
+  @ApiPropertyOptional({
+    description: 'Marketing/attribution source supplied by the client at signup (e.g. a UTM value or "how did you hear about us" answer).',
+  })
+  @IsOptional()
+  referrerSource?: string;
 }

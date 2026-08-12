@@ -1,13 +1,10 @@
-import { HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
-import { QuestionTopic } from 'src/common/typeorm/entities/quesion-topic.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
 import { QuizQuestion } from 'src/common/typeorm/entities/quiz-quesion.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
-import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
-import { Topic } from 'src/common/typeorm/entities/topic.entity';
-import { User } from 'src/common/typeorm/entities/user.entity';
+import { generateScore } from 'src/common/utils/common-functions';
 import { DataSource } from 'typeorm';
 
 @Injectable()
@@ -15,7 +12,6 @@ export class QuizResultService {
   constructor(
     private readonly dataSource: DataSource
   ) { }
-  //subject and topic stats are not working currently
   async getQuizResultByCode(resultCode: string) {
     // 1. Fetch base quiz + user + quiz result
     const base = await this.dataSource
@@ -130,7 +126,6 @@ export class QuizResultService {
           answered: 0,
           correct: 0,
           wrong: 0,
-          score: 0,
         });
       }
       const sub = subjectsMap.get(r.subjectId);
@@ -138,17 +133,19 @@ export class QuizResultService {
       if (r.isSkipped === false) sub.answered += 1;
       if (r.isCorrect === true) {
         sub.correct += 1;
-        sub.score += 1;
       } else if (r.isSkipped === false && r.isCorrect === false) {
         sub.wrong += 1;
-        sub.score -= 0.2; // negative marking
       }
     });
 
+    // score/accuracy use generateScore()/the same "correct over asked" formula every other
+    // scoring surface uses — denominator is `asked` (not `answered`), since a skipped
+    // question is still a recorded attempt, matching computeAttemptMetrics's currentAccuracy.
     const subjects = Array.from(subjectsMap.values()).map((s) => ({
       ...s,
+      score: generateScore(s.asked, s.correct, s.wrong),
       coverage: s.asked ? +((s.answered / s.asked) * 100).toFixed(1) : 0,
-      accuracy: s.answered ? +((s.correct / s.answered) * 100).toFixed(1) : 0,
+      accuracy: s.asked ? +((s.correct / s.asked) * 100).toFixed(1) : 0,
     }));
 
     // 5. Aggregate topics
@@ -163,30 +160,23 @@ export class QuizResultService {
           answered: 0,
           correct: 0,
           wrong: 0,
-          score: 0,
         });
       }
-      //correct these
       const t = topicsMap.get(r.topicId);
-      console.log("@Verify QuizResult topicMap", topicsMap);
-      console.log("@Verify QuizResult topicMap for t=", t);
       t.asked += 1;
       if (r.isSkipped === false) t.answered += 1;
       if (r.isCorrect === true) {
         t.correct += 1;
-        t.score += 1;
       } else if (r.isSkipped === false && r.isCorrect === false) {
         t.wrong += 1;
-        t.score -= 0.2;
       }
     });
 
     const topics = Array.from(topicsMap.values()).map((t) => ({
       ...t,
-      // coverage: t.asked ? +((t.answered / t.asked) * 100).toFixed(1) : 0,
-      // accuracy: t.answered ? +((t.correct / t.answered) * 100).toFixed(1) : 0,
-      coverage: t.asked ? ((t.asked / questions.length) * 100).toFixed(1) : 0,
-      accuracy: t.answered ? +((t.correct / t.answered) * 100).toFixed(1) : 0,
+      score: generateScore(t.asked, t.correct, t.wrong),
+      coverage: t.asked ? +((t.answered / t.asked) * 100).toFixed(1) : 0,
+      accuracy: t.asked ? +((t.correct / t.asked) * 100).toFixed(1) : 0,
     }));
 
     // 6. Final response
