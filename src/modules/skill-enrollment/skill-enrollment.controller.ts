@@ -9,7 +9,14 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse as ApiResponseDoc,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Public } from 'src/core/auth/decorators/public.decorator';
 import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard';
 import { Roles } from 'src/core/auth/decorators/roles.decorator';
@@ -30,6 +37,7 @@ import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 import { SkillEnrollmentService } from './providers/skill-enrollment.service';
 
 @ApiTags('Skill Enrollment')
+@ApiBearerAuth('access-token') // Same name used in `addBearerAuth`
 @Controller('apis/enrollments')
 export class SkillEnrollmentController {
   constructor(private readonly service: SkillEnrollmentService) {}
@@ -44,6 +52,11 @@ export class SkillEnrollmentController {
       'lesson access on a premium subject** — without an explicit enrollment (Basic ' +
       'or higher), a premium subject is fully locked; only non-premium ' +
       '(`isPremium: false`) subjects are open with no enrollment at all.',
+  })
+  @ApiResponseDoc({ status: 404, description: 'No subject exists with the given id.' })
+  @ApiResponseDoc({
+    status: 409,
+    description: 'Caller already has an active enrollment (any tier) for this subject.',
   })
   @Post('enroll-basic')
   async enrollBasic(
@@ -103,6 +116,16 @@ export class SkillEnrollmentController {
       'defaults per-tier (Basic never expires). 409 if the user already has an active ' +
       'enrollment for this subject — revoke it first to change tiers.',
   })
+  @ApiResponseDoc({ status: 404, description: 'No subject exists with the given id.' })
+  @ApiResponseDoc({
+    status: 400,
+    description: 'The subject does not offer the given tier (Basic is exempt from this check).',
+  })
+  @ApiResponseDoc({
+    status: 409,
+    description: 'The user already has an active enrollment for this subject.',
+  })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Post('grant')
@@ -116,7 +139,15 @@ export class SkillEnrollmentController {
 
   @ApiOperation({
     summary: 'Revoke/cancel an enrollment (Admin only)',
+    description:
+      'Sets the enrollment to Cancelled with an optional reason and timestamp — a hard ' +
+      'stop on access for that subject, not a refund action in itself. Does not delete ' +
+      'the row; it stays visible in listMine()/listAll() for history.',
   })
+  @ApiParam({ name: 'id', description: 'SkillEnrollment id to revoke.', type: Number })
+  @ApiResponseDoc({ status: 404, description: 'No enrollment exists with the given id.' })
+  @ApiResponseDoc({ status: 409, description: 'The enrollment is already cancelled.' })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Post(':id/revoke')
@@ -139,8 +170,11 @@ export class SkillEnrollmentController {
 
   @ApiOperation({
     summary: 'List all enrollments (Admin only)',
-    description: 'Optional filters: userId, status.',
+    description: 'Every SkillEnrollment row across every user, newest first, with the resolved subject name and current-active flag attached. Optionally filtered.',
   })
+  @ApiQuery({ name: 'userId', required: false, type: Number, description: 'Only this user\'s enrollments.' })
+  @ApiQuery({ name: 'status', required: false, enum: EnrollmentStatusEnum, description: 'Only enrollments in this status.' })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Get()
@@ -164,6 +198,8 @@ export class SkillEnrollmentController {
       'zero access on a premium subject. Anonymous callers are always `null` on a ' +
       'premium subject (enrollment requires an account), unaffected on a non-premium one.',
   })
+  @ApiParam({ name: 'subjectId', description: 'Subject id to check access for.', type: Number })
+  @ApiResponseDoc({ status: 404, description: 'No subject exists with the given id.' })
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @Get('access/subject/:subjectId')
@@ -184,6 +220,8 @@ export class SkillEnrollmentController {
       'enrolled in that specific subject). To gain access, enroll in the individual ' +
       'subjects that make up the role.',
   })
+  @ApiParam({ name: 'jobRoleId', description: 'Job role id to browse.', type: Number })
+  @ApiResponseDoc({ status: 404, description: 'No job role exists with the given id.' })
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @Get('job-role/:jobRoleId/subjects')
@@ -206,6 +244,12 @@ export class SkillEnrollmentController {
       'updates its price/duration overrides and reactivates it. Basic cannot be ' +
       'declared — it\'s universal. Price/duration omitted falls back to the tier\'s default.',
   })
+  @ApiResponseDoc({ status: 404, description: 'No subject exists with the given id.' })
+  @ApiResponseDoc({
+    status: 400,
+    description: 'Basic was given as the tier — it is universal/implicit and cannot be declared as an offering.',
+  })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Post('tier-offerings')
@@ -221,6 +265,9 @@ export class SkillEnrollmentController {
     summary: 'Deactivate a tier offering (Admin only)',
     description: 'Existing enrollments at this tier are unaffected — this only blocks new grants/purchases.',
   })
+  @ApiParam({ name: 'id', description: 'SkillTierOffering id to deactivate.', type: Number })
+  @ApiResponseDoc({ status: 404, description: 'No tier offering exists with the given id.' })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Post('tier-offerings/:id/deactivate')
@@ -242,6 +289,7 @@ export class SkillEnrollmentController {
       'overrides (if given) apply uniformly to every pair — for a different override ' +
       'per pair, use the single-item endpoint instead.',
   })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Post('tier-offerings/batch')
@@ -262,6 +310,7 @@ export class SkillEnrollmentController {
       'Existing enrollments at a deactivated tier are unaffected — this only blocks ' +
       'new grants/purchases.',
   })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Post('tier-offerings/batch/deactivate')
@@ -279,6 +328,13 @@ export class SkillEnrollmentController {
       'which only shows what\'s currently purchasable) — what a "manage plans" admin ' +
       'screen needs to render a subject x tier grid without one request per subject.',
   })
+  @ApiQuery({
+    name: 'subjectIds',
+    required: true,
+    type: String,
+    description: 'Comma-separated subject ids, e.g. "3,7,12". Invalid/non-positive ids are silently dropped.',
+  })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Get('tier-offerings/manage')
@@ -301,6 +357,7 @@ export class SkillEnrollmentController {
     summary: 'List active tier offerings for a subject (public)',
     description: 'What a frontend needs to render "available plans" on a subject page.',
   })
+  @ApiParam({ name: 'subjectId', description: 'Subject id to list offerings for.', type: Number })
   @Public()
   @Get('tier-offerings/subject/:subjectId')
   async listTierOfferings(
@@ -323,6 +380,9 @@ export class SkillEnrollmentController {
       'This is the only way to make a subject a free showcase — there is no hardcoded ' +
       'exemption list anymore.',
   })
+  @ApiParam({ name: 'subjectId', description: 'Subject id to update.', type: Number })
+  @ApiResponseDoc({ status: 404, description: 'No subject exists with the given id.' })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Post('subjects/:subjectId/premium-flag')
@@ -342,6 +402,7 @@ export class SkillEnrollmentController {
     summary: 'List configured daily caps per tier (Admin only)',
     description: 'A tier with no row falls back to a hardcoded default — see skill-enrollment.constants.ts.',
   })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Get('tier-caps')
@@ -354,6 +415,8 @@ export class SkillEnrollmentController {
     summary: 'Set the daily quiz/lesson caps for a tier (Admin only)',
     description: 'Only meaningful for Basic/Curious — Pro/Intern/Serious are always unlimited regardless of any row here.',
   })
+  @ApiParam({ name: 'tier', description: 'Tier to configure.', enum: EnrollmentTierEnum })
+  @ApiResponseDoc({ status: 403, description: 'Caller is not an Admin.' })
   @UseGuards(RolesGuard)
   @Roles(UserRoleEnum.ADMIN)
   @Post('tier-caps/:tier')

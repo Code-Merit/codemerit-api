@@ -293,6 +293,7 @@ export class SubjectStatsService {
       subjectTracks,
       certificationTracks,
       lessons,
+      nextAction: this.computeNextAction(syllabus, lessons.list, subjectTracks, certificationTracks),
       relatedJobRoles,
       meritList: subjectMerits.meritLists.get(subjectId) ?? [],
       popularTopics: popularTopicsMap.get(subjectId) ?? [],
@@ -301,6 +302,119 @@ export class SubjectStatsService {
       // anonymous requests, same as `subjectRatings` above.
       badges,
     };
+  }
+
+  // ─── Next Best Action ──────────────────────────────────────────────────────────
+
+  /**
+   * Single backend-computed "what should this learner do next" suggestion for the
+   * subject dashboard hero widget. Priority: resume an in-progress lesson (anywhere
+   * in the subject) > finish unread/incomplete lessons on the earliest unmastered
+   * topic (walked in `syllabus`'s `t.order` sequence) > quiz that exact topic once
+   * its lessons are done > nudge toward the nearest incomplete certification once
+   * every topic is mastered > caught up.
+   *
+   * No userId branching needed: for anonymous callers every lesson's `status` is
+   * null and every topic's quiz stats are zero, so the walk below naturally lands
+   * on "first topic, first lesson (or quiz if it has none)" instead of a
+   * personalized resume — still a sensible suggestion, just not personalized.
+   */
+  private computeNextAction(
+    syllabus: any[],
+    lessonsList: any[],
+    subjectTracks: any[],
+    certificationTracks: any[],
+  ): any {
+    const inProgress = lessonsList.filter(
+      (l) => l.status === UserLessonTrackerStatusEnum.Read && l.lastActivityAt,
+    );
+    if (inProgress.length) {
+      const latest = inProgress.reduce((a, b) =>
+        new Date(a.lastActivityAt).getTime() >= new Date(b.lastActivityAt).getTime() ? a : b,
+      );
+      return {
+        type: 'resume-lesson',
+        lessonId: latest.id,
+        title: latest.title,
+        slug: latest.slug,
+        topicId: latest.topicId,
+        topicTitle: latest.topicTitle,
+        progressPercent: latest.progressPercent,
+      };
+    }
+
+    const lessonsByTopic = new Map<number, any[]>();
+    for (const l of lessonsList) {
+      if (!l.topicId) continue;
+      const arr = lessonsByTopic.get(l.topicId) ?? [];
+      arr.push(l);
+      lessonsByTopic.set(l.topicId, arr);
+    }
+
+    for (const topic of syllabus) {
+      const topicLessons = lessonsByTopic.get(topic.id) ?? [];
+      const lessonsTotal = topicLessons.length;
+      const lessonsCompleted = topicLessons.filter(
+        (l) => l.status === UserLessonTrackerStatusEnum.Completed,
+      ).length;
+      const lessonsDone = lessonsTotal === 0 || lessonsCompleted === lessonsTotal;
+
+      if (lessonsDone && topic.isCompleted) continue; // fully mastered — move to next topic
+
+      if (!lessonsDone) {
+        const nextLesson = topicLessons.find(
+          (l) => l.status !== UserLessonTrackerStatusEnum.Completed,
+        );
+        return {
+          type: 'learn-lesson',
+          topicId: topic.id,
+          topicTitle: topic.title,
+          lessonId: nextLesson?.id ?? null,
+          lessonTitle: nextLesson?.title ?? null,
+          lessonSlug: nextLesson?.slug ?? null,
+          lessonsCompleted,
+          lessonsTotal,
+        };
+      }
+
+      // Lessons done (or topic has none) but the quiz isn't — target this exact topic.
+      const track = subjectTracks.find((st) => st.topics?.some((t: any) => t.id === topic.id));
+      return {
+        type: 'quiz',
+        topicId: topic.id,
+        topicTitle: topic.title,
+        subjectTrackId: track?.id ?? null,
+        subjectTrackTitle: track?.title ?? null,
+        score: topic.score,
+        currentAccuracy: topic.currentAccuracy,
+        coverage: topic.coverage,
+      };
+    }
+
+    // Every topic mastered — nudge toward the nearest incomplete certification. Cert cards
+    // (from getCertificationTracksForSubject below) don't carry a top-level progress/achieved
+    // flag of their own — only per-subjectTrack progressPercent/isCompleted and myCertificate
+    // (set only once a Certificate row actually exists) — so derive both here rather than
+    // assuming fields that were never computed for this endpoint.
+    const certCandidates = certificationTracks
+      .filter((ct) => !ct.myCertificate)
+      .map((ct) => {
+        const total = ct.totalSubjectTracks || ct.subjectTracks?.length || 0;
+        const completed = (ct.subjectTracks ?? []).filter((st: any) => st.isCompleted).length;
+        return { ct, progressPercent: total > 0 ? +((completed / total) * 100).toFixed(0) : 0 };
+      })
+      .sort((a, b) => b.progressPercent - a.progressPercent);
+
+    if (certCandidates.length) {
+      const best = certCandidates[0];
+      return {
+        type: 'certification',
+        certificationTrackId: best.ct.id,
+        title: best.ct.title,
+        progressPercent: best.progressPercent,
+      };
+    }
+    return { type: 'caught-up' };
   }
 
   // ─── Certification Tracks (via SubjectTrack -> CertificationTrackSubjectTrack) ─
@@ -441,6 +555,8 @@ export class SubjectStatsService {
       qb.leftJoin('user_lesson_tracker', 'ult', 'ult.lessonId = l.id AND ult.userId = :userId', { userId })
         .addSelect('ult.status', 'status')
         .addSelect('ult.views', 'views')
+        .addSelect('ult.progressPercent', 'progressPercent')
+        .addSelect('ult.updatedAt', 'lastActivityAt')
         .addGroupBy('ult.id');
     }
 
@@ -457,17 +573,30 @@ export class SubjectStatsService {
       numSections: +r.numSections || 0,
       status: userId ? (r.status ?? UserLessonTrackerStatusEnum.Pending) : null,
       views: userId ? +r.views || 0 : 0,
+      progressPercent: userId ? (+r.progressPercent || 0) : 0,
+      lastActivityAt: userId ? (r.lastActivityAt ?? null) : null,
     }));
 
     const completed = userId
       ? list.filter((l) => l.status === UserLessonTrackerStatusEnum.Completed).length
       : 0;
+    const inProgress = userId
+      ? list.filter((l) => l.status === UserLessonTrackerStatusEnum.Read).length
+      : 0;
+    const totalViews = userId ? list.reduce((sum, l) => sum + l.views, 0) : 0;
+    const lastActivityAt = userId
+      ? list.reduce<string | null>((latest, l) => {
+          if (!l.lastActivityAt) return latest;
+          if (!latest || new Date(l.lastActivityAt).getTime() > new Date(latest).getTime()) return l.lastActivityAt;
+          return latest;
+        }, null)
+      : null;
 
     // Same numerator/denominator*100, .toFixed(1) convention computeAttemptMetrics() uses for
     // question coverage — kept inline here since it's a single field, not shared across levels.
     const learningCompleteness = list.length > 0 ? +((completed / list.length) * 100).toFixed(1) : 0;
 
-    return { total: list.length, completed, learningCompleteness, list };
+    return { total: list.length, completed, inProgress, totalViews, lastActivityAt, learningCompleteness, list };
   }
 
   // ─── Related Job Roles ────────────────────────────────────────────────────────

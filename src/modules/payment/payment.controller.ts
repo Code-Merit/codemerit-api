@@ -9,7 +9,13 @@ import {
   Request,
 } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiHeader,
+  ApiOperation,
+  ApiResponse as ApiResponseDoc,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Public } from 'src/core/auth/decorators/public.decorator';
 import { ApiResponse } from 'src/common/utils/api-response';
 import { CreateCheckoutDto } from './dtos/create-checkout.dto';
@@ -44,6 +50,10 @@ export class PaymentController {
       'checkout (Razorpay order id + key id for Checkout.js, or a Stripe-hosted checkout URL). ' +
       '409 if the caller already has an active enrollment for this scope.',
   })
+  @ApiResponseDoc({ status: 404, description: 'No subject exists with the given id.' })
+  @ApiResponseDoc({ status: 400, description: 'The subject does not offer the given tier, or the tier is Basic (not purchasable).' })
+  @ApiResponseDoc({ status: 409, description: 'Caller already has an active enrollment for this subject.' })
+  @ApiResponseDoc({ status: 503, description: 'The gateway for the requested currency is not configured on this environment.' })
   @ApiBearerAuth('access-token')
   @Post('checkout')
   async checkout(
@@ -67,6 +77,8 @@ export class PaymentController {
       '`batchId: null`) means nothing was eligible — no gateway call was made, ' +
       'nothing to pay for. 503 if the gateway isn\'t configured yet.',
   })
+  @ApiResponseDoc({ status: 400, description: 'The tier given is Basic — not purchasable, use POST /apis/enrollments/enroll-basic/batch instead.' })
+  @ApiResponseDoc({ status: 503, description: 'The gateway for the requested currency is not configured on this environment.' })
   @ApiBearerAuth('access-token')
   @Post('checkout/batch')
   async checkoutBatch(
@@ -89,8 +101,11 @@ export class PaymentController {
     summary: 'Razorpay webhook (not for direct use — configure this URL in the Razorpay dashboard)',
     description:
       'Verifies the X-Razorpay-Signature header via HMAC before acting on anything. Only ' +
-      'payment.captured fulfills an enrollment; other event types are acknowledged and ignored.',
+      'payment.captured fulfills an enrollment; other event types are acknowledged and ignored. ' +
+      'Idempotent — safe for Razorpay to retry/duplicate deliveries.',
   })
+  @ApiHeader({ name: 'x-razorpay-signature', description: 'HMAC signature of the raw request body, from Razorpay.' })
+  @ApiResponseDoc({ status: 401, description: 'Signature missing or does not match the raw request body.' })
   @Public()
   @Post('webhook/razorpay')
   async razorpayWebhook(
@@ -105,8 +120,11 @@ export class PaymentController {
     summary: 'Stripe webhook (not for direct use — configure this URL in the Stripe dashboard)',
     description:
       'Verifies the Stripe-Signature header via the Stripe SDK before acting on anything. ' +
-      'Only checkout.session.completed fulfills an enrollment.',
+      'Only checkout.session.completed fulfills an enrollment. Idempotent — safe for ' +
+      'Stripe to retry/duplicate deliveries.',
   })
+  @ApiHeader({ name: 'stripe-signature', description: 'Signature of the raw request body, from Stripe.' })
+  @ApiResponseDoc({ status: 401, description: 'Signature missing or does not match the raw request body.' })
   @Public()
   @Post('webhook/stripe')
   async stripeWebhook(

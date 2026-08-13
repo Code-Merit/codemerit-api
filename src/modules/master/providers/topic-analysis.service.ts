@@ -53,6 +53,7 @@ export class TopicAnalysisService {
       .addSelect('t.subjectId', 'subjectId')
       .addSelect('s.title', 'subjectName')
       .addSelect('t.goal', 'goal')
+      .addSelect('t.order', 'topicOrder')
 
       // Total question counts
       .addSelect('COUNT(DISTINCT q.id)', 'totalQuestions')
@@ -243,6 +244,7 @@ export class TopicAnalysisService {
       goal: raw.goal,
       subjectId: +raw.subjectId,
       subjectName: raw?.subjectName,
+      order: +raw.topicOrder || 0,
       numTrivia,
       numBasicTrivia: +raw?.numBasicTrivia || 0,
       numIntTrivia: +raw?.numIntTrivia || 0,
@@ -283,10 +285,11 @@ export class TopicAnalysisService {
   /** Get stats for ALL topics under ONE subject (single grouped query). */
   async getTopicStatsBySubject(subjectId: number, user?: GetUserRequestDto | number) {
     const userId = typeof user === 'number' ? user : user?.id;
-    const qb = this.buildTopicStatsBaseQB(userId, user).where(
-      't.subjectId = :subjectId',
-      { subjectId },
-    );
+    const qb = this.buildTopicStatsBaseQB(userId, user)
+      .where('t.subjectId = :subjectId', { subjectId })
+      // Sequence order — callers (e.g. subjectDashboard's next-best-action logic) rely on
+      // this list already being in learning-path order, not just insertion order.
+      .orderBy('t.order', 'ASC');
 
     const raws = await qb.getRawMany();
     return raws.map((r) => this.mapTopicRow(r));
