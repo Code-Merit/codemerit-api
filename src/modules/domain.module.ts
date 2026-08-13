@@ -14,6 +14,8 @@ import { LessonModule } from './lesson/lesson.module';
 import { SubjectTrackModule } from './subject-track/subject-track.module';
 import { CertificationTrackModule } from './certification-track/certification-track.module';
 import { ActivityModule } from './activity/activity.module';
+import { SkillEnrollmentModule } from './skill-enrollment/skill-enrollment.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { ActivityModule } from './activity/activity.module';
     LessonModule,
     SubjectTrackModule,
     CertificationTrackModule,
+    SkillEnrollmentModule,
+    PaymentModule,
   ],
 })
 export class DomainModule {}

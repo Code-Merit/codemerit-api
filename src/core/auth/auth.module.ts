@@ -1,19 +1,18 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { JwtStrategy } from './jwt/jwt.strategy';
-import { UsersModule } from '../users/users.module';
-import { AuthService } from './providers/auth.service';
-import { LocalStrategy } from './guards/local.strategy';
-import { LoginValidationMiddleware } from './middleware/login-validation.middleware';
-import { UserPermissionModule } from 'src/modules/user-permission/user-permission.module';
-import { TopicAnalysisService } from 'src/modules/master/providers/topic-analysis.service';
-import { SubjectAnalysisService } from 'src/modules/master/providers/subject-analysis.service';
-import { MasterModule } from 'src/modules/master/master.module';
-import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
+import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
+import { MasterModule } from 'src/modules/master/master.module';
+import { SkillEnrollmentModule } from 'src/modules/skill-enrollment/skill-enrollment.module';
+import { UserPermissionModule } from 'src/modules/user-permission/user-permission.module';
+import { UsersModule } from '../users/users.module';
+import { AuthController } from './auth.controller';
+import { LocalStrategy } from './guards/local.strategy';
+import { JwtStrategy } from './jwt/jwt.strategy';
+import { LoginValidationMiddleware } from './middleware/login-validation.middleware';
+import { AuthService } from './providers/auth.service';
 
 @Module({
   imports: [
@@ -27,8 +26,7 @@ import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
     }),
     UserPermissionModule,
     MasterModule,
-    //TopicAnalysisService,
-    //SubjectAnalysisService
+    SkillEnrollmentModule,
   ],
   providers: [AuthService, JwtStrategy, LocalStrategy],
   controllers: [AuthController],

@@ -1,8 +1,6 @@
 import {
-  Body,
   Controller,
   Get,
-  Post,
   Query,
   Request,
   UseGuards,
@@ -11,7 +9,6 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { Public } from 'src/core/auth/decorators/public.decorator';
 import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard';
-import { AddUserSubjectsDto } from 'src/core/users/dtos/user-subject.dto';
 import { ApiResponse } from 'src/common/utils/api-response';
 import { UserPermissionService } from '../user-permission/providers/user-permission.service';
 import { MasterService } from './providers/master.service';
@@ -47,8 +44,9 @@ export class MasterController {
       'Aggregates the subject catalog, job roles (each with their subjects), globally popular ' +
       'topics, subject tracks, and certification tracks into one payload used to seed app-wide ' +
       'dropdowns/nav on load. Runs six independent lookups in parallel. When called with a valid ' +
-      "JWT, the subject list's `isSubscribed` flags reflect the caller's own UserSubject rows; " +
-      'anonymous callers get the same catalog with every subject unsubscribed.',
+      "JWT, the subject list's `isSubscribed` flags reflect the caller's own SkillEnrollment rows " +
+      "(any tier, not cancelled); anonymous callers get the same catalog with every subject " +
+      'unsubscribed.',
   })
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
@@ -56,22 +54,6 @@ export class MasterController {
   async getMasterData(@Request() req: any) {
     const userId = req.user?.id;
     return this.masterService.getMasterData(userId);
-  }
-
-  @ApiOperation({
-    summary: 'Subscribe the caller to one or more subjects',
-    description:
-      "Creates a UserSubject row for each `subjectId` not already subscribed, scoped to the " +
-      "caller's own id from the JWT. Subject ids the caller is already subscribed to are not " +
-      "treated as an error — they're skipped and reported individually in `results[]` with a " +
-      '"already added" status alongside the newly-added ones. `subjectIds` must be a non-empty ' +
-      'array of unique integers (enforced by the DTO); any unexpected database failure is caught ' +
-      'and surfaced as a 500.',
-  })
-  @Post('userSubjects')
-  async addUserSubjects(@Request() req, @Body() dto: AddUserSubjectsDto) {
-    const userId = req.user.id;
-    return this.masterService.addUserSubjects(userId, dto);
   }
 
   @ApiOperation({
@@ -100,8 +82,8 @@ export class MasterController {
       'When `subjectId` is supplied and parses to a positive integer, returns stats scoped to that ' +
       "subject's topics only; otherwise returns stats for all topics (internally capped at 300, no " +
       'pagination params exposed here). Requires login. Non-Admin callers only see topics whose ' +
-      "parent subject they're subscribed to (via UserSubject) — Admins see every topic regardless " +
-      'of subscription.',
+      "parent subject they hold an enrollment for (via SkillEnrollment) — Admins see every topic " +
+      'regardless of enrollment.',
   })
   @ApiQuery({
     name: 'subjectId',

@@ -17,6 +17,7 @@ import { QuizController } from './quiz.controller';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { ActivityModule } from '../activity/activity.module';
 import { AchievementModule } from '../achievement/achievement.module';
+import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AchievementModule } from '../achievement/achievement.module';
     NotificationModule,
     ActivityModule,
     AchievementModule,
+    SkillEnrollmentModule,
   ],
   providers: [QuizService, QuestionAttemptService, QuizResultService],
   controllers: [QuizController],

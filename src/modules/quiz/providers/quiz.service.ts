@@ -1,15 +1,20 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
+import { EnrollmentTierEnum, isTierAtLeast } from 'src/common/enum/enrollment-tier.enum';
+import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
+import { MailService } from 'src/common/mail/providers/mail.service';
+import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuizQuestion } from 'src/common/typeorm/entities/quiz-quesion.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
+import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
 import { QuizSubject } from 'src/common/typeorm/entities/quiz-subject.entity';
 import { QuizTopic } from 'src/common/typeorm/entities/quiz-topic.entity';
 import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
-import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
-import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
+import { User } from 'src/common/typeorm/entities/user.entity';
 import {
   generate6DigitNumber,
   generateScore,
@@ -21,23 +26,19 @@ import {
   generateSlug,
   generateUniqueSlug,
 } from 'src/common/utils/slugify.util';
+import { NewlyEarnedDto } from 'src/modules/achievement/dtos/newly-earned.dto';
+import { AchievementService } from 'src/modules/achievement/providers/achievement.service';
 import { MasterService } from 'src/modules/master/providers/master.service';
 import { NotificationService } from 'src/modules/notification/providers/notification.service';
 import { GetQuestionsByIdsDto } from 'src/modules/question/dtos/get-questions-by-ids.dto';
 import { QuestionService } from 'src/modules/question/providers/question.service';
 import { QuestionGeneratorService } from 'src/modules/question/providers/question-generator.service';
-import { DataSource, In, Repository } from 'typeorm';
+import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
+import { DataSource, MoreThanOrEqual, Repository } from 'typeorm';
 import { CreateQuizDto } from '../dtos/create-quiz.dto';
-import { UpdateQuizDto } from '../dtos/update-quiz.dto';
-import { SubmitQuizDto } from '../dtos/submit-quiz.dto';
-import { Question } from 'src/common/typeorm/entities/question.entity';
 import { PublishedQuizFilterDto } from '../dtos/published-quiz.dto';
-import { User } from 'src/common/typeorm/entities/user.entity';
-import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
-import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
-import { MailService } from 'src/common/mail/providers/mail.service';
-import { AchievementService } from 'src/modules/achievement/providers/achievement.service';
-import { NewlyEarnedDto } from 'src/modules/achievement/dtos/newly-earned.dto';
+import { SubmitQuizDto } from '../dtos/submit-quiz.dto';
+import { UpdateQuizDto } from '../dtos/update-quiz.dto';
 import {
   DEFAULT_QUIZ_LENGTH,
   MAX_QUIZ_LENGTH,
@@ -69,16 +70,17 @@ export class QuizService {
     private readonly notificationService: NotificationService,
     private readonly mailService: MailService,
     private readonly achievementService: AchievementService,
+    private readonly skillEnrollmentService: SkillEnrollmentService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async fetchQuizBySlug(slug: string): Promise<any> {
-  const quiz = await this.quizRepository
-  .createQueryBuilder('quiz')
-  .leftJoinAndSelect('quiz.quizQuestions', 'quizQuestion')
-  .leftJoinAndSelect('quiz.settings', 'settings')
-  .where('quiz.slug = :slug', { slug })
-  .getOne();
+    const quiz = await this.quizRepository
+      .createQueryBuilder('quiz')
+      .leftJoinAndSelect('quiz.quizQuestions', 'quizQuestion')
+      .leftJoinAndSelect('quiz.settings', 'settings')
+      .where('quiz.slug = :slug', { slug })
+      .getOne();
 
     if (!quiz) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz not found.`);
@@ -176,6 +178,19 @@ export class QuizService {
       quizCategory = 'Topic';
     }
 
+    // Free-tier gating: only for self-directed practice (UserQuiz), and never for the
+    // one-time system-generated initial assessment (createInitialAssessmentQuiz calls
+    // back into this method with tag=INITIAL_ASSESSMENT_TAG — that's free onboarding,
+    // not a purchase decision, since the user hasn't even seen pricing yet). Standard
+    // (admin-authored) quizzes are intentionally left ungated in this pass — see the
+    // enrollment implementation notes.
+    if (
+      createQuizDto?.quizType === QuizTypeEnum.UserQuiz &&
+      createQuizDto?.tag !== INITIAL_ASSESSMENT_TAG
+    ) {
+      await this.enforceSubjectAccessForUserQuiz(userId, subjectIds, topicIds, subjectTrackIds);
+    }
+
     // All three scopes are resolved down to one topic-level pool by
     // QuestionGeneratorService — they combine (union), they don't override each other,
     // so a quiz can legitimately span e.g. one whole subject plus a couple of
@@ -264,7 +279,7 @@ export class QuizService {
       }
       const quiz = new Quiz();
       quiz.title = title;
-      quiz.tag = createQuizDto.tag ;
+      quiz.tag = createQuizDto.tag;
       quiz.quizType = createQuizDto.quizType;
       quiz.shortDesc = shortDesc ? shortDesc.slice(0, 200) : shortDesc;
       quiz.description = createQuizDto.description;
@@ -378,6 +393,98 @@ export class QuizService {
     const suffix = `-by-${userPart}-${shortTimestamp}`;
     const titlePart = generateSlug(title, Math.max(1, 100 - suffix.length)) || 'quiz';
     return `${titlePart}${suffix}`;
+  }
+
+  /** Resolves subjectIds/topicIds/subjectTrackIds down to the flat set of subjects a
+   * would-be UserQuiz actually touches, purely for the entitlement check below — this
+   * is a separate, read-only resolution from the one QuestionGeneratorService does for
+   * actually building the question pool. */
+  private async resolveSubjectIdsForGating(
+    subjectIds: number[],
+    topicIds: number[],
+    subjectTrackIds: number[],
+  ): Promise<number[]> {
+    const resolved = new Set<number>(subjectIds);
+
+    if (topicIds.length) {
+      const rows = await this.dataSource
+        .createQueryBuilder()
+        .select('t.subjectId', 'subjectId')
+        .from('topic', 't')
+        .where('t.id IN (:...topicIds)', { topicIds })
+        .getRawMany();
+      rows.forEach((r) => resolved.add(+r.subjectId));
+    }
+
+    if (subjectTrackIds.length) {
+      const rows = await this.dataSource
+        .createQueryBuilder()
+        .select('t.subjectId', 'subjectId')
+        .from('subject_track_topic', 'stt')
+        .innerJoin('topic', 't', 't.id = stt.topicId')
+        .where('stt.subjectTrackId IN (:...subjectTrackIds)', { subjectTrackIds })
+        .getRawMany();
+      rows.forEach((r) => resolved.add(+r.subjectId));
+    }
+
+    return Array.from(resolved);
+  }
+
+  /** Tier-aware: non-premium subjects and Pro+ tiers are unlimited. Otherwise, the
+   * MINIMUM effective tier across every target subject (all-or-nothing, same pattern
+   * as before) determines the daily cap — a mix of a Curious-tier subject and a
+   * Basic-tier one is treated as Basic for this request. Approximated as "today's
+   * total UserQuiz creation count", not a per-subject count, matching the equivalent
+   * simplification already made for the lesson cap's daily (not cumulative) counter.
+   * This never blocks a quiz on subjects the user actually has full access to; it
+   * only ever throttles the ones they don't. */
+  private async enforceSubjectAccessForUserQuiz(
+    userId: number,
+    subjectIds: number[],
+    topicIds: number[],
+    subjectTrackIds: number[],
+  ): Promise<void> {
+    const targetSubjectIds = await this.resolveSubjectIdsForGating(
+      subjectIds,
+      topicIds,
+      subjectTrackIds,
+    );
+    if (!targetSubjectIds.length) return;
+
+    const minTier = await this.skillEnrollmentService.getMinEffectiveTierForSubjects(
+      userId,
+      targetSubjectIds,
+    );
+    if (minTier === null) {
+      throw new AppCustomException(
+        HttpStatus.FORBIDDEN,
+        `You're not enrolled in one or more of these subjects yet. ` +
+        `Enroll in the free Basic plan (or higher) to start practicing.`,
+      );
+    }
+    if (isTierAtLeast(minTier, EnrollmentTierEnum.Pro)) return;
+
+    const caps = await this.skillEnrollmentService.getCapsForTier(minTier);
+    const dailyCap = caps?.dailyQuizCap;
+    if (dailyCap === undefined) return;
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const todaysCount = await this.quizRepository.count({
+      where: {
+        createdBy: userId,
+        quizType: QuizTypeEnum.UserQuiz,
+        createdAt: MoreThanOrEqual(startOfDay),
+      },
+    });
+
+    if (todaysCount >= dailyCap) {
+      throw new AppCustomException(
+        HttpStatus.FORBIDDEN,
+        `You've used today's ${dailyCap} free practice quizzes on your current plan (${minTier}). ` +
+        `Upgrade for unlimited practice, or come back tomorrow.`,
+      );
+    }
   }
 
   /**
@@ -580,7 +687,7 @@ export class QuizService {
   }
 
 
-  async getUserQuizzes(userId: number,isAdmin: boolean,): Promise<any> {
+  async getUserQuizzes(userId: number, isAdmin: boolean,): Promise<any> {
     const query = await this.quizRepository
       .createQueryBuilder('quiz')
       .leftJoin(QuizResult, 'qr', 'qr.quizId = quiz.id')
@@ -602,13 +709,13 @@ export class QuizService {
         quizType: QuizTypeEnum.Standard,
       })
 
-      if (!isAdmin) {
-    query.andWhere(
-      'quiz.createdBy = :userId',
-      { userId },
-    );
-  }
-      const quizzes = await query
+    if (!isAdmin) {
+      query.andWhere(
+        'quiz.createdBy = :userId',
+        { userId },
+      );
+    }
+    const quizzes = await query
       .groupBy('quiz.id')
       .addGroupBy('quiz.title')
       .addGroupBy('quiz.slug')
@@ -639,257 +746,255 @@ export class QuizService {
 
 
   async getPublishedQuizzes(
-  filters: PublishedQuizFilterDto,
-): Promise<any[]> {
+    filters: PublishedQuizFilterDto,
+  ): Promise<any[]> {
 
-  const query = this.quizRepository
-    .createQueryBuilder('quiz')
-    .distinct(true)
+    const query = this.quizRepository
+      .createQueryBuilder('quiz')
+      .distinct(true)
 
-    .leftJoinAndSelect(
-      'quiz.settings',
-      'settings',
-    )
+      .leftJoinAndSelect(
+        'quiz.settings',
+        'settings',
+      )
 
-    .leftJoinAndSelect(
-      'quiz.userCreatedBy',
-      'userCreatedBy',
-    )
+      .leftJoinAndSelect(
+        'quiz.userCreatedBy',
+        'userCreatedBy',
+      )
 
-    // Subject Mapping
-    .leftJoin(
-      QuizSubject,
-      'filterQuizSubjects',
-      'filterQuizSubjects.quizId = quiz.id',
-    )
-    .leftJoin(
-      QuizSubject,
-      'quizSubjects',
-      'quizSubjects.quizId = quiz.id',
-    )
-    .leftJoinAndMapMany(
-    'quiz.subjects',
-    Subject,
-    'subject',
-    'subject.id = quizSubjects.subjectId',
-  )
+      // Subject Mapping
+      .leftJoin(
+        QuizSubject,
+        'filterQuizSubjects',
+        'filterQuizSubjects.quizId = quiz.id',
+      )
+      .leftJoin(
+        QuizSubject,
+        'quizSubjects',
+        'quizSubjects.quizId = quiz.id',
+      )
+      .leftJoinAndMapMany(
+        'quiz.subjects',
+        Subject,
+        'subject',
+        'subject.id = quizSubjects.subjectId',
+      )
 
-    // Topic Mapping
-    .leftJoin(
-      QuizTopic,
-      'quizTopics',
-      'quizTopics.quizId = quiz.id',
-    )
+      // Topic Mapping
+      .leftJoin(
+        QuizTopic,
+        'quizTopics',
+        'quizTopics.quizId = quiz.id',
+      )
 
-    .leftJoin(
-  JobRoleSubject,
-  'jobRoleSubjects',
-  `
+      .leftJoin(
+        JobRoleSubject,
+        'jobRoleSubjects',
+        `
   jobRoleSubjects.subjectId =
   filterQuizSubjects.subjectId
   `,
-)
+      )
 
-    .where(
-      'quiz.isPublished = :isPublished',
-      {
-        isPublished: true,
-      },
-    )
+      .where(
+        'quiz.isPublished = :isPublished',
+        {
+          isPublished: true,
+        },
+      )
 
-    .andWhere(
-      'quiz.quizType = :quizType',
-      {
-        quizType:
-          QuizTypeEnum.Standard,
-      },
-    );
+      .andWhere(
+        'quiz.quizType = :quizType',
+        {
+          quizType:
+            QuizTypeEnum.Standard,
+        },
+      );
 
-  /*
-  JOB ROLE FILTER
-*/
-if (
-  filters.jobRoleId &&
-  Number(filters.jobRoleId) !== 0
-) {
-  query.andWhere(
-    'jobRoleSubjects.jobRoleId = :jobRoleId',
-    {
-      jobRoleId:
-        filters.jobRoleId,
-    },
-  );
-}  
-
-/*
-  QUIZ SETTINGS MODE FILTER
-*/
-if (filters.mode) {
-  query.andWhere(
-    'settings.mode = :mode',
-    {
-      mode: filters.mode,
-    },
-  );
-}
-
-  /*
-    SUBJECT FILTER
-    subjectId = 0 => ignore filter
+    /*
+    JOB ROLE FILTER
   */
-  if (
-    filters.subjectId &&
-    Number(filters.subjectId) !== 0
-  ) {
+    if (
+      filters.jobRoleId &&
+      Number(filters.jobRoleId) !== 0
+    ) {
+      query.andWhere(
+        'jobRoleSubjects.jobRoleId = :jobRoleId',
+        {
+          jobRoleId:
+            filters.jobRoleId,
+        },
+      );
+    }
 
-    query.andWhere(
-      'filterQuizSubjects.subjectId = :subjectId',
-      {
-        subjectId:
-          filters.subjectId,
-      },
-    );
-  }
+    /*
+      QUIZ SETTINGS MODE FILTER
+    */
+    if (filters.mode) {
+      query.andWhere(
+        'settings.mode = :mode',
+        {
+          mode: filters.mode,
+        },
+      );
+    }
 
-  /*
-    TOPIC FILTER
-    topicId = 0 => ignore filter
-  */
-  if (
-    filters.topicId &&
-    Number(filters.topicId) !== 0
-  ) {
+    /*
+      SUBJECT FILTER
+      subjectId = 0 => ignore filter
+    */
+    if (
+      filters.subjectId &&
+      Number(filters.subjectId) !== 0
+    ) {
 
-    query.andWhere(
-       `
+      query.andWhere(
+        'filterQuizSubjects.subjectId = :subjectId',
+        {
+          subjectId:
+            filters.subjectId,
+        },
+      );
+    }
+
+    /*
+      TOPIC FILTER
+      topicId = 0 => ignore filter
+    */
+    if (
+      filters.topicId &&
+      Number(filters.topicId) !== 0
+    ) {
+
+      query.andWhere(
+        `
   quizTopics.topicId = :topicId
   AND
   jobRoleSubjects.topicId =
   quizTopics.topicId
   `,
-      {
-        topicId:
-          filters.topicId,
-      },
-    );
-  }
-
-  /*
-    If filters are empty/0
-    => no extra filters
-    => fetch all quizzes
-  */
-
-  query.orderBy(
-    'quiz.createdAt',
-    'DESC',
-  );
-
-  const quizzes =
-    await query.getMany();
-
-  if (!quizzes.length) {
-    return [];
-  }
-
-  const quizIds = quizzes.map(
-    (quiz) => quiz.id,
-  );
-
-  /*
-    TOTAL ATTEMPTS
-  */
-  const attempts =
-    await this.quizResultRepository
-      .createQueryBuilder('qr')
-      .select(
-        'qr.quizId',
-        'quizId',
-      )
-      .addSelect(
-        'COUNT(qr.id)',
-        'totalAttempts',
-      )
-      .where(
-        'qr.quizId IN (:...quizIds)',
         {
-          quizIds,
+          topicId:
+            filters.topicId,
         },
-      )
-      .groupBy('qr.quizId')
-      .getRawMany();
+      );
+    }
 
-  const attemptMap = new Map<
-    number,
-    number
-  >();
+    /*
+      If filters are empty/0
+      => no extra filters
+      => fetch all quizzes
+    */
 
-  for (const item of attempts) {
-
-    attemptMap.set(
-      Number(item.quizId),
-      Number(item.totalAttempts),
+    query.orderBy(
+      'quiz.createdAt',
+      'DESC',
     );
-  }
 
-  /*
-    TOTAL QUESTIONS
-  */
-  const questionCounts =
-    await this.quizQuestionRepo
-      .createQueryBuilder('qq')
-      .select(
-        'qq.quizId',
-        'quizId',
-      )
-      .addSelect(
-        'COUNT(qq.id)',
-        'totalQuestions',
-      )
-      .where(
-        'qq.quizId IN (:...quizIds)',
-        {
-          quizIds,
-        },
-      )
-      .groupBy('qq.quizId')
-      .getRawMany();
+    const quizzes =
+      await query.getMany();
 
-  const questionCountMap =
-    new Map<number, number>();
+    if (!quizzes.length) {
+      return [];
+    }
 
-  for (const item of questionCounts) {
-
-    questionCountMap.set(
-      Number(item.quizId),
-      Number(item.totalQuestions),
+    const quizIds = quizzes.map(
+      (quiz) => quiz.id,
     );
-  }
 
-  /*
-    FINAL RESPONSE
-  */
-  return quizzes.map(
-    (quiz: any) => {
+    /*
+      TOTAL ATTEMPTS
+    */
+    const attempts =
+      await this.quizResultRepository
+        .createQueryBuilder('qr')
+        .select(
+          'qr.quizId',
+          'quizId',
+        )
+        .addSelect(
+          'COUNT(qr.id)',
+          'totalAttempts',
+        )
+        .where(
+          'qr.quizId IN (:...quizIds)',
+          {
+            quizIds,
+          },
+        )
+        .groupBy('qr.quizId')
+        .getRawMany();
 
-      const {
-        userCreatedBy,
-        ...quizData
-      } = quiz;
+    const attemptMap = new Map<
+      number,
+      number
+    >();
 
-      const createdByName = `${
-        userCreatedBy?.firstName || ''
-      } ${
-        userCreatedBy?.lastName || ''
-      }`.trim();
+    for (const item of attempts) {
 
-      return {
+      attemptMap.set(
+        Number(item.quizId),
+        Number(item.totalAttempts),
+      );
+    }
 
-        ...quizData,
+    /*
+      TOTAL QUESTIONS
+    */
+    const questionCounts =
+      await this.quizQuestionRepo
+        .createQueryBuilder('qq')
+        .select(
+          'qq.quizId',
+          'quizId',
+        )
+        .addSelect(
+          'COUNT(qq.id)',
+          'totalQuestions',
+        )
+        .where(
+          'qq.quizId IN (:...quizIds)',
+          {
+            quizIds,
+          },
+        )
+        .groupBy('qq.quizId')
+        .getRawMany();
 
-        createdBy:
-          userCreatedBy
-            ? {
+    const questionCountMap =
+      new Map<number, number>();
+
+    for (const item of questionCounts) {
+
+      questionCountMap.set(
+        Number(item.quizId),
+        Number(item.totalQuestions),
+      );
+    }
+
+    /*
+      FINAL RESPONSE
+    */
+    return quizzes.map(
+      (quiz: any) => {
+
+        const {
+          userCreatedBy,
+          ...quizData
+        } = quiz;
+
+        const createdByName = `${userCreatedBy?.firstName || ''
+          } ${userCreatedBy?.lastName || ''
+          }`.trim();
+
+        return {
+
+          ...quizData,
+
+          createdBy:
+            userCreatedBy
+              ? {
                 id:
                   userCreatedBy.id,
 
@@ -898,40 +1003,40 @@ if (filters.mode) {
                   userCreatedBy.username ||
                   null,
               }
-            : null,
+              : null,
 
-        status:
-          quiz.isPublished
-            ? 'Published'
-            : 'Draft',
+          status:
+            quiz.isPublished
+              ? 'Published'
+              : 'Draft',
 
-        totalQuestions:
-          questionCountMap.get(
-            quiz.id,
-          ) || 0,
+          totalQuestions:
+            questionCountMap.get(
+              quiz.id,
+            ) || 0,
 
-        totalAttempts:
-          attemptMap.get(
-            quiz.id,
-          ) || 0,
+          totalAttempts:
+            attemptMap.get(
+              quiz.id,
+            ) || 0,
 
-        settings:
-          quiz.settings || null,
+          settings:
+            quiz.settings || null,
 
-        subjects:
-      quiz?.subjects?.map(
-        (subject: any) => ({
-          id: subject.id,
-          title: subject.title,
-          colour: subject.color,
-          image: subject.image,
-        }),
-      ) || [],
-      };
-    },
-  );
-}
-  
+          subjects:
+            quiz?.subjects?.map(
+              (subject: any) => ({
+                id: subject.id,
+                title: subject.title,
+                colour: subject.color,
+                image: subject.image,
+              }),
+            ) || [],
+        };
+      },
+    );
+  }
+
 
   async updateQuiz(
     quizId: number,
@@ -1024,7 +1129,7 @@ if (filters.mode) {
       quiz.goal = updateQuizDto.goal;
     }
 
-     if (updateQuizDto.category !== undefined) {
+    if (updateQuizDto.category !== undefined) {
       quiz.category = updateQuizDto.category;
     }
 

@@ -7,7 +7,6 @@ import { MasterController } from './master.controller';
 import { MasterService } from './providers/master.service';
 import { RouteService } from './providers/route.service';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
-import { UserSubject } from 'src/common/typeorm/entities/user-subject.entity';
 import { TopicAnalysisService } from './providers/topic-analysis.service';
 import { SubjectAnalysisService } from './providers/subject-analysis.service';
 import { User } from 'src/common/typeorm/entities/user.entity';
@@ -22,15 +21,17 @@ import { SubjectStatsService } from './providers/subject-stats.service';
 import { ProgramService } from './providers/program.service';
 import { SubjectTrackAnalysisService } from './providers/subject-track-analysis.service';
 import { BadgeQueryModule } from '../achievement/badge-query.module';
+import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       User, JobRole, UserJobRole, Subject, JobRoleSubject,
-      Topic, UserSubject, UserPermission, SubjectTrack, CertificationTrack, CertificationTrackJobRole,
+      Topic, UserPermission, SubjectTrack, CertificationTrack, CertificationTrackJobRole,
     ]),
     UserPermissionModule,
     BadgeQueryModule,
+    SkillEnrollmentModule,
   ],
   controllers: [MasterController],
   providers: [

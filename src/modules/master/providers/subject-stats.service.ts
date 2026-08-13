@@ -11,7 +11,7 @@ import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.ent
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
-import { UserSubject } from 'src/common/typeorm/entities/user-subject.entity';
+import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
 import { computeAttemptMetrics, getAggregateUserLevel } from 'src/common/utils/common-functions';
 import { DataSource, In, Repository } from 'typeorm';
 import { MeritService } from './merit.service';
@@ -24,9 +24,6 @@ export class SubjectStatsService {
   constructor(
     @InjectRepository(JobRoleSubject)
     private readonly jobRoleSubjectRepo: Repository<JobRoleSubject>,
-
-    @InjectRepository(UserSubject)
-    private readonly userSubjectRepo: Repository<UserSubject>,
 
     @InjectRepository(SubjectTrack)
     private readonly subjectTrackRepo: Repository<SubjectTrack>,
@@ -120,8 +117,17 @@ export class SubjectStatsService {
           'wrongHard',
         )
         .addSelect('SUM(CASE WHEN qa.isSkipped = 1 THEN 1 ELSE 0 END)', 'skipped')
-        .addSelect('CASE WHEN us.userId IS NOT NULL THEN 1 ELSE 0 END', 'isSubscribed')
-        .leftJoin('user_subject', 'us', 'us.subjectId = s.id AND us.userId = :userId', { userId })
+        // isSubscribed = "has a SkillEnrollment here that isn't explicitly cancelled" —
+        // deliberately not status='active'/not-expired: a naturally expired paid tier
+        // still counts as "my subjects" for personalization purposes, same as before
+        // UserSubject existed. Real access checks (quiz/lesson gating) are a separate,
+        // stricter query in SkillEnrollmentService and are unaffected by this.
+        .addSelect('CASE WHEN se.userId IS NOT NULL THEN 1 ELSE 0 END', 'isSubscribed')
+        .leftJoin(
+          'skill_enrollment', 'se',
+          'se.subjectId = s.id AND se.userId = :userId AND se.status != :cancelledStatus',
+          { userId, cancelledStatus: EnrollmentStatusEnum.Cancelled },
+        )
         .setParameter('userId', userId);
 
       // "Journey" totals — every attempt ever, retries included — separate from the
