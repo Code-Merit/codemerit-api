@@ -13,9 +13,6 @@ import { DataSource } from 'typeorm';
 @Injectable()
 export class TopicAnalysisService {
   constructor(private readonly dataSource: DataSource) {}
-
-  // In your service class
-
   /**
    * Build a base QB that returns per-topic aggregates.
    * - numTrivia: count of Trivia questions in the topic
