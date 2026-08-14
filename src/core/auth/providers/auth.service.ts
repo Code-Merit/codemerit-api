@@ -9,6 +9,7 @@ import { ApiUsageService } from 'src/common/services/api-usage.service';
 import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { AccountStatusEnum } from 'src/core/users/enums/account-status.enum';
+import { UserOtpTagsEnum } from 'src/core/users/enums/user-otp-Tags.enum';
 import { UserProfileService } from 'src/core/users/providers/user-profile.service';
 import { UserService } from 'src/core/users/providers/user.service';
 import { MasterService } from 'src/modules/master/providers/master.service';
@@ -360,7 +361,25 @@ export class AuthService {
     return this.usersService.create(createUserDto, createdBy, requestMeta);
   }
 
+  /**
+   * Delegates the OTP match + activation/password-change to UserService, then — for a
+   * successful ACC_VERIFY — reuses the exact same `login()` used by POST /auth/login (and by
+   * the Google/LinkedIn callbacks above) to build the token + profile/permissions/enrollments
+   * payload. This lets the frontend apply its normal post-login navigation logic straight off
+   * `/auth/verify`'s response, without a second round-trip to `/auth/login`. PWD_RECOVER keeps
+   * returning the plain confirmation message — that flow still expects the user to log in
+   * afterwards with their new password.
+   */
   async accountVerification(accountVerificationDto: AccountVerificationDto) {
-    return this.usersService.acoountVerification(accountVerificationDto);
+    const message = await this.usersService.acoountVerification(
+      accountVerificationDto,
+    );
+    if (accountVerificationDto.tag === UserOtpTagsEnum.ACC_VERIFY) {
+      const user = await this.usersService.findByEmail(
+        accountVerificationDto.email,
+      );
+      return this.login(user);
+    }
+    return message;
   }
 }

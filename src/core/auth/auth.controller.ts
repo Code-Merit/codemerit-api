@@ -182,17 +182,21 @@ export class AuthController {
     description:
       'Matches `otp` against the most recently created OTP row for `email`+`tag`; on a match, marks ' +
       'that OTP used and — for `tag: ACC_VERIFY` — flips the account to ACTIVE, sends an ' +
-      'account-verified e-mail, and logs an activity entry. Rejects with 400 on any mismatch/unknown ' +
-      'e-mail. This same handler also powers `tag: PWD_RECOVER` (see `/auth/recover-password` below) ' +
-      'since both routes call the identical service method — the `tag` field in the body, not the ' +
-      'URL, decides which business rule actually runs.',
+      'account-verified e-mail, and logs an activity entry. On a successful ACC_VERIFY, the response ' +
+      '`data` is the same signed-JWT + profile/permissions/enrollments/stats payload `POST /auth/login` ' +
+      'returns, so the frontend can reuse its normal post-login navigation logic without a second ' +
+      'round-trip to `/auth/login`. Rejects with 400 on any mismatch/unknown e-mail. This same handler ' +
+      'also powers `tag: PWD_RECOVER` (see `/auth/recover-password` below) — for that tag the response ' +
+      'stays the plain confirmation message, since a password-recovery flow still expects the user to ' +
+      'log in afterwards with their new password. The `tag` field in the body, not the URL, decides ' +
+      'which business rule actually runs.',
   })
   @Post('verify')
   async acoountVerification(
     @Body()
     accountVerificationDto: AccountVerificationDto,
   ): Promise<ApiResponse<any>> {
-    const result = await this.usersService.acoountVerification(
+    const result = await this.authService.accountVerification(
       accountVerificationDto,
     );
     return new ApiResponse('Account verified succesfully.', result);

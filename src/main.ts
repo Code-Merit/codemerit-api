@@ -70,6 +70,14 @@ async function bootstrap() {
     .addServer('https://qa.appdevops.in/', 'Staging')
     .addServer('https://prod.appdevops.in/', 'Production')
     .addTag('CodeMerit')
+    // Registers the 'access-token' security scheme referenced by every
+    // @ApiBearerAuth('access-token') decorator across the controllers — without this,
+    // those decorators point at an undefined scheme and Swagger UI's Authorize button
+    // has nothing to attach the JWT to.
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'access-token',
+    )
     .build();
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup('api-docs', app, document);
