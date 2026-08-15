@@ -67,10 +67,17 @@ export class Lesson extends AbstractEntity {
   })
   format: 'comic' | 'tutorial' | 'reference';
 
+  // 'simple-json' (not 'json') deliberately — MariaDB has no native JSON type (it's a
+  // LONGTEXT alias), and TypeORM's schema-diff never recognizes that as a match for a
+  // 'json' column, so every synchronize (i.e. every dev server restart) silently
+  // DROP+ADDs this column. Repeated instant DROP/ADD COLUMN cycles accumulate InnoDB's
+  // internal row-size bookkeeping until `lesson` trips the 8126-byte row limit and the
+  // app refuses to boot ("Row size too large"). 'simple-json' stores as plain TEXT
+  // (stable type match, no flapping) and still round-trips as string[] | null exactly
+  // like 'json' did — no application code changes needed.
   @Column({
-    type: 'json',
+    type: 'simple-json',
     nullable: true,
-    default: null,
   })
   tags: string[] | null;
 

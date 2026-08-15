@@ -33,15 +33,12 @@ import { NotificationService } from 'src/modules/notification/providers/notifica
 import { GetQuestionsByIdsDto } from 'src/modules/question/dtos/get-questions-by-ids.dto';
 import { QuestionService } from 'src/modules/question/providers/question.service';
 import { QuestionGeneratorService } from 'src/modules/question/providers/question-generator.service';
-import { DataSource, In, Repository } from 'typeorm';
+import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
+import { DataSource, In, MoreThanOrEqual, Repository } from 'typeorm';
 import { CreateQuizDto } from '../dtos/create-quiz.dto';
 import { PublishedQuizFilterDto } from '../dtos/published-quiz.dto';
-import { User } from 'src/common/typeorm/entities/user.entity';
-import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
-import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
-import { MailService } from 'src/common/mail/providers/mail.service';
-import { AchievementService } from 'src/modules/achievement/providers/achievement.service';
-import { NewlyEarnedDto } from 'src/modules/achievement/dtos/newly-earned.dto';
+import { SubmitQuizDto } from '../dtos/submit-quiz.dto';
+import { UpdateQuizDto } from '../dtos/update-quiz.dto';
 import {
   DEFAULT_QUIZ_LENGTH,
   MAX_QUIZ_LENGTH,
