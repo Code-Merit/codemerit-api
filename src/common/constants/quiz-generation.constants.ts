@@ -1,4 +1,4 @@
-export const DEFAULT_QUIZ_LENGTH = 10; // used when client omits numQuestions
+export const DEFAULT_QUIZ_LENGTH = 5; // used when client omits numQuestions
 export const MAX_QUIZ_LENGTH = 25; // hard server-side ceiling, regardless of client request
 export const INITIAL_ASSESSMENT_LENGTH = 20; // kept for createInitialAssessmentQuiz — must stay <= MAX_QUIZ_LENGTH
 

@@ -11,7 +11,10 @@ import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.ent
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
-import { UserSubject } from 'src/common/typeorm/entities/user-subject.entity';
+import { SkillRating } from 'src/common/typeorm/entities/skill-rating.entity';
+import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
+import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
+import { SkillTypeEnum } from 'src/common/enum/skill-type.enum';
 import { computeAttemptMetrics, getAggregateUserLevel } from 'src/common/utils/common-functions';
 import { DataSource, In, Repository } from 'typeorm';
 import { MeritService } from './merit.service';
@@ -24,9 +27,6 @@ export class SubjectStatsService {
   constructor(
     @InjectRepository(JobRoleSubject)
     private readonly jobRoleSubjectRepo: Repository<JobRoleSubject>,
-
-    @InjectRepository(UserSubject)
-    private readonly userSubjectRepo: Repository<UserSubject>,
 
     @InjectRepository(SubjectTrack)
     private readonly subjectTrackRepo: Repository<SubjectTrack>,
@@ -120,8 +120,17 @@ export class SubjectStatsService {
           'wrongHard',
         )
         .addSelect('SUM(CASE WHEN qa.isSkipped = 1 THEN 1 ELSE 0 END)', 'skipped')
-        .addSelect('CASE WHEN us.userId IS NOT NULL THEN 1 ELSE 0 END', 'isSubscribed')
-        .leftJoin('user_subject', 'us', 'us.subjectId = s.id AND us.userId = :userId', { userId })
+        // isSubscribed = "has a SkillEnrollment here that isn't explicitly cancelled" —
+        // deliberately not status='active'/not-expired: a naturally expired paid tier
+        // still counts as "my subjects" for personalization purposes, same as before
+        // UserSubject existed. Real access checks (quiz/lesson gating) are a separate,
+        // stricter query in SkillEnrollmentService and are unaffected by this.
+        .addSelect('CASE WHEN se.userId IS NOT NULL THEN 1 ELSE 0 END', 'isSubscribed')
+        .leftJoin(
+          'skill_enrollment', 'se',
+          'se.subjectId = s.id AND se.userId = :userId AND se.status != :cancelledStatus',
+          { userId, cancelledStatus: EnrollmentStatusEnum.Cancelled },
+        )
         .setParameter('userId', userId);
 
       // "Journey" totals — every attempt ever, retries included — separate from the
@@ -227,6 +236,12 @@ export class SubjectStatsService {
       subjectTrackMap,
       userId,
     );
+    // null until every topic in the subject has a SELF rating on file — the Overview tab's
+    // "Self Rate Your Skills" widget shows a plain CTA while this is null, and a summary once
+    // it isn't. Reuses the same topic-id universe `syllabus` already computed above.
+    const detailSelfRating = userId
+      ? await this.getDetailSelfRating(subjectId, userId, syllabus)
+      : null;
 
     const attempted = +raw.attempted || 0;
     const correct = +raw.correct || 0;
@@ -287,6 +302,7 @@ export class SubjectStatsService {
       subjectTracks,
       certificationTracks,
       lessons,
+      nextAction: this.computeNextAction(syllabus, lessons.list, subjectTracks, certificationTracks),
       relatedJobRoles,
       meritList: subjectMerits.meritLists.get(subjectId) ?? [],
       popularTopics: popularTopicsMap.get(subjectId) ?? [],
@@ -294,7 +310,121 @@ export class SubjectStatsService {
       // Badges scoped to this subject, each tagged `unlocked` — omitted (empty array) for
       // anonymous requests, same as `subjectRatings` above.
       badges,
+      detailSelfRating,
     };
+  }
+
+  // ─── Next Best Action ──────────────────────────────────────────────────────────
+
+  /**
+   * Single backend-computed "what should this learner do next" suggestion for the
+   * subject dashboard hero widget. Priority: resume an in-progress lesson (anywhere
+   * in the subject) > finish unread/incomplete lessons on the earliest unmastered
+   * topic (walked in `syllabus`'s `t.order` sequence) > quiz that exact topic once
+   * its lessons are done > nudge toward the nearest incomplete certification once
+   * every topic is mastered > caught up.
+   *
+   * No userId branching needed: for anonymous callers every lesson's `status` is
+   * null and every topic's quiz stats are zero, so the walk below naturally lands
+   * on "first topic, first lesson (or quiz if it has none)" instead of a
+   * personalized resume — still a sensible suggestion, just not personalized.
+   */
+  private computeNextAction(
+    syllabus: any[],
+    lessonsList: any[],
+    subjectTracks: any[],
+    certificationTracks: any[],
+  ): any {
+    const inProgress = lessonsList.filter(
+      (l) => l.status === UserLessonTrackerStatusEnum.Read && l.lastActivityAt,
+    );
+    if (inProgress.length) {
+      const latest = inProgress.reduce((a, b) =>
+        new Date(a.lastActivityAt).getTime() >= new Date(b.lastActivityAt).getTime() ? a : b,
+      );
+      return {
+        type: 'resume-lesson',
+        lessonId: latest.id,
+        title: latest.title,
+        slug: latest.slug,
+        topicId: latest.topicId,
+        topicTitle: latest.topicTitle,
+        progressPercent: latest.progressPercent,
+      };
+    }
+
+    const lessonsByTopic = new Map<number, any[]>();
+    for (const l of lessonsList) {
+      if (!l.topicId) continue;
+      const arr = lessonsByTopic.get(l.topicId) ?? [];
+      arr.push(l);
+      lessonsByTopic.set(l.topicId, arr);
+    }
+
+    for (const topic of syllabus) {
+      const topicLessons = lessonsByTopic.get(topic.id) ?? [];
+      const lessonsTotal = topicLessons.length;
+      const lessonsCompleted = topicLessons.filter(
+        (l) => l.status === UserLessonTrackerStatusEnum.Completed,
+      ).length;
+      const lessonsDone = lessonsTotal === 0 || lessonsCompleted === lessonsTotal;
+
+      if (lessonsDone && topic.isCompleted) continue; // fully mastered — move to next topic
+
+      if (!lessonsDone) {
+        const nextLesson = topicLessons.find(
+          (l) => l.status !== UserLessonTrackerStatusEnum.Completed,
+        );
+        return {
+          type: 'learn-lesson',
+          topicId: topic.id,
+          topicTitle: topic.title,
+          lessonId: nextLesson?.id ?? null,
+          lessonTitle: nextLesson?.title ?? null,
+          lessonSlug: nextLesson?.slug ?? null,
+          lessonsCompleted,
+          lessonsTotal,
+        };
+      }
+
+      // Lessons done (or topic has none) but the quiz isn't — target this exact topic.
+      const track = subjectTracks.find((st) => st.topics?.some((t: any) => t.id === topic.id));
+      return {
+        type: 'quiz',
+        topicId: topic.id,
+        topicTitle: topic.title,
+        subjectTrackId: track?.id ?? null,
+        subjectTrackTitle: track?.title ?? null,
+        score: topic.score,
+        currentAccuracy: topic.currentAccuracy,
+        coverage: topic.coverage,
+      };
+    }
+
+    // Every topic mastered — nudge toward the nearest incomplete certification. Cert cards
+    // (from getCertificationTracksForSubject below) don't carry a top-level progress/achieved
+    // flag of their own — only per-subjectTrack progressPercent/isCompleted and myCertificate
+    // (set only once a Certificate row actually exists) — so derive both here rather than
+    // assuming fields that were never computed for this endpoint.
+    const certCandidates = certificationTracks
+      .filter((ct) => !ct.myCertificate)
+      .map((ct) => {
+        const total = ct.totalSubjectTracks || ct.subjectTracks?.length || 0;
+        const completed = (ct.subjectTracks ?? []).filter((st: any) => st.isCompleted).length;
+        return { ct, progressPercent: total > 0 ? +((completed / total) * 100).toFixed(0) : 0 };
+      })
+      .sort((a, b) => b.progressPercent - a.progressPercent);
+
+    if (certCandidates.length) {
+      const best = certCandidates[0];
+      return {
+        type: 'certification',
+        certificationTrackId: best.ct.id,
+        title: best.ct.title,
+        progressPercent: best.progressPercent,
+      };
+    }
+    return { type: 'caught-up' };
   }
 
   // ─── Certification Tracks (via SubjectTrack -> CertificationTrackSubjectTrack) ─
@@ -417,6 +547,7 @@ export class SubjectStatsService {
       .select('l.id', 'id')
       .addSelect('l.title', 'title')
       .addSelect('l.slug', 'slug')
+      .addSelect('l.summary', 'summary')
       .addSelect('l.level', 'level')
       .addSelect('l.format', 'format')
       .addSelect('l.topicId', 'topicId')
@@ -447,6 +578,7 @@ export class SubjectStatsService {
       id: +r.id,
       title: r.title,
       slug: r.slug,
+      summary: r.summary ?? null,
       level: +r.level,
       format: r.format,
       topicId: r.topicId ? +r.topicId : null,
@@ -455,7 +587,7 @@ export class SubjectStatsService {
       numSections: +r.numSections || 0,
       status: userId ? (r.status ?? UserLessonTrackerStatusEnum.Pending) : null,
       views: userId ? +r.views || 0 : 0,
-      progressPercent: userId ? +r.progressPercent || 0 : 0,
+      progressPercent: userId ? (+r.progressPercent || 0) : 0,
       lastActivityAt: userId ? (r.lastActivityAt ?? null) : null,
     }));
 
@@ -467,10 +599,10 @@ export class SubjectStatsService {
       : 0;
     const totalViews = userId ? list.reduce((sum, l) => sum + l.views, 0) : 0;
     const lastActivityAt = userId
-      ? list.reduce<Date | null>((latest, l) => {
+      ? list.reduce<string | null>((latest, l) => {
           if (!l.lastActivityAt) return latest;
-          const ts = new Date(l.lastActivityAt);
-          return !latest || ts > latest ? ts : latest;
+          if (!latest || new Date(l.lastActivityAt).getTime() > new Date(latest).getTime()) return l.lastActivityAt;
+          return latest;
         }, null)
       : null;
 
@@ -478,7 +610,7 @@ export class SubjectStatsService {
     // question coverage — kept inline here since it's a single field, not shared across levels.
     const learningCompleteness = list.length > 0 ? +((completed / list.length) * 100).toFixed(1) : 0;
 
-    return { total: list.length, completed, inProgress, totalViews, learningCompleteness, lastActivityAt, list };
+    return { total: list.length, completed, inProgress, totalViews, lastActivityAt, learningCompleteness, list };
   }
 
   // ─── Related Job Roles ────────────────────────────────────────────────────────
@@ -533,5 +665,53 @@ export class SubjectStatsService {
         createdAt: r.createdAt,
       })),
     }));
+  }
+
+  // Powers the Overview tab's "Self Rate Your Skills" widget. Deliberately all-or-nothing —
+  // returns null the moment even one topic in the subject is missing a SELF rating, so the
+  // widget has exactly two states (CTA vs. summary) instead of a partial-progress display.
+  // `topics` is the same topic-id universe getSubjectPage already computed as `syllabus`, so
+  // this needs no query of its own for "what topics does this subject have."
+  private async getDetailSelfRating(
+    subjectId: number,
+    userId: number,
+    topics: { id: number }[],
+  ): Promise<{ totalTopics: number; averageRating: number; lastRatedAt: Date } | null> {
+    const topicIds = topics.map((t) => t.id);
+    if (!topicIds.length) return null;
+
+    const ratings = await this.dataSource
+      .getRepository(SkillRating)
+      .createQueryBuilder('rating')
+      .innerJoin('rating.assessmentSession', 'session')
+      .where('session.userId = :userId', { userId })
+      .andWhere('rating.skillType = :skillType', { skillType: SkillTypeEnum.TOPIC })
+      .andWhere('rating.ratingType = :ratingType', { ratingType: RatingTypeEnum.SELF })
+      .andWhere('rating.skillId IN (:...topicIds)', { topicIds })
+      .orderBy('rating.skillId', 'ASC')
+      .addOrderBy('rating.createdAt', 'DESC')
+      .getMany();
+
+    // A topic can carry more than one SELF rating over time (reassessment) — keep only the
+    // most recent per topic, same "latest wins" rule the rest of this service applies to
+    // repeated attempts elsewhere.
+    const latestByTopic = new Map<number, SkillRating>();
+    for (const r of ratings) {
+      if (!latestByTopic.has(r.skillId)) latestByTopic.set(r.skillId, r);
+    }
+    if (latestByTopic.size < topicIds.length) return null;
+
+    const latest = [...latestByTopic.values()];
+    const averageRating = latest.reduce((sum, r) => sum + r.rating, 0) / latest.length;
+    const lastRatedAt = latest.reduce(
+      (max, r) => (r.createdAt > max ? r.createdAt : max),
+      latest[0].createdAt,
+    );
+
+    return {
+      totalTopics: topicIds.length,
+      averageRating: Math.round(averageRating * 10) / 10,
+      lastRatedAt,
+    };
   }
 }

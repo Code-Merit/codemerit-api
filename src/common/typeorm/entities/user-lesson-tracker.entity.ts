@@ -58,6 +58,23 @@ export class UserLessonTracker extends AbstractEntity {
   })
   notes: string;
 
+  // Independent of status/progressPercent by design — a learner can rate usefulness/quality
+  // whether or not they ever complete the lesson. Overwritten (not accumulated) on every
+  // rating submission, so this is the learner's latest rating, not a history of ratings.
+  @Column({
+    type: 'int',
+    nullable: true,
+    default: null,
+  })
+  usefulRating: number | null;
+
+  @Column({
+    type: 'int',
+    nullable: true,
+    default: null,
+  })
+  qualityRating: number | null;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 

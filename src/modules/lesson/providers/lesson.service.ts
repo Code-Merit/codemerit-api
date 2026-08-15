@@ -2,20 +2,36 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { UserLessonTrackerStatusEnum } from 'src/common/enum/user-lesson-tracker-status.enum';
-import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
 import { LessonSection } from 'src/common/typeorm/entities/lesson-section.entity';
 import { Lesson } from 'src/common/typeorm/entities/lesson.entity';
-import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
-import { UserSubject } from 'src/common/typeorm/entities/user-subject.entity';
 import {
   generateSlug,
   generateUniqueSlug,
 } from 'src/common/utils/slugify.util';
+import { sanitizeLessonHtml } from 'src/common/utils/lesson-html-sanitizer.util';
 import { DataSource, In, Repository } from 'typeorm';
 import { CreateLessonDto } from '../dtos/create-lesson.dto';
 import { GetLessonsDto } from '../dtos/get-lessons.dto';
+import { UpdateLessonDto } from '../dtos/update-lesson.dto';
 import { UpdateLessonProgressDto } from '../dtos/update-lesson-progress.dto';
+import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
+import { BASIC_PREMIUM_SUBJECT_CONTENT_CEILING } from 'src/modules/skill-enrollment/constants/skill-enrollment.constants';
+import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
+import { EnrollmentTierEnum, isTierAtLeast } from 'src/common/enum/enrollment-tier.enum';
+
+interface LessonAccessResult {
+  locked: boolean;
+  isNewFreeGrant: boolean;
+  tier: EnrollmentTierEnum | null;
+}
+
+interface FreeLessonContext {
+  viewedLessonIdsEver: Set<number>;
+  viewedCountBySubjectEver: Map<number, number>;
+  todaysViewedCount: number;
+  lessonCountBySubject: Map<number, number>;
+}
 
 @Injectable()
 export class LessonService {
@@ -24,8 +40,149 @@ export class LessonService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(UserLessonTracker)
     private readonly userLessonTrackerRepo: Repository<UserLessonTracker>,
+    @InjectRepository(FreeLessonView)
+    private readonly freeLessonViewRepo: Repository<FreeLessonView>,
     private readonly dataSource: DataSource,
-  ) {}
+    private readonly skillEnrollmentService: SkillEnrollmentService,
+  ) { }
+
+  /** Comic-format lessons are always free regardless of subject. Non-premium
+   * (`Subject.isPremium: false`) subjects are unlimited for everyone at any tier,
+   * including no enrollment at all. Otherwise: `tier === null` (no active enrollment
+   * for this subject at all — not even Basic) is locked outright, with no free peek —
+   * enrolling in at least Basic is required first (see enrollBasic()). tier >= Pro is
+   * fully unlocked; Basic and Curious are capped daily (their own configured
+   * dailyLessonCap), and Basic additionally has a cumulative "seen no more than 40% of
+   * this subject's lessons, ever" ceiling — see BASIC_PREMIUM_SUBJECT_CONTENT_CEILING.
+   * A lesson already granted before (any date) always stays free, regardless of
+   * today's/cumulative counts. This is deliberately a *different* concept from the
+   * looser "what has this user engaged with" personalization signal used elsewhere
+   * in this service (see getEnrolledSubjectIds() below) — this method is the strict,
+   * real-access check. */
+  private evaluateLessonAccess(
+    lesson: Lesson,
+    tier: EnrollmentTierEnum | null,
+    caps: { dailyLessonCap: number } | null,
+    ctx: FreeLessonContext,
+  ): { locked: boolean; isNewFreeGrant: boolean } {
+    if (lesson.format === 'comic') return { locked: false, isNewFreeGrant: false };
+    if (!lesson.subject?.isPremium) return { locked: false, isNewFreeGrant: false };
+    if (tier === null) return { locked: true, isNewFreeGrant: false };
+    if (isTierAtLeast(tier, EnrollmentTierEnum.Pro)) return { locked: false, isNewFreeGrant: false };
+
+    if (ctx.viewedLessonIdsEver.has(lesson.id)) return { locked: false, isNewFreeGrant: false };
+
+    if (tier === EnrollmentTierEnum.Basic) {
+      const viewed = ctx.viewedCountBySubjectEver.get(lesson.subjectId) ?? 0;
+      const total = ctx.lessonCountBySubject.get(lesson.subjectId) ?? 0;
+      if (total > 0 && viewed / total >= BASIC_PREMIUM_SUBJECT_CONTENT_CEILING) {
+        return { locked: true, isNewFreeGrant: false };
+      }
+    }
+
+    const dailyCap = caps?.dailyLessonCap ?? Infinity;
+    if (ctx.todaysViewedCount >= dailyCap) {
+      return { locked: true, isNewFreeGrant: false };
+    }
+
+    return { locked: false, isNewFreeGrant: true };
+  }
+
+  /** Batched access computation for a set of lessons in one pass (no N+1 queries).
+   * `ctx.todaysViewedCount` is intentionally NOT incremented while iterating — for a
+   * list of several not-yet-seen lessons, each is evaluated independently against the
+   * same starting count, so the list can optimistically show more than one as
+   * unlocked even though opening all of them would eventually hit the cap (list is
+   * optimistic, the detail view — findBySlug, which actually records — is
+   * authoritative). */
+  private async computeLessonAccessBatch(
+    lessons: Lesson[],
+    userId: number | undefined,
+  ): Promise<Map<number, LessonAccessResult>> {
+    const tierMap = userId
+      ? await this.skillEnrollmentService.getSubjectTierMap(userId)
+      : new Map<number, EnrollmentTierEnum>();
+
+    const relevantSubjectIds = new Set<number>();
+    for (const lesson of lessons) {
+      if (lesson.format === 'comic' || !lesson.subject?.isPremium) continue;
+      const tier = tierMap.get(lesson.subjectId) ?? null;
+      // No enrollment at all locks outright (handled directly in evaluateLessonAccess)
+      // — no need to pull free-view history for it.
+      if (tier && !isTierAtLeast(tier, EnrollmentTierEnum.Pro)) relevantSubjectIds.add(lesson.subjectId);
+    }
+
+    const ctx: FreeLessonContext = {
+      viewedLessonIdsEver: new Set(),
+      viewedCountBySubjectEver: new Map(),
+      todaysViewedCount: 0,
+      lessonCountBySubject: new Map(),
+    };
+
+    if (userId && relevantSubjectIds.size) {
+      const [allViews, counts] = await Promise.all([
+        this.freeLessonViewRepo.find({ where: { userId } }),
+        this.lessonRepository
+          .createQueryBuilder('l')
+          .select('l.subjectId', 'subjectId')
+          .addSelect('COUNT(*)', 'cnt')
+          .where('l.subjectId IN (:...ids)', { ids: Array.from(relevantSubjectIds) })
+          .andWhere("l.format != 'comic'")
+          .groupBy('l.subjectId')
+          .getRawMany(),
+      ]);
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      for (const view of allViews) {
+        ctx.viewedLessonIdsEver.add(view.lessonId);
+        ctx.viewedCountBySubjectEver.set(
+          view.subjectId,
+          (ctx.viewedCountBySubjectEver.get(view.subjectId) ?? 0) + 1,
+        );
+        if (view.createdAt >= startOfDay) ctx.todaysViewedCount += 1;
+      }
+      counts.forEach((c) => ctx.lessonCountBySubject.set(+c.subjectId, +c.cnt));
+    }
+
+    const capsCache = new Map<EnrollmentTierEnum, { dailyQuizCap: number; dailyLessonCap: number } | null>();
+    const result = new Map<number, LessonAccessResult>();
+    for (const lesson of lessons) {
+      const tier = tierMap.get(lesson.subjectId) ?? null;
+      let caps: { dailyQuizCap: number; dailyLessonCap: number } | null = null;
+      if (tier) {
+        caps = capsCache.get(tier) ?? null;
+        if (!capsCache.has(tier)) {
+          caps = await this.skillEnrollmentService.getCapsForTier(tier);
+          capsCache.set(tier, caps);
+        }
+      }
+      const { locked, isNewFreeGrant } = this.evaluateLessonAccess(lesson, tier, caps, ctx);
+      result.set(lesson.id, { locked, isNewFreeGrant, tier });
+    }
+    return result;
+  }
+
+  private async evaluateSingleLessonAccess(
+    lesson: Lesson,
+    userId: number | undefined,
+  ): Promise<LessonAccessResult> {
+    const map = await this.computeLessonAccessBatch([lesson], userId);
+    return map.get(lesson.id)!;
+  }
+
+  /** Records the free-tier "spend" for a lesson computeLessonAccessBatch/
+   * evaluateSingleLessonAccess just granted for the first time — the only place a
+   * FreeLessonView row is ever inserted. */
+  private async recordFreeLessonView(userId: number, lesson: Lesson): Promise<void> {
+    await this.freeLessonViewRepo.save(
+      this.freeLessonViewRepo.create({
+        userId,
+        lessonId: lesson.id,
+        subjectId: lesson.subjectId,
+      }),
+    );
+  }
 
   /** With no userId, or a userId with no subject enrollment, `fetch=all` falls back to a random
    * discovery feed (public/empty-profile browsing). Once a user has enrolled subjects (directly,
@@ -51,36 +208,48 @@ export class LessonService {
       ? await this.getTrackerMap(userId, lessons.map((lesson) => lesson.id))
       : new Map<number, UserLessonTracker>();
 
+    // List view only — never records a FreeLessonView (see computeLessonAccessBatch's
+    // docstring on why this is deliberately optimistic).
+    const accessMap = await this.computeLessonAccessBatch(lessons, userId);
+
     return lessons.map((lesson) =>
-      this.toLessonSummaryDto(lesson, trackerMap.get(lesson.id)),
+      this.toLessonSummaryDto(
+        lesson,
+        trackerMap.get(lesson.id),
+        accessMap.get(lesson.id)?.locked ?? true,
+      ),
     );
   }
 
-  private toLessonSummaryDto(lesson: Lesson, tracker?: UserLessonTracker) {
+  /** `locked` lessons (paid Tutorial/Reference content the caller hasn't enrolled for)
+   * still surface their metadata for a "browse the catalog, see what's locked" UX, but
+   * `sections` is stripped so the actual content is never sent to a caller without access. */
+  private toLessonSummaryDto(lesson: Lesson, tracker?: UserLessonTracker, locked = false) {
     return {
       ...lesson,
       subject: lesson.subject
         ? {
-            id: lesson.subject.id,
-            title: lesson.subject.title,
-            image: lesson.subject.image,
-          }
+          id: lesson.subject.id,
+          title: lesson.subject.title,
+          image: lesson.subject.image,
+        }
         : null,
       topic: lesson.topic
         ? {
-            id: lesson.topic.id,
-            title: lesson.topic.title,
-            image: lesson.topic.image,
-          }
+          id: lesson.topic.id,
+          title: lesson.topic.title,
+          image: lesson.topic.image,
+        }
         : null,
       user: lesson.user
         ? {
-            id: lesson.user.id,
-            firstName: lesson.user.firstName,
-            lastName: lesson.user.lastName,
-          }
+          id: lesson.user.id,
+          firstName: lesson.user.firstName,
+          lastName: lesson.user.lastName,
+        }
         : null,
-      sections: lesson.sections || [],
+      sections: locked ? [] : lesson.sections || [],
+      locked,
       myProgress: tracker ? this.toTrackerDto(tracker, lesson.id) : null,
     };
   }
@@ -103,10 +272,10 @@ export class LessonService {
       );
     }
 
-    if (!dto.descriptions?.length) {
+    if (!dto.sections?.length) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
-        'At least one lesson description is required.',
+        'At least one lesson section is required.',
       );
     }
 
@@ -121,20 +290,23 @@ export class LessonService {
 
       const lesson = manager.create(Lesson, {
         title: dto.title,
+        summary: dto.summary,
         subjectId,
         topicId,
         slug,
         level: dto.level,
+        format: dto.format ?? 'tutorial',
         userId,
       });
 
       const savedLesson = await manager.save(Lesson, lesson);
 
-      const sections = dto.descriptions.map((description) =>
+      const sections = dto.sections.map((section, index) =>
         manager.create(LessonSection, {
           lessonId: savedLesson.id,
-          title: description.title,
-          description: description.content,
+          title: section.title,
+          content: sanitizeLessonHtml(section.content),
+          orderIndex: index,
         }),
       );
 
@@ -142,6 +314,55 @@ export class LessonService {
 
       return manager.findOne(Lesson, {
         where: { id: savedLesson.id },
+        relations: ['sections'],
+      });
+    });
+  }
+
+  /** Edits an existing lesson in place — previously the only way to "fix" a lesson was to
+   * delete and reseed it. `sections`, when provided, replaces the full section set
+   * (delete-and-reinsert), but the `Lesson` row's own id and `slug` are preserved and
+   * `UserLessonTracker` rows are never touched, so editing content can never reset a
+   * learner's progress. */
+  async updateLesson(slug: string, dto: UpdateLessonDto): Promise<Lesson> {
+    return this.dataSource.transaction(async (manager) => {
+      const lesson = await manager.findOne(Lesson, { where: { slug } });
+      if (!lesson) {
+        throw new AppCustomException(
+          HttpStatus.NOT_FOUND,
+          `Lesson with slug "${slug}" not found.`,
+        );
+      }
+
+      const subjectId = dto.subjectId ?? dto.subject;
+      const topicId = dto.topicId ?? dto.topic;
+
+      await manager.update(Lesson, lesson.id, {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.summary !== undefined && { summary: dto.summary }),
+        ...(dto.level !== undefined && { level: dto.level }),
+        ...(dto.format !== undefined && { format: dto.format }),
+        ...(subjectId !== undefined && { subjectId }),
+        ...(topicId !== undefined && { topicId }),
+      });
+
+      if (dto.sections?.length) {
+        await manager.delete(LessonSection, { lessonId: lesson.id });
+
+        const sections = dto.sections.map((section, index) =>
+          manager.create(LessonSection, {
+            lessonId: lesson.id,
+            title: section.title,
+            content: sanitizeLessonHtml(section.content),
+            orderIndex: index,
+          }),
+        );
+
+        await manager.save(LessonSection, sections);
+      }
+
+      return manager.findOne(Lesson, {
+        where: { id: lesson.id },
         relations: ['sections'],
       });
     });
@@ -157,7 +378,34 @@ export class LessonService {
       ? await this.userLessonTrackerRepo.findOne({ where: { userId, lessonId: lesson.id } })
       : undefined;
 
-    return this.toLessonSummaryDto(lesson, myTracker);
+    // The one read path that actually "spends" a free view — this is where a
+    // not-yet-seen lesson's FreeLessonView row gets recorded, unlike findLessons.
+    const access = await this.evaluateSingleLessonAccess(lesson, userId);
+    if (access.isNewFreeGrant && userId) {
+      await this.recordFreeLessonView(userId, lesson);
+    }
+
+    return this.toLessonSummaryDto(lesson, myTracker, access.locked);
+  }
+
+  /** Throws 403 if `lesson` is paid content the caller can't currently access. Shared
+   * by the two actions that actually consume a lesson (recording access, updating
+   * progress) — unlike findBySlug/findLessons, which return a locked preview instead
+   * of erroring, since those are catalog-browsing reads rather than "consume this
+   * content" actions. Also records a fresh free grant if this endpoint is called
+   * standalone (without a prior findBySlug), so it stays usable on its own. */
+  private async assertLessonUnlocked(userId: number, lesson: Lesson): Promise<void> {
+    const access = await this.evaluateSingleLessonAccess(lesson, userId);
+    if (access.locked) {
+      const subjectTitle = lesson.subject?.title ?? 'this subject';
+      const message = access.tier
+        ? `This lesson requires a higher plan for "${subjectTitle}" — you're currently on ${access.tier}. Upgrade to continue.`
+        : `You're not enrolled in "${subjectTitle}" yet. Enroll in the free Basic plan (or higher) to access it.`;
+      throw new AppCustomException(HttpStatus.FORBIDDEN, message);
+    }
+    if (access.isNewFreeGrant) {
+      await this.recordFreeLessonView(userId, lesson);
+    }
   }
 
   /** Called when a user opens a lesson: creates the tracker on first view (status Pending,
@@ -166,6 +414,7 @@ export class LessonService {
    * it" stay two independently meaningful signals instead of one call trying to mean both. */
   async recordLessonAccess(userId: number, slug: string): Promise<any> {
     const lesson = await this.findLessonEntityOrThrow(slug);
+    await this.assertLessonUnlocked(userId, lesson);
     const tracker = await this.getOrCreateTracker(userId, lesson.id);
 
     await this.userLessonTrackerRepo.increment({ id: tracker.id }, 'views', 1);
@@ -174,22 +423,30 @@ export class LessonService {
     return this.toTrackerDto(updated, lesson.id);
   }
 
-  /** Updates a user's own progress on a lesson — completion status and/or a 0-100 percent.
-   * Creates the tracker on the fly if the user jumps straight to e.g. "mark complete" without a
-   * prior recordLessonAccess() call, so this endpoint is usable standalone. */
+  /** Updates a user's own progress on a lesson — completion status, a 0-100 percent, and/or a
+   * 1-5 useful/quality rating. Creates the tracker on the fly if the user jumps straight to e.g.
+   * "mark complete" without a prior recordLessonAccess() call, so this endpoint is usable
+   * standalone. Ratings are intentionally independent of completion: a learner who bails out
+   * partway through can still say "this was useful" without being forced to finish first. */
   async updateLessonProgress(
     userId: number,
     slug: string,
     dto: UpdateLessonProgressDto,
   ): Promise<any> {
-    if (dto.status === undefined && dto.progressPercent === undefined) {
+    if (
+      dto.status === undefined &&
+      dto.progressPercent === undefined &&
+      dto.useful === undefined &&
+      dto.quality === undefined
+    ) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
-        'Provide at least a status or a progressPercent to update lesson progress.',
+        'Provide at least a status, progressPercent, useful, or quality to update lesson progress.',
       );
     }
 
     const lesson = await this.findLessonEntityOrThrow(slug);
+    await this.assertLessonUnlocked(userId, lesson);
     const tracker = await this.getOrCreateTracker(userId, lesson.id);
     const changes = this.deriveProgressUpdate(tracker, dto);
 
@@ -252,16 +509,19 @@ export class LessonService {
     }
   }
 
-  /** Reconciles a status/percent update into one consistent pair. Rules, in order:
+  /** Reconciles a status/percent/rating update into one consistent row. Status/percent rules,
+   * in order:
    *  - explicit status: Completed always forces percent to 100; Pending (with no percent given
    *    in the same call) resets percent to 0; any other explicit status leaves percent untouched.
    *  - percent only (no explicit status): derives status from the percent's value (100 →
    *    Completed, 0 → Pending, else → Read) — UNLESS the current status is the manually-set
-   *    NeedsRevisit or Reported, which a stray progress ping should never silently clear. */
+   *    NeedsRevisit or Reported, which a stray progress ping should never silently clear.
+   * useful/quality are independent of status/percent by design — deliberately no completion
+   * check here. A learner who never finishes the lesson can still rate it. */
   private deriveProgressUpdate(
     current: UserLessonTracker,
     dto: UpdateLessonProgressDto,
-  ): Pick<UserLessonTracker, 'status' | 'progressPercent'> {
+  ): Pick<UserLessonTracker, 'status' | 'progressPercent' | 'usefulRating' | 'qualityRating'> {
     let status = dto.status ?? current.status;
     let progressPercent = dto.progressPercent ?? current.progressPercent;
 
@@ -286,7 +546,10 @@ export class LessonService {
       }
     }
 
-    return { status, progressPercent };
+    const usefulRating = dto.useful ?? current.usefulRating;
+    const qualityRating = dto.quality ?? current.qualityRating;
+
+    return { status, progressPercent, usefulRating, qualityRating };
   }
 
   private toTrackerDto(tracker: UserLessonTracker, lessonId: number) {
@@ -296,31 +559,21 @@ export class LessonService {
       progressPercent: tracker.progressPercent,
       views: tracker.views,
       notes: tracker.notes,
+      useful: tracker.usefulRating,
+      quality: tracker.qualityRating,
       updatedAt: tracker.updatedAt,
     };
   }
 
-  /** Union of subjects a user is enrolled in directly (UserSubject) and subjects that belong to any
-   * job role they're enrolled in (UserJobRole -> JobRoleSubject) — a job-role enrollment implies
-   * enrollment in every subject on that role's curriculum, so lessons for those subjects should show
-   * up in the same feed. */
+  /** Subjects the user actually holds a SkillEnrollment for — narrowed to real
+   * enrollment only, per the locked design decision. A job role the user has merely
+   * *targeted* (UserJobRole) no longer feeds this list on its own; targeting a role
+   * carries no access, so it shouldn't drive what shows up here either — that's now
+   * purely a Career Dashboard / goal-setting signal. Delegates to
+   * SkillEnrollmentService rather than querying SkillEnrollment directly, matching
+   * how every other consumer in this codebase reaches it. */
   private async getEnrolledSubjectIds(userId: number): Promise<number[]> {
-    const [userSubjects, userJobRoles] = await Promise.all([
-      this.dataSource.getRepository(UserSubject).find({ where: { userId } }),
-      this.dataSource.getRepository(UserJobRole).find({ where: { userId } }),
-    ]);
-
-    const subjectIds = new Set<number>(userSubjects.map((item) => item.subjectId));
-
-    const jobRoleIds = userJobRoles.map((item) => item.jobRoleId);
-    if (jobRoleIds.length) {
-      const jobRoleSubjects = await this.dataSource
-        .getRepository(JobRoleSubject)
-        .find({ where: { jobRoleId: In(jobRoleIds) } });
-      jobRoleSubjects.forEach((item) => subjectIds.add(item.subjectId));
-    }
-
-    return Array.from(subjectIds);
+    return this.skillEnrollmentService.getEnrolledSubjectIds(userId);
   }
 
   /** lessonId -> this user's tracker row, for stamping `myProgress` onto a batch of lessons without

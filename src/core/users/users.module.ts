@@ -22,10 +22,20 @@ import { ActivityModule } from 'src/modules/activity/activity.module';
 import { QuizModule } from 'src/modules/quiz/quiz.module';
 import { AchievementModule } from 'src/modules/achievement/achievement.module';
 import { BadgeQueryModule } from 'src/modules/achievement/badge-query.module';
+import { LinkedinShareService } from './providers/linkedin-share.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Profile, UserOtp, UserJobRole, JobRole, QuizResult, Certificate, UserStreak]),
+    TypeOrmModule.forFeature([
+      User,
+      Profile,
+      UserOtp,
+      UserJobRole,
+      JobRole,
+      QuizResult,
+      Certificate,
+      UserStreak,
+    ]),
     NotificationModule,
     MasterModule,
     MailModule,
@@ -40,6 +50,7 @@ import { BadgeQueryModule } from 'src/modules/achievement/badge-query.module';
     UserOtpService,
     UserProfileService,
     UserProfileAggregatorService,
+    LinkedinShareService,
   ],
   controllers: [UsersController],
   exports: [
@@ -47,6 +58,7 @@ import { BadgeQueryModule } from 'src/modules/achievement/badge-query.module';
     UserOtpService,
     UserProfileService,
     UserProfileAggregatorService,
+    LinkedinShareService,
   ],
 })
 export class UsersModule {}

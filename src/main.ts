@@ -38,7 +38,11 @@ function flattenValidationErrors(
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: true exposes req.rawBody (Buffer) alongside the normal parsed req.body,
+  // without disabling JSON parsing anywhere else — needed for Razorpay/Stripe webhook
+  // signature verification, which re-hashes the exact bytes received (see
+  // PaymentController's webhook routes and the corresponding provider classes).
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config: IAppConfig = app.get<IAppConfig>(appConfig.KEY);
 
   // Enable CORS for localhost dev
@@ -66,6 +70,14 @@ async function bootstrap() {
     .addServer('https://qa.appdevops.in/', 'Staging')
     .addServer('https://prod.appdevops.in/', 'Production')
     .addTag('CodeMerit')
+    // Registers the 'access-token' security scheme referenced by every
+    // @ApiBearerAuth('access-token') decorator across the controllers — without this,
+    // those decorators point at an undefined scheme and Swagger UI's Authorize button
+    // has nothing to attach the JWT to.
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'access-token',
+    )
     .build();
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup('api-docs', app, document);

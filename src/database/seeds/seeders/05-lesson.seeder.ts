@@ -8,6 +8,7 @@ import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
+import { sanitizeLessonHtml } from 'src/common/utils/lesson-html-sanitizer.util';
 
 const DATA_FILE = path.join(__dirname, '../data/05-lessons.seed.json');
 
@@ -17,16 +18,23 @@ interface LessonData {
   subjectSlug: string;
   topicSlug: string;
   level: 1 | 2 | 3;
+  summary: string;
   format?: 'comic' | 'tutorial' | 'reference';
   tags?: string[];
-  sections: Array<{ title: string; description?: string; blocks?: object[] }>;
+  sections: Array<{ title: string; content: string }>;
 }
 
+/** Lessons are the one entity where the seed JSON is meant to be authoritative for content
+ * (so a copy fix in the JSON actually takes effect on reseed), so a slug match updates the
+ * lesson's fields and replaces its sections in place — rather than the plain skip-if-exists
+ * every other seeder uses. Crucially this NEVER deletes/recreates the `Lesson` row itself and
+ * NEVER touches `UserLessonTracker` — a prior version deleted and fully recreated the lesson
+ * (sections and progress trackers included) on every slug match, which silently wiped learner
+ * progress and any live-authored content any time `npm run seed` was re-run. */
 export async function seedLessons(dataSource: DataSource, subjects: Subject[], topics: Topic[]): Promise<void> {
   const data: LessonData[] = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
   const lessonRepo = dataSource.getRepository(Lesson);
   const sectionRepo = dataSource.getRepository(LessonSection);
-  const trackerRepo = dataSource.getRepository(UserLessonTracker);
 
   const author = await dataSource.getRepository(User).findOne({ where: { role: UserRoleEnum.ADMIN } });
   if (!author) {
@@ -38,7 +46,7 @@ export async function seedLessons(dataSource: DataSource, subjects: Subject[], t
   const topicBySlug = new Map(topics.map((t) => [t.slug, t]));
 
   let created = 0;
-  let replaced = 0;
+  let updated = 0;
   let sectionsCreated = 0;
 
   for (const l of data) {
@@ -50,39 +58,51 @@ export async function seedLessons(dataSource: DataSource, subjects: Subject[], t
     }
 
     const existing = await lessonRepo.findOne({ where: { slug: l.slug } });
-    if (existing) {
-      await trackerRepo.delete({ lessonId: existing.id });
-      await sectionRepo.delete({ lessonId: existing.id });
-      await lessonRepo.delete({ id: existing.id });
-      replaced++;
-    }
 
-    const lesson = await lessonRepo.save(
-      lessonRepo.create({
+    let lessonId: number;
+    if (existing) {
+      await lessonRepo.update(existing.id, {
         title: l.title,
+        summary: l.summary,
         subjectId: subject.id,
         topicId: topic.id,
-        slug: l.slug,
         level: l.level,
         format: l.format ?? 'tutorial',
         tags: l.tags ?? null,
-        userId: author.id,
-      }),
-    );
-    created++;
+      });
+      await sectionRepo.delete({ lessonId: existing.id });
+      lessonId = existing.id;
+      updated++;
+    } else {
+      const lesson = await lessonRepo.save(
+        lessonRepo.create({
+          title: l.title,
+          summary: l.summary,
+          subjectId: subject.id,
+          topicId: topic.id,
+          slug: l.slug,
+          level: l.level,
+          format: l.format ?? 'tutorial',
+          tags: l.tags ?? null,
+          userId: author.id,
+        }),
+      );
+      lessonId = lesson.id;
+      created++;
+    }
 
-    for (const s of l.sections) {
+    for (const [index, s] of l.sections.entries()) {
       const entity = sectionRepo.create({
-        lessonId: lesson.id,
+        lessonId,
         title: s.title,
-        description: s.description ?? null,
-        blocks: s.blocks ?? null,
+        content: sanitizeLessonHtml(s.content),
+        orderIndex: index,
       });
       await sectionRepo.save(entity);
       sectionsCreated++;
     }
   }
 
-  console.log(`  ✔ Lessons : ${data.length} declared (${created} created, ${replaced} replaced)`);
+  console.log(`  ✔ Lessons : ${data.length} declared (${created} created, ${updated} updated in place)`);
   console.log(`  ✔ Sections: ${sectionsCreated} created`);
 }

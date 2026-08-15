@@ -54,6 +54,8 @@ export class UserProfileService {
         'subjectTrackId',
         'masteryLevel',
         'profileCompleted',
+        'linkedinAccessToken',
+        'linkedinTokenExpiresAt',
       ],
     });
     if (!profile) return undefined;
@@ -75,7 +77,10 @@ export class UserProfileService {
   async updateProfile(userId: number, dto: Partial<Profile>): Promise<Profile> {
     const profile = await this.profileRepository.findOne({ where: { userId } });
     if (!profile) {
-      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'Profile not found.');
+      throw new AppCustomException(
+        HttpStatus.BAD_REQUEST,
+        'Profile not found.',
+      );
     }
     this.assertWorkStatusConsistency(dto);
 
@@ -134,7 +139,10 @@ export class UserProfileService {
       }
     }
 
-    if (dto.hasCompletedInternship === false && dto.internshipDuration !== undefined) {
+    if (
+      dto.hasCompletedInternship === false &&
+      dto.internshipDuration !== undefined
+    ) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
         'internshipDuration cannot be set when hasCompletedInternship is false.',
@@ -147,6 +155,8 @@ export class UserProfileService {
     data: {
       googleId?: string;
       linkedinId?: string;
+      linkedinAccessToken?: string;
+      linkedinTokenExpiresAt?: Date;
       auth_provider: string;
     },
   ): Promise<Profile> {
@@ -167,6 +177,14 @@ export class UserProfileService {
 
     if (data.linkedinId) {
       profile.linkedinId = data.linkedinId;
+    }
+
+    if (data.linkedinAccessToken) {
+      profile.linkedinAccessToken = data.linkedinAccessToken;
+    }
+
+    if (data.linkedinTokenExpiresAt) {
+      profile.linkedinTokenExpiresAt = data.linkedinTokenExpiresAt;
     }
 
     profile.auth_provider = data.auth_provider;

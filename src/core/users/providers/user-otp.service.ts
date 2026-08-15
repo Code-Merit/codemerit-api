@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserOtp } from 'src/common/typeorm/entities/user-otp.entity';
-import { Repository } from 'typeorm';
+import { MoreThanOrEqual, Repository } from 'typeorm';
 import { UserOtpTagsEnum } from '../enums/user-otp-Tags.enum';
 
 @Injectable()
@@ -32,6 +32,20 @@ export class UserOtpService {
       },
       order: {
         id: 'DESC',
+      },
+    });
+  }
+
+  async countSentSince(
+    userId: number,
+    tag: UserOtpTagsEnum,
+    since: Date,
+  ): Promise<number> {
+    return this.userOtpRepo.count({
+      where: {
+        userId: userId,
+        tag: tag,
+        audit: { createdAt: MoreThanOrEqual(since) },
       },
     });
   }

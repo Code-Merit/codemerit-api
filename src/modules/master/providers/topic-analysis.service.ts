@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TOPIC_DONE } from 'src/common/constants/completion-thresholds';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
+import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
 import { Topic } from 'src/common/typeorm/entities/topic.entity';
@@ -12,9 +13,6 @@ import { DataSource } from 'typeorm';
 @Injectable()
 export class TopicAnalysisService {
   constructor(private readonly dataSource: DataSource) {}
-
-  // In your service class
-
   /**
    * Build a base QB that returns per-topic aggregates.
    * - numTrivia: count of Trivia questions in the topic
@@ -52,6 +50,7 @@ export class TopicAnalysisService {
       .addSelect('t.subjectId', 'subjectId')
       .addSelect('s.title', 'subjectName')
       .addSelect('t.goal', 'goal')
+      .addSelect('t.order', 'topicOrder')
 
       // Total question counts
       .addSelect('COUNT(DISTINCT q.id)', 'totalQuestions')
@@ -165,7 +164,11 @@ export class TopicAnalysisService {
 
     qb.groupBy('t.id');
 
-    // Non-admin users can only see topics under subscribed subjects.
+    // Non-admin users can only see topics under enrolled subjects — a simple
+    // existence check (not tier-aware), same semantics as when this read UserSubject;
+    // now reads SkillEnrollment since UserSubject is retired. `status != cancelled`
+    // (not the stricter active-and-not-expired check real access gating uses) — a
+    // naturally expired enrollment still counts as "my subjects" here.
     if (
       user &&
       typeof user === 'object' &&
@@ -173,10 +176,10 @@ export class TopicAnalysisService {
       userId
     ) {
       qb.innerJoin(
-        'user_subject',
-        'us',
-        'us.subjectId = t.subjectId AND us.userId = :subscriptionUserId',
-        { subscriptionUserId: userId },
+        'skill_enrollment',
+        'se',
+        'se.subjectId = t.subjectId AND se.userId = :subscriptionUserId AND se.status != :cancelledStatus',
+        { subscriptionUserId: userId, cancelledStatus: EnrollmentStatusEnum.Cancelled },
       );
     }
 
@@ -238,6 +241,7 @@ export class TopicAnalysisService {
       goal: raw.goal,
       subjectId: +raw.subjectId,
       subjectName: raw?.subjectName,
+      order: +raw.topicOrder || 0,
       numTrivia,
       numBasicTrivia: +raw?.numBasicTrivia || 0,
       numIntTrivia: +raw?.numIntTrivia || 0,
@@ -278,10 +282,11 @@ export class TopicAnalysisService {
   /** Get stats for ALL topics under ONE subject (single grouped query). */
   async getTopicStatsBySubject(subjectId: number, user?: GetUserRequestDto | number) {
     const userId = typeof user === 'number' ? user : user?.id;
-    const qb = this.buildTopicStatsBaseQB(userId, user).where(
-      't.subjectId = :subjectId',
-      { subjectId },
-    );
+    const qb = this.buildTopicStatsBaseQB(userId, user)
+      .where('t.subjectId = :subjectId', { subjectId })
+      // Sequence order — callers (e.g. subjectDashboard's next-best-action logic) rely on
+      // this list already being in learning-path order, not just insertion order.
+      .orderBy('t.order', 'ASC');
 
     const raws = await qb.getRawMany();
     return raws.map((r) => this.mapTopicRow(r));

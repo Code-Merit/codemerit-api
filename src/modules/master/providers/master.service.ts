@@ -1,11 +1,8 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IUserPermissionDto } from 'src/common/dto/user-permission.dto';
-import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { Topic } from 'src/common/typeorm/entities/topic.entity';
-import { UserSubject } from 'src/common/typeorm/entities/user-subject.entity';
-import { AddUserSubjectsDto } from 'src/core/users/dtos/user-subject.dto';
 import { DataSource, In, Repository } from 'typeorm';
 import { MeritService } from './merit.service';
 import { ProgramService } from './program.service';
@@ -21,9 +18,6 @@ export class MasterService {
 
     @InjectRepository(Topic)
     private readonly topicRepo: Repository<Topic>,
-
-    @InjectRepository(UserSubject)
-    private readonly userSubjectRepo: Repository<UserSubject>,
 
     private readonly dataSource: DataSource,
     private readonly subjectStats: SubjectStatsService,
@@ -149,40 +143,6 @@ export class MasterService {
     }
 
     return [...certMap.values()];
-  }
-
-  async addUserSubjects(userId: number, dto: AddUserSubjectsDto) {
-    try {
-      const existing = await this.userSubjectRepo.find({
-        where: { userId },
-        relations: ['subject'],
-        select: ['id', 'subjectId', 'subject'],
-      });
-
-      const existingIds = new Set(existing.map((us) => us.subjectId));
-      const results: { subjectId: number; status: string }[] = [];
-
-      for (const subjectId of dto.subjectIds) {
-        if (existingIds.has(subjectId)) {
-          results.push({
-            subjectId,
-            status: `Subject already added: ${existing.find((e) => e.subjectId === subjectId)?.subject.title}`,
-          });
-          continue;
-        }
-        const newUserSubject = this.userSubjectRepo.create({ userId, subjectId });
-        await this.userSubjectRepo.save(newUserSubject);
-        results.push({ subjectId, status: 'Added successfully' });
-      }
-
-      if (!results.length) return { message: 'No new subjects added', results };
-      return { message: 'Subjects processed successfully', results };
-    } catch (err) {
-      throw new AppCustomException(
-        HttpStatus.INTERNAL_SERVER_ERROR,
-        'Failed to add subjects. Please try again later.',
-      );
-    }
   }
 
   async getUserQuizStats(userId: number) {

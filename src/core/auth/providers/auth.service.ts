@@ -1,28 +1,26 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import axios from 'axios';
+import * as bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
-import { User } from 'src/common/typeorm/entities/user.entity';
+import { ApiUsageService } from 'src/common/services/api-usage.service';
 import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
-import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
+import { User } from 'src/common/typeorm/entities/user.entity';
 import { AccountStatusEnum } from 'src/core/users/enums/account-status.enum';
+import { UserOtpTagsEnum } from 'src/core/users/enums/user-otp-Tags.enum';
 import { UserProfileService } from 'src/core/users/providers/user-profile.service';
 import { UserService } from 'src/core/users/providers/user.service';
+import { MasterService } from 'src/modules/master/providers/master.service';
+import { SubjectAnalysisService } from 'src/modules/master/providers/subject-analysis.service';
+import { TopicAnalysisService } from 'src/modules/master/providers/topic-analysis.service';
+import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
+import { UserPermissionService } from 'src/modules/user-permission/providers/user-permission.service';
+import { DataSource, Repository } from 'typeorm';
 import { AccountVerificationDto } from '../dto/account-verification.dto';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginResponseDto } from '../dto/login-response.dto';
-import { UserPermissionService } from 'src/modules/user-permission/providers/user-permission.service';
-import { TopicAnalysisService } from 'src/modules/master/providers/topic-analysis.service';
-import { SubjectAnalysisService } from 'src/modules/master/providers/subject-analysis.service';
-import { ApiUsageService } from 'src/common/services/api-usage.service';
-import { MasterService } from 'src/modules/master/providers/master.service';
-import { BadRequestException } from '@nestjs/common';
-import { OAuth2Client } from 'google-auth-library';
-import axios from 'axios';
-import { DataSource } from 'typeorm';
-import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 
 interface LinkedInProfile {
   sub: string;
@@ -49,11 +47,12 @@ export class AuthService {
     private readonly subjectAnalyzer: SubjectAnalysisService,
     private readonly topicAnalysisProvider: TopicAnalysisService,
     private readonly apiUsageService: ApiUsageService,
+    private readonly skillEnrollmentService: SkillEnrollmentService,
 
     @InjectRepository(UserJobRole)
     private userJobRoleRepo: Repository<UserJobRole>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async validateUser(email: string, pass: string) {
     if (email && pass) {
@@ -128,6 +127,12 @@ export class AuthService {
 
     const quizStats = await this.masterService.getUserQuizStats(userData.id);
 
+    // Real, active access — SkillEnrollment is the sole source of truth here, split
+    // subject-wise and job-role-wise. Distinct from `userJobRoles` above, which is
+    // just career-path targeting (UserJobRole) and carries no access implication.
+    const { subjectEnrollments, jobRoleEnrollments } =
+      await this.skillEnrollmentService.getMyEnrollmentSummary(user.id);
+
     const response = new LoginResponseDto({
       id: userData.id,
       firstName: userData.firstName,
@@ -146,6 +151,8 @@ export class AuthService {
       profile,
       permissions,
       userJobRoles,
+      subjectEnrollments,
+      jobRoleEnrollments,
       courseStats,
       quizStats,
       apiUsage: {
@@ -165,7 +172,15 @@ export class AuthService {
       role: user.role,
     };
     const token = this.jwtService.sign(payload);
-    //do not attach profile level details
+    // UserService.create() always creates the Profile row in the same transaction as the
+    // User, before autoLogin() ever runs — so this is a read of data that already exists,
+    // not new data collection. Attaching it (same call login() already makes) is what lets
+    // the frontend's AuthGuard reliably detect profileCompleted:false right after
+    // QuickRegistration and route to onboarding, instead of that happening only as a side
+    // effect of `profile` being entirely absent from this response. Deliberately still not
+    // attaching permissions/userJobRoles/subjectEnrollments/jobRoleEnrollments/courseStats/
+    // quizStats/apiUsage here — this stays a minimal response otherwise, on purpose.
+    const profile = await this.userProfileService.findOneByUserId(user.id);
     const response = new LoginResponseDto({
       id: user.id,
       firstName: user.firstName,
@@ -181,7 +196,7 @@ export class AuthService {
       points: user.points,
       accountStatus: user.accountStatus,
       token,
-      //profile,
+      profile,
     });
     return response;
   }
@@ -260,6 +275,8 @@ export class AuthService {
     if (existingUser) {
       await this.userProfileService.updateSocialProfile(existingUser.id, {
         linkedinId: profile.sub,
+        linkedinAccessToken: accessToken,
+        linkedinTokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
         auth_provider: 'LinkedIn',
       });
 
@@ -279,6 +296,13 @@ export class AuthService {
       email: profile.email,
       image: profile.picture || '',
       linkedinId: profile.sub,
+      auth_provider: 'LinkedIn',
+    });
+
+    await this.userProfileService.updateSocialProfile(user.id, {
+      linkedinId: profile.sub,
+      linkedinAccessToken: accessToken,
+      linkedinTokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
       auth_provider: 'LinkedIn',
     });
 
@@ -332,11 +356,30 @@ export class AuthService {
     callerId?: number,
     requestMeta?: { ipAddress?: string; userAgent?: string },
   ) {
-    const createdBy = createUserDto.flow === 'UserRegistration' ? (callerId ?? null) : null;
+    const createdBy =
+      createUserDto.flow === 'UserRegistration' ? (callerId ?? null) : null;
     return this.usersService.create(createUserDto, createdBy, requestMeta);
   }
 
+  /**
+   * Delegates the OTP match + activation/password-change to UserService, then — for a
+   * successful ACC_VERIFY — reuses the exact same `login()` used by POST /auth/login (and by
+   * the Google/LinkedIn callbacks above) to build the token + profile/permissions/enrollments
+   * payload. This lets the frontend apply its normal post-login navigation logic straight off
+   * `/auth/verify`'s response, without a second round-trip to `/auth/login`. PWD_RECOVER keeps
+   * returning the plain confirmation message — that flow still expects the user to log in
+   * afterwards with their new password.
+   */
   async accountVerification(accountVerificationDto: AccountVerificationDto) {
-    return this.usersService.acoountVerification(accountVerificationDto);
+    const message = await this.usersService.acoountVerification(
+      accountVerificationDto,
+    );
+    if (accountVerificationDto.tag === UserOtpTagsEnum.ACC_VERIFY) {
+      const user = await this.usersService.findByEmail(
+        accountVerificationDto.email,
+      );
+      return this.login(user);
+    }
+    return message;
   }
 }
