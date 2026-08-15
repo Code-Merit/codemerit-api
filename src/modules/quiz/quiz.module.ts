@@ -9,7 +9,6 @@ import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
 import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
 import { MasterModule } from '../master/master.module';
 import { NotificationModule } from '../notification/notification.module';
-import { UserQuestionService } from '../question/providers/user-question.service';
 import { QuestionModule } from '../question/question.module';
 import { QuestionAttemptService } from './providers/question-attempt.service';
 import { QuizResultService } from './providers/quiz-result.service';

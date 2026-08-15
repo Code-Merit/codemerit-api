@@ -52,11 +52,12 @@ export class MailService {
     }
 
     const html = template.html.replace(/\{\{FRONTEND_URL\}\}/g, this.frontendUrl);
+    const subject = template.subject.replace(/\{\{FRONTEND_URL\}\}/g, this.frontendUrl);
     try {
       await this.resend.emails.send({
         from: this.fromAddress,
         to,
-        subject: template.subject,
+        subject,
         html,
       });
     } catch (error) {

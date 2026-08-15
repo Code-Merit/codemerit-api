@@ -41,7 +41,6 @@ export class GetQuestionsByIdsDto {
   @IsNumber()
   numQuestions?:number = 5;
 
-  //delete if unused
   @IsOptional()
   @IsArray()
   @ArrayNotEmpty()

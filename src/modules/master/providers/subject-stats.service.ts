@@ -549,6 +549,7 @@ export class SubjectStatsService {
       .addSelect('l.slug', 'slug')
       .addSelect('l.summary', 'summary')
       .addSelect('l.level', 'level')
+      .addSelect('l.format', 'format')
       .addSelect('l.topicId', 'topicId')
       .addSelect('t.title', 'topicTitle')
       .addSelect('t.slug', 'topicSlug')
@@ -579,6 +580,7 @@ export class SubjectStatsService {
       slug: r.slug,
       summary: r.summary ?? null,
       level: +r.level,
+      format: r.format,
       topicId: r.topicId ? +r.topicId : null,
       topicTitle: r.topicTitle ?? null,
       topicSlug: r.topicSlug ?? null,
