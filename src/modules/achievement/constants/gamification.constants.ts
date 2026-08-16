@@ -2,8 +2,8 @@
 // (DifficultyLevelEnum: Easy=1, Intermediate=2, Advanced=3).
 export const XP_PER_CORRECT: Record<number, number> = {
   1: 10,
-  2: 20,
-  3: 35,
+  2: 15,
+  3: 20
 };
 
 export const XP_HINT_PENALTY_MULTIPLIER = 0.5; // hintUsed halves that question's XP
@@ -23,12 +23,12 @@ export interface LevelTier {
 // on-screen collisions between "topic skill level" and "account XP level".
 export const LEVEL_TIERS: LevelTier[] = [
   { level: 1, title: 'Rookie', minXp: 0 },
-  { level: 2, title: 'Learner', minXp: 100 },
-  { level: 3, title: 'Achiever', minXp: 300 },
-  { level: 4, title: 'Specialist', minXp: 700 },
-  { level: 5, title: 'Expert', minXp: 1500 },
-  { level: 6, title: 'Champion', minXp: 3000 },
-  { level: 7, title: 'Legend', minXp: 6000 },
+  { level: 2, title: 'Learner', minXp: 500 },
+  { level: 3, title: 'Achiever', minXp: 1000 },
+  { level: 4, title: 'Specialist', minXp: 2000 },
+  { level: 5, title: 'Expert', minXp: 2500 },
+  { level: 6, title: 'Champion', minXp: 4000 },
+  { level: 7, title: 'Legend', minXp: 11000 }
 ];
 
 export function computeLevel(points: number): LevelTier {
