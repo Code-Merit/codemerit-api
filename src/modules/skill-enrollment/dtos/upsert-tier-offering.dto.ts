@@ -11,7 +11,7 @@ export class UpsertTierOfferingDto {
   @ApiProperty({
     enum: EnrollmentTierEnum,
     example: EnrollmentTierEnum.Curious,
-    description: 'Basic is implicit/universal and cannot be declared here.',
+    description: 'Basic is implicit and cannot be declared here.',
   })
   @IsEnum(EnrollmentTierEnum)
   tier: EnrollmentTierEnum;
