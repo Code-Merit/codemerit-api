@@ -19,17 +19,15 @@ export class LessonSection extends AbstractEntity {
 
   @Column({
     type: 'text',
-    nullable: true,
-    default: null,
+    nullable: false,
   })
-  description: string | null;
+  content: string;
 
   @Column({
-    type: 'json',
-    nullable: true,
-    default: null,
+    type: 'int',
+    default: 0,
   })
-  blocks: object[] | null;
+  orderIndex: number;
 
   @ManyToOne(() => Lesson, (lesson) => lesson.sections, {
     onDelete: 'CASCADE',

@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed.ts",
     "seed:snapshot": "ts-node -r tsconfig-paths/register src/database/scripts/export-seed-snapshot.ts",
-    "seed:quizzes": "ts-node -r tsconfig-paths/register src/database/scripts/seed-standard-quizzes.ts"
+    "seed:quizzes": "ts-node -r tsconfig-paths/register src/database/scripts/seed-standard-quizzes.ts",
+    "seed:lessons": "ts-node -r tsconfig-paths/register src/database/scripts/seed-lessons.ts"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",
@@ -48,9 +49,12 @@
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
     "pg": "^8.15.5",
+    "razorpay": "^2.9.8",
     "reflect-metadata": "^0.2.0",
     "resend": "^6.12.4",
     "rxjs": "^7.8.1",
+    "sanitize-html": "^2.17.7",
+    "stripe": "^22.4.0",
     "swagger-ui-express": "^5.0.1",
     "tslib": "^2.6.2",
     "typeorm": "^0.3.20"
@@ -66,6 +70,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/passport-jwt": "^4.0.1",
     "@types/passport-local": "^1.0.38",
+    "@types/sanitize-html": "^2.16.1",
     "@types/supertest": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",

@@ -40,11 +40,16 @@ import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
 import { UserOtp } from 'src/common/typeorm/entities/user-otp.entity';
 import { UserPermission } from 'src/common/typeorm/entities/user-permission.entity';
-import { UserSubject } from 'src/common/typeorm/entities/user-subject.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { UserXpLog } from 'src/common/typeorm/entities/user-xp-log.entity';
 import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
+import { SkillEnrollment } from 'src/common/typeorm/entities/skill-enrollment.entity';
+import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
+import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offering.entity';
+import { EnrollmentTierCapConfig } from 'src/common/typeorm/entities/enrollment-tier-cap-config.entity';
+import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
+import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -60,7 +65,6 @@ export const AppDataSource = new DataSource({
     JobRole,
     JobRoleSubject,
     UserJobRole,
-    UserSubject,
     Topic,
     UserOtp,
     Question,
@@ -99,6 +103,55 @@ export const AppDataSource = new DataSource({
     UserStreak,
     UserXpLog,
     LinkedinShare,
+    User,
+    Profile,
+    Subject,
+    JobRole,
+    JobRoleSubject,
+    UserJobRole,
+    Topic,
+    UserOtp,
+    Question,
+    QuestionOption,
+    QuestionTopic,
+    AssessmentSession,
+    SkillRating,
+    QuestionAttempt,
+    Quiz,
+    QuizResult,
+    QuizQuestion,
+    QuizSubject,
+    QuizTopic,
+    QuizSettings,
+    Lesson,
+    LessonSection,
+    UserLessonTracker,
+    Permission,
+    PermissionRequest,
+    UserPermission,
+    ApiUsage,
+    Notification,
+    SkillMetric,
+    Interview,
+    InterviewStatusHistory,
+    CertificationTrack,
+    CertificationTrackJobRole,
+    SubjectTrack,
+    CertificationTrackSubjectTrack,
+    SubjectTrackTopic,
+    Certificate,
+    Activity,
+    Badge,
+    BadgeRule,
+    UserBadge,
+    UserStreak,
+    UserXpLog,
+    SkillEnrollment,
+    PaymentOrder,
+    SkillTierOffering,
+    EnrollmentTierCapConfig,
+    FreeLessonView,
+    EnrollmentBatch,
   ],
   synchronize: false,
 });

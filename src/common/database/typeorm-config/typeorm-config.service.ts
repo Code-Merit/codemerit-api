@@ -43,8 +43,13 @@ import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
 import { UserOtp } from 'src/common/typeorm/entities/user-otp.entity';
 import { UserPermission } from 'src/common/typeorm/entities/user-permission.entity';
-import { UserSubject } from 'src/common/typeorm/entities/user-subject.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
+import { SkillEnrollment } from 'src/common/typeorm/entities/skill-enrollment.entity';
+import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
+import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offering.entity';
+import { EnrollmentTierCapConfig } from 'src/common/typeorm/entities/enrollment-tier-cap-config.entity';
+import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
+import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
 import { IDatabaseConfig } from 'src/config/database-config';
 @Injectable()
 export class TypeormConfigService implements TypeOrmOptionsFactory {
@@ -68,7 +73,6 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         JobRole,
         JobRoleSubject,
         UserJobRole,
-        UserSubject,
         Topic,
         UserOtp,
         Question,
@@ -106,6 +110,12 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         UserBadge,
         UserStreak,
         UserXpLog,
+        SkillEnrollment,
+        PaymentOrder,
+        SkillTierOffering,
+        EnrollmentTierCapConfig,
+        FreeLessonView,
+        EnrollmentBatch,
       ],
       // entities: [__dirname + '/../**/*.entity.{ts,js}'],
       // entities: ['src/**/*.entity.ts'],

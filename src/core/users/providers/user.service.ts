@@ -13,6 +13,7 @@ import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { UserOtp } from 'src/common/typeorm/entities/user-otp.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { generate6DigitNumber } from 'src/common/utils/common-functions';
+import { OTP_DAILY_LIMIT } from 'src/common/constants/otp.constants';
 import {
   generateSlug,
   generateUniqueSlug,
@@ -579,12 +580,26 @@ export class UserService {
         'User is already verified.',
       );
     }
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const sentToday = await this.userOtpService.countSentSince(
+      user.id,
+      tag,
+      startOfDay,
+    );
+    if (sentToday >= OTP_DAILY_LIMIT) {
+      throw new AppCustomException(
+        HttpStatus.TOO_MANY_REQUESTS,
+        `Daily OTP limit reached. Please try again after midnight.`,
+      );
+    }
+
     let userOtp: UserOtp = new UserOtp();
     userOtp.otp = pass ? pass : generate6DigitNumber();
     userOtp.userId = user?.id;
     userOtp.tag = tag;
     const result = await this.userOtpService.create(userOtp);
-    //check if limit not exceeded for sending OTP. If exceeded, do not send e-mail and return error message
     try {
       if (isNewRegistration) {
         await this.mailService.sendRegistrationWelcomeEmail(
@@ -860,7 +875,11 @@ export class UserService {
     }
   }
 
-  async enrollJobRole(userId: number, jobRoleId: number): Promise<UserJobRole> {
+  /** Records a career-path *target*, not access — see SkillEnrollment for the
+   * separate, subject-scoped concept that actually gates content. Renamed from
+   * enrollJobRole() to stop that "enroll" ambiguity at the source; same mechanics
+   * (409 on duplicate target, notification, seeds the initial-assessment quiz). */
+  async targetJobRole(userId: number, jobRoleId: number): Promise<UserJobRole> {
     const user = await this.findOne(userId);
     if (!user) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, 'User not found.');
@@ -880,7 +899,7 @@ export class UserService {
     if (existing) {
       throw new AppCustomException(
         HttpStatus.CONFLICT,
-        `User is already enrolled in this job role.`,
+        `User is already targeting this job role.`,
       );
     }
 

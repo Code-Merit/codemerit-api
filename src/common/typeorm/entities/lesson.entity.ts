@@ -49,9 +49,21 @@ export class Lesson extends AbstractEntity {
 
   @Column({
     type: 'varchar',
+    length: 300,
+    nullable: false,
+  })
+  summary: string;
+
+  /** Content-structure tag from the old blocks-based system, now repurposed purely as a
+   * monetization/access category — evaluateLessonAccess() in lesson.service.ts treats
+   * `format === 'comic'` as always-free regardless of subject premium status. Every
+   * lesson is now authored as the same rich-text `content` shape (see LessonSection);
+   * `format` no longer implies a different content structure, only this pricing rule. */
+  @Column({
+    type: 'varchar',
     length: 20,
     nullable: false,
-    default: 'tutorial'
+    default: 'tutorial',
   })
   format: 'comic' | 'tutorial' | 'reference';
 
@@ -61,6 +73,14 @@ export class Lesson extends AbstractEntity {
     default: null,
   })
   tags: string[] | null;
+
+  // Quality/merchandising signal only — does NOT gate access on its own (Basic-tier
+  // users still see premium lessons, subject to the normal daily cap/ceiling rules).
+  @Column({
+    type: 'boolean',
+    default: false,
+  })
+  isPremium: boolean;
 
   @Column({
     type: 'integer',
