@@ -11,7 +11,10 @@ import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.ent
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
+import { SkillRating } from 'src/common/typeorm/entities/skill-rating.entity';
 import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
+import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
+import { SkillTypeEnum } from 'src/common/enum/skill-type.enum';
 import { computeAttemptMetrics, getAggregateUserLevel } from 'src/common/utils/common-functions';
 import { DataSource, In, Repository } from 'typeorm';
 import { MeritService } from './merit.service';
@@ -233,6 +236,12 @@ export class SubjectStatsService {
       subjectTrackMap,
       userId,
     );
+    // null until every topic in the subject has a SELF rating on file — the Overview tab's
+    // "Self Rate Your Skills" widget shows a plain CTA while this is null, and a summary once
+    // it isn't. Reuses the same topic-id universe `syllabus` already computed above.
+    const detailSelfRating = userId
+      ? await this.getDetailSelfRating(subjectId, userId, syllabus)
+      : null;
 
     const attempted = +raw.attempted || 0;
     const correct = +raw.correct || 0;
@@ -301,6 +310,7 @@ export class SubjectStatsService {
       // Badges scoped to this subject, each tagged `unlocked` — omitted (empty array) for
       // anonymous requests, same as `subjectRatings` above.
       badges,
+      detailSelfRating,
     };
   }
 
@@ -537,6 +547,7 @@ export class SubjectStatsService {
       .select('l.id', 'id')
       .addSelect('l.title', 'title')
       .addSelect('l.slug', 'slug')
+      .addSelect('l.summary', 'summary')
       .addSelect('l.level', 'level')
       .addSelect('l.format', 'format')
       .addSelect('l.topicId', 'topicId')
@@ -567,6 +578,7 @@ export class SubjectStatsService {
       id: +r.id,
       title: r.title,
       slug: r.slug,
+      summary: r.summary ?? null,
       level: +r.level,
       format: r.format,
       topicId: r.topicId ? +r.topicId : null,
@@ -653,5 +665,53 @@ export class SubjectStatsService {
         createdAt: r.createdAt,
       })),
     }));
+  }
+
+  // Powers the Overview tab's "Self Rate Your Skills" widget. Deliberately all-or-nothing —
+  // returns null the moment even one topic in the subject is missing a SELF rating, so the
+  // widget has exactly two states (CTA vs. summary) instead of a partial-progress display.
+  // `topics` is the same topic-id universe getSubjectPage already computed as `syllabus`, so
+  // this needs no query of its own for "what topics does this subject have."
+  private async getDetailSelfRating(
+    subjectId: number,
+    userId: number,
+    topics: { id: number }[],
+  ): Promise<{ totalTopics: number; averageRating: number; lastRatedAt: Date } | null> {
+    const topicIds = topics.map((t) => t.id);
+    if (!topicIds.length) return null;
+
+    const ratings = await this.dataSource
+      .getRepository(SkillRating)
+      .createQueryBuilder('rating')
+      .innerJoin('rating.assessmentSession', 'session')
+      .where('session.userId = :userId', { userId })
+      .andWhere('rating.skillType = :skillType', { skillType: SkillTypeEnum.TOPIC })
+      .andWhere('rating.ratingType = :ratingType', { ratingType: RatingTypeEnum.SELF })
+      .andWhere('rating.skillId IN (:...topicIds)', { topicIds })
+      .orderBy('rating.skillId', 'ASC')
+      .addOrderBy('rating.createdAt', 'DESC')
+      .getMany();
+
+    // A topic can carry more than one SELF rating over time (reassessment) — keep only the
+    // most recent per topic, same "latest wins" rule the rest of this service applies to
+    // repeated attempts elsewhere.
+    const latestByTopic = new Map<number, SkillRating>();
+    for (const r of ratings) {
+      if (!latestByTopic.has(r.skillId)) latestByTopic.set(r.skillId, r);
+    }
+    if (latestByTopic.size < topicIds.length) return null;
+
+    const latest = [...latestByTopic.values()];
+    const averageRating = latest.reduce((sum, r) => sum + r.rating, 0) / latest.length;
+    const lastRatedAt = latest.reduce(
+      (max, r) => (r.createdAt > max ? r.createdAt : max),
+      latest[0].createdAt,
+    );
+
+    return {
+      totalTopics: topicIds.length,
+      averageRating: Math.round(averageRating * 10) / 10,
+      lastRatedAt,
+    };
   }
 }

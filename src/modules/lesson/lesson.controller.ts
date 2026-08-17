@@ -19,6 +19,7 @@ import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard'
 import { UserPermissionService } from '../user-permission/providers/user-permission.service';
 import { CreateLessonDto } from './dtos/create-lesson.dto';
 import { GetLessonsDto } from './dtos/get-lessons.dto';
+import { UpdateLessonDto } from './dtos/update-lesson.dto';
 import { UpdateLessonProgressDto } from './dtos/update-lesson-progress.dto';
 import { LessonService } from './providers/lesson.service';
 import {
@@ -61,12 +62,13 @@ export class LessonController {
     description:
       'Requires the LmsManager permission (permissionId 4) via the manual `ensureLmsAccess` check — ' +
       '403 for anyone else, with no Admin bypass. `subjectId`/`subject` and `topicId`/`topic` (either ' +
-      'field name is accepted) are both mandatory, as is at least one entry in `descriptions` — 400 ' +
-      'if any are missing. Auto-generates a unique slug from the title, retrying on collision. Saves ' +
-      'the lesson and its section rows together in one transaction.',
+      'field name is accepted) are both mandatory, as is at least one entry in `sections` — 400 ' +
+      'if any are missing. `format` defaults to "tutorial" if omitted (`comic` lessons are always ' +
+      'free — see LessonService.evaluateLessonAccess). Auto-generates a unique slug from the title, ' +
+      'retrying on collision. Saves the lesson and its section rows together in one transaction.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @ApiResponseDoc({ status: 400, description: 'Missing subjectId, topicId, or descriptions.' })
+  @ApiResponseDoc({ status: 400, description: 'Missing subjectId, topicId, or sections.' })
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'))
   @Post('create')
@@ -77,6 +79,31 @@ export class LessonController {
     await this.ensureLmsAccess(req.user?.id);
     const result = await this.service.createLesson(data, req.user.id);
     return new ApiResponse('Lesson created successfully', result);
+  }
+
+  @ApiOperation({
+    summary: 'Update a lesson in place (LMS Manager only)',
+    description:
+      'Requires the LmsManager permission, same as create. All fields optional — only what\'s ' +
+      'provided is changed. When `sections` is provided, it replaces the full section set ' +
+      '(delete-and-reinsert), so always send the complete list of sections, not a partial diff. ' +
+      'The lesson\'s own id/slug and every `UserLessonTracker` progress row for it are left ' +
+      'untouched — editing content never resets a learner\'s progress. 404 if the slug does not exist.',
+  })
+  @ApiParam({ name: 'slug', description: 'The lesson\'s slug.', type: String })
+  @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
+  @ApiResponseDoc({ status: 404, description: 'No lesson exists with the given slug.' })
+  @ApiBearerAuth('access-token')
+  @UseGuards(AuthGuard('jwt'))
+  @Patch(':slug')
+  async update(
+    @Param('slug') slug: string,
+    @Body() data: UpdateLessonDto,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    await this.ensureLmsAccess(req.user?.id);
+    const result = await this.service.updateLesson(slug, data);
+    return new ApiResponse('Lesson updated successfully', result);
   }
 
   @ApiOperation({
@@ -154,18 +181,21 @@ export class LessonController {
   @ApiOperation({
     summary: "Update the caller's own progress on a lesson",
     description:
-      'Requires at least one of `status` or `progressPercent` in the body — 400 if both are omitted. ' +
-      'Creates the tracker on the fly if the caller jumps straight to e.g. "mark complete" without a ' +
-      'prior access-record call. Reconciliation rules: setting `status: Completed` always forces ' +
-      '`progressPercent` to 100; setting `status: Pending` with no `progressPercent` in the same call ' +
-      'resets it to 0; any other explicit status leaves the percent untouched. Sending only ' +
-      '`progressPercent` (no `status`) derives status from its value (100 -> Completed, 0 -> Pending, ' +
-      'else -> Read) UNLESS the tracker\'s current status is the manually-set NeedsRevisit or ' +
-      'Reported, which a stray progress ping never silently overwrites. 404 if the slug does not ' +
-      'exist.',
+      'Requires at least one of `status`, `progressPercent`, `useful`, or `quality` in the body — ' +
+      '400 if all are omitted. Creates the tracker on the fly if the caller jumps straight to e.g. ' +
+      '"mark complete" without a prior access-record call. Reconciliation rules: setting ' +
+      '`status: Completed` always forces `progressPercent` to 100; setting `status: Pending` with no ' +
+      '`progressPercent` in the same call resets it to 0; any other explicit status leaves the ' +
+      'percent untouched. Sending only `progressPercent` (no `status`) derives status from its value ' +
+      '(100 -> Completed, 0 -> Pending, else -> Read) UNLESS the tracker\'s current status is the ' +
+      'manually-set NeedsRevisit or Reported, which a stray progress ping never silently overwrites. ' +
+      '`useful`/`quality` (1-5) record the learner\'s rating and are deliberately independent of ' +
+      '`status`/`progressPercent` — ratable on a lesson that\'s still in progress or was never ' +
+      'finished, not just on completion. Each resubmission overwrites the previous rating rather ' +
+      'than accumulating one. 404 if the slug does not exist.',
   })
   @ApiParam({ name: 'slug', description: 'The lesson\'s slug.', type: String })
-  @ApiResponseDoc({ status: 400, description: 'Neither status nor progressPercent was provided.' })
+  @ApiResponseDoc({ status: 400, description: 'None of status, progressPercent, useful, or quality was provided.' })
   @ApiResponseDoc({ status: 404, description: 'No lesson exists with the given slug.' })
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'))

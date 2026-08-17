@@ -9,9 +9,11 @@ import {
   generateSlug,
   generateUniqueSlug,
 } from 'src/common/utils/slugify.util';
+import { sanitizeLessonHtml } from 'src/common/utils/lesson-html-sanitizer.util';
 import { DataSource, In, Repository } from 'typeorm';
 import { CreateLessonDto } from '../dtos/create-lesson.dto';
 import { GetLessonsDto } from '../dtos/get-lessons.dto';
+import { UpdateLessonDto } from '../dtos/update-lesson.dto';
 import { UpdateLessonProgressDto } from '../dtos/update-lesson-progress.dto';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import { BASIC_PREMIUM_SUBJECT_CONTENT_CEILING } from 'src/modules/skill-enrollment/constants/skill-enrollment.constants';
@@ -270,10 +272,10 @@ export class LessonService {
       );
     }
 
-    if (!dto.descriptions?.length) {
+    if (!dto.sections?.length) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
-        'At least one lesson description is required.',
+        'At least one lesson section is required.',
       );
     }
 
@@ -288,20 +290,23 @@ export class LessonService {
 
       const lesson = manager.create(Lesson, {
         title: dto.title,
+        summary: dto.summary,
         subjectId,
         topicId,
         slug,
         level: dto.level,
+        format: dto.format ?? 'tutorial',
         userId,
       });
 
       const savedLesson = await manager.save(Lesson, lesson);
 
-      const sections = dto.descriptions.map((description) =>
+      const sections = dto.sections.map((section, index) =>
         manager.create(LessonSection, {
           lessonId: savedLesson.id,
-          title: description.title,
-          description: description.content,
+          title: section.title,
+          content: sanitizeLessonHtml(section.content),
+          orderIndex: index,
         }),
       );
 
@@ -309,6 +314,55 @@ export class LessonService {
 
       return manager.findOne(Lesson, {
         where: { id: savedLesson.id },
+        relations: ['sections'],
+      });
+    });
+  }
+
+  /** Edits an existing lesson in place — previously the only way to "fix" a lesson was to
+   * delete and reseed it. `sections`, when provided, replaces the full section set
+   * (delete-and-reinsert), but the `Lesson` row's own id and `slug` are preserved and
+   * `UserLessonTracker` rows are never touched, so editing content can never reset a
+   * learner's progress. */
+  async updateLesson(slug: string, dto: UpdateLessonDto): Promise<Lesson> {
+    return this.dataSource.transaction(async (manager) => {
+      const lesson = await manager.findOne(Lesson, { where: { slug } });
+      if (!lesson) {
+        throw new AppCustomException(
+          HttpStatus.NOT_FOUND,
+          `Lesson with slug "${slug}" not found.`,
+        );
+      }
+
+      const subjectId = dto.subjectId ?? dto.subject;
+      const topicId = dto.topicId ?? dto.topic;
+
+      await manager.update(Lesson, lesson.id, {
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.summary !== undefined && { summary: dto.summary }),
+        ...(dto.level !== undefined && { level: dto.level }),
+        ...(dto.format !== undefined && { format: dto.format }),
+        ...(subjectId !== undefined && { subjectId }),
+        ...(topicId !== undefined && { topicId }),
+      });
+
+      if (dto.sections?.length) {
+        await manager.delete(LessonSection, { lessonId: lesson.id });
+
+        const sections = dto.sections.map((section, index) =>
+          manager.create(LessonSection, {
+            lessonId: lesson.id,
+            title: section.title,
+            content: sanitizeLessonHtml(section.content),
+            orderIndex: index,
+          }),
+        );
+
+        await manager.save(LessonSection, sections);
+      }
+
+      return manager.findOne(Lesson, {
+        where: { id: lesson.id },
         relations: ['sections'],
       });
     });
@@ -369,18 +423,25 @@ export class LessonService {
     return this.toTrackerDto(updated, lesson.id);
   }
 
-  /** Updates a user's own progress on a lesson — completion status and/or a 0-100 percent.
-   * Creates the tracker on the fly if the user jumps straight to e.g. "mark complete" without a
-   * prior recordLessonAccess() call, so this endpoint is usable standalone. */
+  /** Updates a user's own progress on a lesson — completion status, a 0-100 percent, and/or a
+   * 1-5 useful/quality rating. Creates the tracker on the fly if the user jumps straight to e.g.
+   * "mark complete" without a prior recordLessonAccess() call, so this endpoint is usable
+   * standalone. Ratings are intentionally independent of completion: a learner who bails out
+   * partway through can still say "this was useful" without being forced to finish first. */
   async updateLessonProgress(
     userId: number,
     slug: string,
     dto: UpdateLessonProgressDto,
   ): Promise<any> {
-    if (dto.status === undefined && dto.progressPercent === undefined) {
+    if (
+      dto.status === undefined &&
+      dto.progressPercent === undefined &&
+      dto.useful === undefined &&
+      dto.quality === undefined
+    ) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
-        'Provide at least a status or a progressPercent to update lesson progress.',
+        'Provide at least a status, progressPercent, useful, or quality to update lesson progress.',
       );
     }
 
@@ -448,16 +509,19 @@ export class LessonService {
     }
   }
 
-  /** Reconciles a status/percent update into one consistent pair. Rules, in order:
+  /** Reconciles a status/percent/rating update into one consistent row. Status/percent rules,
+   * in order:
    *  - explicit status: Completed always forces percent to 100; Pending (with no percent given
    *    in the same call) resets percent to 0; any other explicit status leaves percent untouched.
    *  - percent only (no explicit status): derives status from the percent's value (100 →
    *    Completed, 0 → Pending, else → Read) — UNLESS the current status is the manually-set
-   *    NeedsRevisit or Reported, which a stray progress ping should never silently clear. */
+   *    NeedsRevisit or Reported, which a stray progress ping should never silently clear.
+   * useful/quality are independent of status/percent by design — deliberately no completion
+   * check here. A learner who never finishes the lesson can still rate it. */
   private deriveProgressUpdate(
     current: UserLessonTracker,
     dto: UpdateLessonProgressDto,
-  ): Pick<UserLessonTracker, 'status' | 'progressPercent'> {
+  ): Pick<UserLessonTracker, 'status' | 'progressPercent' | 'usefulRating' | 'qualityRating'> {
     let status = dto.status ?? current.status;
     let progressPercent = dto.progressPercent ?? current.progressPercent;
 
@@ -482,7 +546,10 @@ export class LessonService {
       }
     }
 
-    return { status, progressPercent };
+    const usefulRating = dto.useful ?? current.usefulRating;
+    const qualityRating = dto.quality ?? current.qualityRating;
+
+    return { status, progressPercent, usefulRating, qualityRating };
   }
 
   private toTrackerDto(tracker: UserLessonTracker, lessonId: number) {
@@ -492,6 +559,8 @@ export class LessonService {
       progressPercent: tracker.progressPercent,
       views: tracker.views,
       notes: tracker.notes,
+      useful: tracker.usefulRating,
+      quality: tracker.qualityRating,
       updatedAt: tracker.updatedAt,
     };
   }

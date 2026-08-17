@@ -977,6 +977,7 @@ export class ProgramService {
       .select('l.id', 'id')
       .addSelect('l.title', 'title')
       .addSelect('l.slug', 'slug')
+      .addSelect('l.summary', 'summary')
       .addSelect('l.level', 'level')
       .addSelect('l.format', 'format')
       .addSelect('l.subjectId', 'subjectId')
@@ -1011,6 +1012,7 @@ export class ProgramService {
       id: +r.id,
       title: r.title ?? '',
       slug: r.slug ?? '',
+      summary: r.summary ?? '',
       level: +(r.level ?? 1),
       format: r.format ?? null,
       subjectId: +(r.subjectId ?? 0),
