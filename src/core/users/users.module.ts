@@ -2,6 +2,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Profile } from 'src/common/typeorm/entities/profile.entity';
+import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
 import { UserOtp } from 'src/common/typeorm/entities/user-otp.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
@@ -29,6 +30,7 @@ import { LinkedinShareService } from './providers/linkedin-share.service';
     TypeOrmModule.forFeature([
       User,
       Profile,
+      LinkedinShare,
       UserOtp,
       UserJobRole,
       JobRole,

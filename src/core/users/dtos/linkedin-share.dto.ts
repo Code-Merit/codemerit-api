@@ -9,7 +9,19 @@ export class LinkedinShareDto {
   @IsUrl()
   url?: string;
 
+  // Optional remote image URL (existing behaviour)
   @IsOptional()
   @IsUrl()
   imageUrl?: string;
+
+  // Optional base64 data URL payload (data:image/png;base64,....)
+  @IsOptional()
+  @IsString()
+  imageDataUrl?: string;
+
+  // Optional filename to suggest when persisting/uploading the image
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  imageFileName?: string;
 }
