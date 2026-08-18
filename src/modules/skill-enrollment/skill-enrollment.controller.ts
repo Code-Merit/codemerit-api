@@ -36,6 +36,20 @@ import { SetSubjectPremiumFlagDto } from './dtos/set-subject-premium-flag.dto';
 import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 import { SkillEnrollmentService } from './providers/skill-enrollment.service';
 
+// Shared by every batch endpoint below that takes a comma-separated id list —
+// invalid/non-positive entries are silently dropped rather than 400ing, since these
+// are always machine-built query strings (master data ids), not raw user input.
+function parseIdList(raw: string): number[] {
+  return Array.from(
+    new Set(
+      String(raw ?? '')
+        .split(',')
+        .map((id) => parseInt(id.trim(), 10))
+        .filter((id) => Number.isInteger(id) && id > 0),
+    ),
+  );
+}
+
 @ApiTags('Skill Enrollment')
 @ApiBearerAuth('access-token') // Same name used in `addBearerAuth`
 @Controller('apis/enrollments')
@@ -212,6 +226,31 @@ export class SkillEnrollmentController {
   }
 
   @ApiOperation({
+    summary: "Check the caller's tier across several subjects at once (public — personalized when logged in)",
+    description:
+      'Batch counterpart to GET access/subject/:subjectId — same per-item shape, one ' +
+      'HTTP round trip instead of one per subject. Built for the job-role subject ' +
+      'picker/enrollment-panel summary, which needs this for every subject a role ' +
+      'covers. Unknown subject ids are silently dropped rather than erroring.',
+  })
+  @ApiQuery({
+    name: 'subjectIds',
+    required: true,
+    type: String,
+    description: 'Comma-separated subject ids, e.g. "3,7,12". Invalid/non-positive ids are silently dropped.',
+  })
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('access/subjects')
+  async subjectAccessBatch(
+    @Query('subjectIds') subjectIds: string,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.getSubjectAccessInfoBatch(req.user?.id, parseIdList(subjectIds));
+    return new ApiResponse('Subject access checked successfully.', result);
+  }
+
+  @ApiOperation({
     summary: "Browse a job role's subjects with the caller's tier on each (public — personalized when logged in, read-only)",
     description:
       'Job roles are not an enrollment scope — there is no "enroll in this job role" ' +
@@ -341,15 +380,7 @@ export class SkillEnrollmentController {
   async listTierOfferingsForSubjects(
     @Query('subjectIds') subjectIds: string,
   ): Promise<ApiResponse<any>> {
-    const ids = Array.from(
-      new Set(
-        String(subjectIds ?? '')
-          .split(',')
-          .map((id) => parseInt(id.trim(), 10))
-          .filter((id) => Number.isInteger(id) && id > 0),
-      ),
-    );
-    const result = await this.service.listTierOfferingsForSubjects(ids);
+    const result = await this.service.listTierOfferingsForSubjects(parseIdList(subjectIds));
     return new ApiResponse('Tier offerings fetched successfully.', result);
   }
 
@@ -364,6 +395,28 @@ export class SkillEnrollmentController {
     @Param('subjectId', ParseIntPipe) subjectId: number,
   ): Promise<ApiResponse<any>> {
     const result = await this.service.listTierOfferings(subjectId);
+    return new ApiResponse('Tier offerings fetched successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: 'List active tier offerings across several subjects at once (public)',
+    description:
+      'Batch counterpart to GET tier-offerings/subject/:subjectId — active rows only, ' +
+      'one HTTP round trip instead of one per subject. Built for the job-role subject ' +
+      'picker/enrollment-panel summary alongside access/subjects above.',
+  })
+  @ApiQuery({
+    name: 'subjectIds',
+    required: true,
+    type: String,
+    description: 'Comma-separated subject ids, e.g. "3,7,12". Invalid/non-positive ids are silently dropped.',
+  })
+  @Public()
+  @Get('tier-offerings/subjects')
+  async listTierOfferingsBatch(
+    @Query('subjectIds') subjectIds: string,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.listTierOfferingsForSubjectsPublic(parseIdList(subjectIds));
     return new ApiResponse('Tier offerings fetched successfully.', result);
   }
 

@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
+import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
@@ -65,6 +66,9 @@ export class QuizResultService {
         't.title AS topicTitle',
         'qa.isSkipped AS isSkipped',
         'qa.isCorrect AS isCorrect',
+        'qa.timeTaken AS timeTaken',
+        'q.level AS level',
+        'q.answer AS answer'
       ])
       .innerJoin('qa.question', 'q')
       .innerJoin('q.subject', 's')
@@ -83,6 +87,12 @@ export class QuizResultService {
       }
     });
 
+    const levelLabelMap: Record<number, string> = {
+      [DifficultyLevelEnum.Easy]: 'Easy',
+      [DifficultyLevelEnum.Intermediate]: 'Intermediate',
+      [DifficultyLevelEnum.Advanced]: 'Advanced',
+    };
+    
     const questions = await Promise.all(
       Array.from(uniqueQuestionRows.values()).map(async (r) => {
         const options = await this.dataSource
@@ -109,6 +119,10 @@ export class QuizResultService {
           isCorrect: r.isCorrect ?? false,
           subjectId: r.subjectId,
           topicId: r.topicId,
+          timeTaken: Number(r.timeTaken) ?? 0,
+          answer: r.answer ?? null,
+          levelLabel: r.level ? levelLabelMap[Number(r.level)] ?? null : null,
+          level: r.level ?? null
         };
       })
     );

@@ -9,7 +9,9 @@ import { PaymentProviderEnum } from 'src/common/enum/payment-provider.enum';
 import { PaymentOrderStatusEnum } from 'src/common/enum/payment-order-status.enum';
 import { EnrollmentBatchStatusEnum } from 'src/common/enum/enrollment-batch-status.enum';
 import { IPaymentConfig } from 'src/config/payment-config';
+import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
+import { DEFAULT_TIER_DURATION_MONTHS } from 'src/modules/skill-enrollment/constants/skill-enrollment.constants';
 import { CreateCheckoutDto } from '../dtos/create-checkout.dto';
 import { CreateBatchCheckoutDto } from '../dtos/create-batch-checkout.dto';
 import { RazorpayProvider } from './razorpay.provider';
@@ -36,11 +38,39 @@ export class PaymentService {
 
   /** Public, no auth required — a pricing page needs this before a user has even
    * signed up. Same catalog createCheckout() prices off of, so what's displayed here
-   * is always what checkout will actually charge. */
-  getPricingCatalog(): ReturnType<typeof getFullPricingCatalog> {
+   * is always what checkout will actually charge. Also carries each tier's real daily
+   * quiz/lesson caps + access-window duration (from SkillEnrollmentService/
+   * EnrollmentTierCapConfig, the SAME source quiz.service.ts's enforcement and the
+   * admin tier-caps screen read) — a frontend rendering "10 quizzes/day" from its own
+   * hardcoded copy could silently drift from whatever an admin has actually configured;
+   * this makes the pricing/checkout/upgrade surfaces read the real number instead. */
+  async getPricingCatalog(): Promise<
+    ReturnType<typeof getFullPricingCatalog> & {
+      caps: Record<EnrollmentTierEnum, { dailyQuizCap: number | null; dailyLessonCap: number | null; durationMonths: number | null }>;
+    }
+  > {
     const founderPricingEnabled =
       this.configService.get<IPaymentConfig>('payment').founderPricingEnabled;
-    return getFullPricingCatalog(founderPricingEnabled);
+    const catalog = getFullPricingCatalog(founderPricingEnabled);
+
+    const allTiers = Object.values(EnrollmentTierEnum);
+    const capsEntries = await Promise.all(
+      allTiers.map(async (tier) => {
+        const tierCaps = await this.skillEnrollmentService.getCapsForTier(tier);
+        const durationMonths =
+          tier === EnrollmentTierEnum.Basic ? null : DEFAULT_TIER_DURATION_MONTHS[tier];
+        return [
+          tier,
+          {
+            dailyQuizCap: tierCaps?.dailyQuizCap ?? null,
+            dailyLessonCap: tierCaps?.dailyLessonCap ?? null,
+            durationMonths: durationMonths ?? null,
+          },
+        ] as const;
+      }),
+    );
+
+    return { ...catalog, caps: Object.fromEntries(capsEntries) as Record<EnrollmentTierEnum, { dailyQuizCap: number | null; dailyLessonCap: number | null; durationMonths: number | null }> };
   }
 
   async createCheckout(userId: number, dto: CreateCheckoutDto): Promise<Record<string, any>> {

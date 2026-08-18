@@ -630,6 +630,47 @@ export class SkillEnrollmentService {
     return { subjectId, tier, isPremium: subject.isPremium, availableTiers };
   }
 
+  /** Batch counterpart to getSubjectAccessInfo — one query per underlying table (tier
+   * map, subjects, tier offerings) instead of N — for the job-role subject-picker/
+   * enrollment-panel summary, which otherwise fires one `access/subject/:id` HTTP
+   * request per subject the role covers (the "20+ requests in the network tab" flood).
+   * Unknown subject ids are silently dropped rather than erroring — callers already
+   * have a known-good subject list from JobRoleSubject/master data, not user input. */
+  async getSubjectAccessInfoBatch(
+    userId: number | undefined,
+    subjectIds: number[],
+  ): Promise<
+    {
+      subjectId: number;
+      tier: EnrollmentTierEnum | null;
+      isPremium: boolean;
+      availableTiers: EnrollmentTierEnum[];
+    }[]
+  > {
+    const uniqueIds = Array.from(new Set(subjectIds));
+    if (!uniqueIds.length) return [];
+
+    const [subjects, tierMap, offerings] = await Promise.all([
+      this.subjectRepo.find({ where: { id: In(uniqueIds) } }),
+      userId ? this.getSubjectTierMap(userId) : Promise.resolve(new Map<number, EnrollmentTierEnum>()),
+      this.tierOfferingRepo.find({ where: { subjectId: In(uniqueIds), isActive: true } }),
+    ]);
+
+    const offeringsBySubject = new Map<number, EnrollmentTierEnum[]>();
+    for (const o of offerings) {
+      const list = offeringsBySubject.get(o.subjectId) ?? [];
+      list.push(o.tier);
+      offeringsBySubject.set(o.subjectId, list);
+    }
+
+    return subjects.map((subject) => ({
+      subjectId: subject.id,
+      tier: tierMap.get(subject.id) ?? null,
+      isPremium: subject.isPremium,
+      availableTiers: [EnrollmentTierEnum.Basic, ...(offeringsBySubject.get(subject.id) ?? [])],
+    }));
+  }
+
   /** Read-only browsing view for a job role — job roles are not an enrollment scope,
    * so there is no top-level "tier" here, just a per-subject breakdown of everything
    * that role's curriculum covers (via JobRoleSubject), each with the caller's real,
@@ -811,6 +852,21 @@ export class SkillEnrollmentService {
     if (!subjectIds.length) return [];
     return this.tierOfferingRepo.find({
       where: { subjectId: In(subjectIds) },
+      order: { subjectId: 'ASC', tier: 'ASC' },
+    });
+  }
+
+  /** Batch counterpart to listTierOfferings — active-only, for the job-role
+   * subject-picker/enrollment-panel summary (same batching rationale as
+   * getSubjectAccessInfoBatch above: one HTTP round trip instead of one per subject).
+   * Unlike the admin-only listTierOfferingsForSubjects, this never includes inactive
+   * rows — it's the public "what can I currently buy" contract, same as the
+   * single-subject listTierOfferings(). */
+  async listTierOfferingsForSubjectsPublic(subjectIds: number[]): Promise<SkillTierOffering[]> {
+    const uniqueIds = Array.from(new Set(subjectIds));
+    if (!uniqueIds.length) return [];
+    return this.tierOfferingRepo.find({
+      where: { subjectId: In(uniqueIds), isActive: true },
       order: { subjectId: 'ASC', tier: 'ASC' },
     });
   }

@@ -31,13 +31,15 @@ export class PaymentController {
     summary: 'Current enrollment pricing (public)',
     description:
       'Every paid tier x currency combination, plus which gateway each currency routes ' +
-      'to. Reflects FOUNDER_PRICING_ENABLED — this is exactly what /checkout will charge, ' +
-      'so a pricing page never has to hardcode amounts.',
+      'to, plus each tier\'s real daily quiz/lesson caps and access-window duration. ' +
+      'Reflects FOUNDER_PRICING_ENABLED and any admin-configured EnrollmentTierCapConfig ' +
+      'override — this is exactly what /checkout will charge and what quiz creation will ' +
+      'actually enforce, so a pricing page never has to hardcode amounts or allowances.',
   })
   @Public()
   @Get('pricing')
-  pricing(): ApiResponse<any> {
-    const result = this.service.getPricingCatalog();
+  async pricing(): Promise<ApiResponse<any>> {
+    const result = await this.service.getPricingCatalog();
     return new ApiResponse('Pricing fetched successfully.', result);
   }
 
