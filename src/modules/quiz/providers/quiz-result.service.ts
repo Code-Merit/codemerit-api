@@ -5,6 +5,7 @@ import { QuestionOption } from 'src/common/typeorm/entities/question-option.enti
 import { QuizQuestion } from 'src/common/typeorm/entities/quiz-quesion.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { generateScore } from 'src/common/utils/common-functions';
+import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { DataSource } from 'typeorm';
 
 @Injectable()
@@ -55,9 +56,12 @@ export class QuizResultService {
       .select([
         'qa.id AS attemptId',
         'qa.selectedOption AS selectedOptionId',
+        'qa.timeTaken AS timeTaken',
         'q.id AS questionId',
         'q.question AS text',
         'q.subjectId AS subjectId',
+        'q.level AS level',
+        'q.answer AS answer',
         's.title AS subjectTitle',
         's.slug AS subjectSlug',
         's.image AS subjectImage',
@@ -83,6 +87,12 @@ export class QuizResultService {
       }
     });
 
+    const levelLabelMap: Record<number, string> = {
+      [DifficultyLevelEnum.Easy]: 'Easy',
+      [DifficultyLevelEnum.Intermediate]: 'Intermediate',
+      [DifficultyLevelEnum.Advanced]: 'Advanced',
+    };
+
     const questions = await Promise.all(
       Array.from(uniqueQuestionRows.values()).map(async (r) => {
         const options = await this.dataSource
@@ -105,10 +115,14 @@ export class QuizResultService {
           text: r.text,
           options: formattedOptions,
           selectedOptionId: Number(r.selectedOptionId) ?? null,
+          timeTaken: Number(r.timeTaken) ?? 0,
+          answer: r.answer ?? null,
           isSkipped: r.isSkipped ?? false,
           isCorrect: r.isCorrect ?? false,
+          levelLabel: r.level ? levelLabelMap[Number(r.level)] ?? null : null,
           subjectId: r.subjectId,
           topicId: r.topicId,
+          level: r.level ?? null,
         };
       })
     );
