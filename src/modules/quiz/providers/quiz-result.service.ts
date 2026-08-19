@@ -28,6 +28,7 @@ export class QuizResultService {
         'r.unanswered',
         'r.score',
         'r.remarks',
+        'r.feedback',
         'r.createdAt',
         'q.title',
         'q.description',
@@ -87,6 +88,16 @@ export class QuizResultService {
       }
     });
 
+    // Sum from uniqueQuestionRows, not the raw questionRows — a question
+    // tagged with multiple topics produces one row per topic (the
+    // questionTopics left join fans out), so summing the raw rows would
+    // double/triple-count that question's timeTaken. This was previously
+    // omitted entirely from the response, which is why "Time Efficiency"
+    // never rendered on any of the result-card designs (it's null-gated on
+    // the frontend whenever timeSpent is missing).
+    const timeSpent = Array.from(uniqueQuestionRows.values())
+      .reduce((sum, r) => sum + (Number(r.timeTaken) || 0), 0);
+
     const levelLabelMap: Record<number, string> = {
       [DifficultyLevelEnum.Easy]: 'Easy',
       [DifficultyLevelEnum.Intermediate]: 'Intermediate',
@@ -144,10 +155,16 @@ export class QuizResultService {
       }
       const sub = subjectsMap.get(r.subjectId);
       sub.asked += 1;
-      if (r.isSkipped === false) sub.answered += 1;
-      if (r.isCorrect === true) {
+      // .getRawMany() returns raw driver values, not entity-hydrated ones —
+      // isSkipped/isCorrect are `boolean` columns but MySQL has no native
+      // boolean (TypeORM maps it to TINYINT), so raw rows carry 0/1, not
+      // true/false. `=== false`/`=== true` against that never matched,
+      // silently leaving answered/correct/wrong at 0 for every subject.
+      // Number(...) normalizes 0/1/boolean/"0"/"1" uniformly.
+      if (Number(r.isSkipped) === 0) sub.answered += 1;
+      if (Number(r.isCorrect) === 1) {
         sub.correct += 1;
-      } else if (r.isSkipped === false && r.isCorrect === false) {
+      } else if (Number(r.isSkipped) === 0 && Number(r.isCorrect) === 0) {
         sub.wrong += 1;
       }
     });
@@ -178,10 +195,11 @@ export class QuizResultService {
       }
       const t = topicsMap.get(r.topicId);
       t.asked += 1;
-      if (r.isSkipped === false) t.answered += 1;
-      if (r.isCorrect === true) {
+      // Same raw-value fix as the subjects loop above — see that comment.
+      if (Number(r.isSkipped) === 0) t.answered += 1;
+      if (Number(r.isCorrect) === 1) {
         t.correct += 1;
-      } else if (r.isSkipped === false && r.isCorrect === false) {
+      } else if (Number(r.isSkipped) === 0 && Number(r.isCorrect) === 0) {
         t.wrong += 1;
       }
     });
@@ -202,7 +220,9 @@ export class QuizResultService {
       correct: Number(base.r_correct) || 0,
       wrong: Number(base.r_wrong) || 0,
       unanswered: Number(base.r_unanswered) || 0,
+      timeSpent,
       remarks: base.r_remarks ?? '',
+      feedback: base.r_feedback ?? '',
       createdAt: base.r_createdAt,
       user: {
         id: base.u_id,

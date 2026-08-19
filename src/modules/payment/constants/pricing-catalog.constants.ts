@@ -28,20 +28,20 @@ const TIER_PRICING: Record<
   Record<SupportedCurrency, { founder: number; mainstream: number }>
 > = {
   [EnrollmentTierEnum.Curious]: {
-    INR: { founder: 299, mainstream: 499 },
-    USD: { founder: 8, mainstream: 14 },
+    INR: { founder: 499, mainstream: 999 },
+    USD: { founder: 10, mainstream: 20 },
   },
   [EnrollmentTierEnum.Pro]: {
-    INR: { founder: 699, mainstream: 999 },
+    INR: { founder: 999, mainstream: 1999 },
     USD: { founder: 19, mainstream: 29 },
   },
   [EnrollmentTierEnum.Intern]: {
-    INR: { founder: 1499, mainstream: 1999 },
-    USD: { founder: 39, mainstream: 59 },
+    INR: { founder: 5999, mainstream: 11999 },
+    USD: { founder: 79, mainstream: 159 },
   },
   [EnrollmentTierEnum.Serious]: {
-    INR: { founder: 999, mainstream: 1499 },
-    USD: { founder: 25, mainstream: 39 },
+    INR: { founder: 6999, mainstream: 10000 },
+    USD: { founder: 100, mainstream: 189 },
   },
 };
 
