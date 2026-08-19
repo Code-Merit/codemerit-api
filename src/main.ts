@@ -2,6 +2,7 @@ import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { configDotenv } from 'dotenv';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { GlobalExceptionsFilter } from './common/filters/global-exception.filter';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
@@ -20,10 +21,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
   const config: IAppConfig = app.get<IAppConfig>(appConfig.KEY);
 
+  // Increase body size limits for large base64 image uploads
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
+
   // Enable CORS for localhost dev
   app.enableCors({
     origin: (origin, callback) => {
-      const allowedOrigins = process.env.CORS_ORIGINS?.split(',').map((url) => url.trim()) || [];
+      const allowedOrigins =
+        process.env.CORS_ORIGINS?.split(',').map((url) => url.trim()) || [];
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {

@@ -50,6 +50,7 @@ import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offeri
 import { EnrollmentTierCapConfig } from 'src/common/typeorm/entities/enrollment-tier-cap-config.entity';
 import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
 import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
+import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
 import { IDatabaseConfig } from 'src/config/database-config';
 @Injectable()
 export class TypeormConfigService implements TypeOrmOptionsFactory {
@@ -116,6 +117,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         EnrollmentTierCapConfig,
         FreeLessonView,
         EnrollmentBatch,
+        LinkedinShare,
       ],
       // entities: [__dirname + '/../**/*.entity.{ts,js}'],
       // entities: ['src/**/*.entity.ts'],
