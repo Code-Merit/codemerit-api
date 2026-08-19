@@ -83,6 +83,7 @@ export class QuizController {
     const result = await this.quizService.submitQuiz({
       ...submitQuizDto,
       userId: req.user.id,
+      ipAddress: submitQuizDto.ipAddress ?? req.ip,
     });
     return new ApiResponse(`Quiz submitted successfully.`, result);
   }

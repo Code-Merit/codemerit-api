@@ -22,6 +22,7 @@ import {
   getTitleByTopicIds,
   shuffleArray,
 } from 'src/common/utils/common-functions';
+import { generateQuizResultFeedback } from 'src/common/utils/quiz-feedback.util';
 import {
   generateSlug,
   generateUniqueSlug,
@@ -565,7 +566,6 @@ export class QuizService {
     return { message: 'Initial assessment generated successfully.', quiz };
   }
 
-  //Generate a server level feedback utility
   async submitQuiz(
     submitQuizDto: SubmitQuizDto,
   ): Promise<QuizResult & { newlyEarned?: NewlyEarnedDto | null }> {
@@ -575,7 +575,7 @@ export class QuizService {
     // behavior for legacy/ad-hoc quizzes that predate QuizSettings).
     const settings = await this.quizSettingsRepository.findOne({
       where: { quizId: submitQuizDto?.quizId },
-      select: ['maxAttempts'],
+      select: ['maxAttempts', 'passMarks'],
     });
     if (settings?.maxAttempts) {
       const priorAttempts = await this.quizResultRepository.count({
@@ -600,6 +600,17 @@ export class QuizService {
     const wrong = attempts.filter((a) => a?.isSkipped !== true && a?.isCorrect !== true).length;
     const score = generateScore(total, correct, wrong);
 
+    const user = await this.dataSource
+      .getRepository(User)
+      .findOne({ where: { id: submitQuizDto?.userId }, select: ['firstName'] });
+    const feedback = generateQuizResultFeedback({
+      firstName: user?.firstName,
+      score,
+      total,
+      unanswered,
+      passMarks: settings?.passMarks ?? 60,
+    });
+
     let questionResult: QuizResult;
     // Populated inside the transaction with the *actual* saved QuestionAttempt ids —
     // the achievement layer needs these to tell "the correct answer I just saved"
@@ -618,6 +629,10 @@ export class QuizService {
           unanswered,
           timeSpent: submitQuizDto?.timeSpent,
           score,
+          feedback,
+          device: submitQuizDto?.device,
+          client: submitQuizDto?.client,
+          ipAddress: submitQuizDto?.ipAddress,
         });
 
         const savedResult = await manager.save(QuizResult, result);

@@ -18,4 +18,8 @@ export interface IQuizResult {
   createdAt: Date;
     //attempts?: QuestionAttempt[]
     attempts?: QuestionAttempt[]
+    feedback?: string
+    device?: string
+    client?: string
+    ipAddress?: string
   }

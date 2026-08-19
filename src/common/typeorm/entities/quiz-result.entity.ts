@@ -85,6 +85,37 @@ export class QuizResult extends AbstractEntity implements IQuizResult {
     })
     remarks?: string;
 
+    @Column({
+        type: 'text',
+        nullable: true,
+        default:null
+    })
+    feedback?: string;
+
+    @Column({
+        type: 'varchar',
+        length: 100,
+        nullable: true,
+        default:null
+    })
+    device?: string;
+
+    @Column({
+        type: 'varchar',
+        length: 100,
+        nullable: true,
+        default:null
+    })
+    client?: string;
+
+    @Column({
+        type: 'varchar',
+        length: 45,
+        nullable: true,
+        default:null
+    })
+    ipAddress?: string;
+
     @CreateDateColumn()
     createdAt: Date;
 

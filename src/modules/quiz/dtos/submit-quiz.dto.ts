@@ -86,4 +86,19 @@ export class SubmitQuizDto {
   @ArrayNotEmpty()
   @Type(() => AttemptDto)
   attempts: AttemptDto[];
+
+  @ApiPropertyOptional({ example: 'Mobile' })
+  @IsOptional()
+  @IsString()
+  device?: string;
+
+  @ApiPropertyOptional({ example: 'Windows 10/11 / Chrome 128' })
+  @IsOptional()
+  @IsString()
+  client?: string;
+
+  @ApiPropertyOptional({ example: '203.0.113.42' })
+  @IsOptional()
+  @IsString()
+  ipAddress?: string;
 }
