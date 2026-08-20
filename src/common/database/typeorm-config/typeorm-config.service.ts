@@ -51,6 +51,7 @@ import { EnrollmentTierCapConfig } from 'src/common/typeorm/entities/enrollment-
 import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
 import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
 import { IDatabaseConfig } from 'src/config/database-config';
+import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
 @Injectable()
 export class TypeormConfigService implements TypeOrmOptionsFactory {
   constructor(private configService: ConfigService) {}
@@ -116,6 +117,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         EnrollmentTierCapConfig,
         FreeLessonView,
         EnrollmentBatch,
+        LinkedinShare,
       ],
       // entities: [__dirname + '/../**/*.entity.{ts,js}'],
       // entities: ['src/**/*.entity.ts'],
