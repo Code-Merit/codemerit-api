@@ -1,18 +1,22 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
+import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { WorkStatusEnum } from '../enums/work-status.enum';
 
 @Injectable()
 export class UserProfileService {
+  private readonly logger = new Logger(UserProfileService.name);
+
   constructor(
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     @InjectRepository(QuizResult)
     private quizResultRepository: Repository<QuizResult>,
+    private readonly activityService: ActivityService,
   ) {}
 
   async createEmpty(manager: EntityManager): Promise<Profile> {
@@ -100,7 +104,26 @@ export class UserProfileService {
       profile.profileCompleted = true;
     }
 
-    return this.profileRepository.save(profile);
+    const savedProfile = await this.profileRepository.save(profile);
+
+    // Only `about` reads as a visible "profile update" in the social-feed sense — everything
+    // else here is onboarding-form data (education/experience/workStatus), not worth an activity.
+    if (dto.about !== undefined) {
+      try {
+        await this.activityService.createActivity(
+          userId,
+          'Profile Updated',
+          'updated profile details.',
+          { dataId: String(userId), dataType: 'USER' },
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed to log profile-update activity for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    return savedProfile;
   }
 
   // DTO-level @ValidateIf only enforces "required when workStatus is X" — it can't

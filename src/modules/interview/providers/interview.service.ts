@@ -312,9 +312,8 @@ export class InterviewService {
       await this.activityService.createActivity(
         savedInterview.userId,
         'Interview Scheduled',
-        `Your interview "${savedInterview.title}" has been scheduled for ${savedInterview.scheduledAt.toLocaleString()}.`,
-        savedInterview.interviewCode,
-        'INTERVIEW',
+        `interview "${savedInterview.title}" scheduled for ${savedInterview.scheduledAt.toLocaleString()}.`,
+        { dataId: savedInterview.interviewCode, dataType: 'INTERVIEW' },
       );
     } catch (activityError) {
       this.logger.error(
@@ -435,9 +434,12 @@ export class InterviewService {
           await this.activityService.createActivity(
             updatedInterview.userId,
             'Interview Rescheduled',
-            `Your interview "${updatedInterview.title}" has been rescheduled to ${scheduledAtText}.`,
-            updatedInterview.interviewCode,
-            'INTERVIEW',
+            `interview "${updatedInterview.title}" rescheduled to ${scheduledAtText}.`,
+            {
+              dataId: updatedInterview.interviewCode,
+              dataType: 'INTERVIEW',
+              actorId: currentUserId !== updatedInterview.userId ? currentUserId : undefined,
+            },
           );
         } catch (activityError) {
           this.logger.error(
@@ -621,9 +623,12 @@ export class InterviewService {
       await this.activityService.createActivity(
         dto.interviewerId,
         'Interview Assigned',
-        `You have been assigned to conduct round ${roundNumber} of "${updatedInterview.title}", scheduled for ${scheduledAtText}.`,
-        updatedInterview.interviewCode,
-        'INTERVIEW',
+        `assigned to conduct round ${roundNumber} of "${updatedInterview.title}", scheduled for ${scheduledAtText}.`,
+        {
+          dataId: updatedInterview.interviewCode,
+          dataType: 'INTERVIEW',
+          actorId: currentUserId !== dto.interviewerId ? currentUserId : undefined,
+        },
       );
     } catch (activityError) {
       this.logger.error(
@@ -659,9 +664,12 @@ export class InterviewService {
         await this.activityService.createActivity(
           candidate.id,
           'Interview Round Scheduled',
-          `Round ${roundNumber} of your interview "${updatedInterview.title}" has been scheduled for ${scheduledAtText}.`,
-          updatedInterview.interviewCode,
-          'INTERVIEW',
+          `round ${roundNumber} of interview "${updatedInterview.title}" scheduled for ${scheduledAtText}.`,
+          {
+            dataId: updatedInterview.interviewCode,
+            dataType: 'INTERVIEW',
+            actorId: currentUserId !== candidate.id ? currentUserId : undefined,
+          },
         );
       } catch (activityError) {
         this.logger.error(
@@ -771,9 +779,12 @@ export class InterviewService {
         await this.activityService.createActivity(
           interviewer.id,
           'Interview Round Cancelled',
-          `Round ${round.roundNumber} of "${updatedInterview.title}", which you were assigned to conduct, has been cancelled. Reason: ${dto.declineReason}`,
-          updatedInterview.interviewCode,
-          'INTERVIEW',
+          `round ${round.roundNumber} of "${updatedInterview.title}", assigned to conduct, was cancelled. Reason: ${dto.declineReason}`,
+          {
+            dataId: updatedInterview.interviewCode,
+            dataType: 'INTERVIEW',
+            actorId: currentUserId !== interviewer.id ? currentUserId : undefined,
+          },
         );
       } catch (activityError) {
         this.logger.error(
@@ -875,9 +886,12 @@ export class InterviewService {
       await this.activityService.createActivity(
         updatedInterview.userId,
         'Interview Cancelled',
-        `Your interview "${updatedInterview.title}" was cancelled. Reason: ${updatedInterview.declineReason}`,
-        updatedInterview.interviewCode,
-        'INTERVIEW',
+        `interview "${updatedInterview.title}" was cancelled. Reason: ${updatedInterview.declineReason}`,
+        {
+          dataId: updatedInterview.interviewCode,
+          dataType: 'INTERVIEW',
+          actorId: currentUserId !== updatedInterview.userId ? currentUserId : undefined,
+        },
       );
     } catch (activityError) {
       this.logger.error(
@@ -921,9 +935,12 @@ export class InterviewService {
         await this.activityService.createActivity(
           interviewer.id,
           'Interview Cancelled',
-          `The interview "${updatedInterview.title}" you were assigned to has been cancelled. Reason: ${dto.declineReason}`,
-          updatedInterview.interviewCode,
-          'INTERVIEW',
+          `the interview "${updatedInterview.title}" assigned to conduct was cancelled. Reason: ${dto.declineReason}`,
+          {
+            dataId: updatedInterview.interviewCode,
+            dataType: 'INTERVIEW',
+            actorId: currentUserId !== interviewer.id ? currentUserId : undefined,
+          },
         );
       } catch (activityError) {
         this.logger.error(
@@ -1022,9 +1039,12 @@ export class InterviewService {
       await this.activityService.createActivity(
         updatedInterview.userId,
         'Interview Completed',
-        `Your interview "${updatedInterview.title}" has been completed and reviewed.`,
-        updatedInterview.interviewCode,
-        'INTERVIEW',
+        `interview "${updatedInterview.title}" was completed and reviewed.`,
+        {
+          dataId: updatedInterview.interviewCode,
+          dataType: 'INTERVIEW',
+          actorId: currentUserId !== updatedInterview.userId ? currentUserId : undefined,
+        },
       );
     } catch (activityError) {
       this.logger.error(
@@ -1252,15 +1272,18 @@ export class InterviewService {
         ? 'Interview Round Completed'
         : 'Interview Round Declined';
       const activityMessage = isCompleted
-        ? `Round ${updatedRound.roundNumber} of your interview "${interview.title}" has been completed and reviewed.`
-        : `Round ${updatedRound.roundNumber} of your interview "${interview.title}" was marked as declined. Reason: ${updatedRound.declineReason}`;
+        ? `round ${updatedRound.roundNumber} of interview "${interview.title}" was completed and reviewed.`
+        : `round ${updatedRound.roundNumber} of interview "${interview.title}" was marked as declined. Reason: ${updatedRound.declineReason}`;
 
       await this.activityService.createActivity(
         interview.userId,
         activityTitle,
         activityMessage,
-        interview.interviewCode,
-        'INTERVIEW',
+        {
+          dataId: interview.interviewCode,
+          dataType: 'INTERVIEW',
+          actorId: currentUserId !== interview.userId ? currentUserId : undefined,
+        },
       );
     } catch (activityError) {
       this.logger.error(

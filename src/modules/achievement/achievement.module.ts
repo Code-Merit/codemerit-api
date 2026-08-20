@@ -7,6 +7,7 @@ import { CertificationTrack } from 'src/common/typeorm/entities/certification-tr
 import { Question } from 'src/common/typeorm/entities/question.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
+import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
@@ -32,6 +33,7 @@ import { AchievementService } from './providers/achievement.service';
       UserXpLog,
       QuizResult,
       QuestionAttempt,
+      Subject,
     ]),
     MasterModule,
     NotificationModule,

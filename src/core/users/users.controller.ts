@@ -303,11 +303,16 @@ export class UsersController {
   @Put('jobRoleEnrollment')
   async targetJobRole(
     @Request() req,
-    @Body() dto: { jobRoleId: number },
+    @Body() dto: { jobRoleId: number; device?: string; client?: string },
   ): Promise<ApiResponse<any>> {
+    const forwardedFor = req.headers?.['x-forwarded-for'];
+    const ipAddress = (
+      typeof forwardedFor === 'string' ? forwardedFor.split(',')[0].trim() : undefined
+    ) || req.ip;
     const result = await this.usersService.targetJobRole(
       req.user.id,
       dto.jobRoleId,
+      { ipAddress, device: dto.device, client: dto.client },
     );
     return new ApiResponse('Job role target set successfully.', result);
   }

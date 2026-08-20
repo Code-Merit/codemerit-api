@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
+import { ActivityModule } from 'src/modules/activity/activity.module';
 import { MasterModule } from 'src/modules/master/master.module';
 import { SkillEnrollmentModule } from 'src/modules/skill-enrollment/skill-enrollment.module';
 import { UserPermissionModule } from 'src/modules/user-permission/user-permission.module';
@@ -27,6 +28,7 @@ import { AuthService } from './providers/auth.service';
     UserPermissionModule,
     MasterModule,
     SkillEnrollmentModule,
+    ActivityModule,
   ],
   providers: [AuthService, JwtStrategy, LocalStrategy],
   controllers: [AuthController],

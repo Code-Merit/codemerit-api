@@ -538,9 +538,8 @@ export class UserService {
         await this.activityService.createActivity(
           user.id,
           'Password Changed',
-          'Your account password was updated successfully.',
-          String(user.id),
-          'USER',
+          'account password updated.',
+          { dataId: String(user.id), dataType: 'USER' },
         );
       } catch (err) {
         if (err instanceof Error) {
@@ -705,9 +704,8 @@ export class UserService {
             await this.activityService.createActivity(
               user.id,
               'User Registration',
-              'Your account has been verified and created successfully.',
-              String(user.id),
-              'USER',
+              'account verified and created.',
+              { dataId: String(user.id), dataType: 'USER' },
             );
           } catch (err) {
             if (err instanceof Error) {
@@ -728,9 +726,8 @@ export class UserService {
             await this.activityService.createActivity(
               user.id,
               'Password Changed',
-              'Your account password was updated successfully.',
-              String(user.id),
-              'USER',
+              'account password updated.',
+              { dataId: String(user.id), dataType: 'USER' },
             );
           } catch (err) {
             if (err instanceof Error) {
@@ -839,6 +836,31 @@ export class UserService {
     this.userRepo.merge(user, userFields);
     const savedUser = await this.userRepo.save(user);
 
+    // Only fire for the fields that read as a visible "profile update" (name/avatar) — skip
+    // trivial admin-only fields (role, points, accountStatus, etc.) so this doesn't become noise.
+    if (
+      updateUserDto.firstName !== undefined ||
+      updateUserDto.lastName !== undefined ||
+      updateUserDto.image !== undefined
+    ) {
+      try {
+        await this.activityService.createActivity(
+          userId,
+          'Profile Updated',
+          'updated profile details.',
+          {
+            dataId: String(userId),
+            dataType: 'USER',
+            actorId: caller && caller.id !== userId ? caller.id : undefined,
+          },
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed to log profile-update activity for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
     if (linkedinUrl !== undefined) {
       let profile = await this.profileRepo.findOne({ where: { userId } });
 
@@ -879,7 +901,11 @@ export class UserService {
    * separate, subject-scoped concept that actually gates content. Renamed from
    * enrollJobRole() to stop that "enroll" ambiguity at the source; same mechanics
    * (409 on duplicate target, notification, seeds the initial-assessment quiz). */
-  async targetJobRole(userId: number, jobRoleId: number): Promise<UserJobRole> {
+  async targetJobRole(
+    userId: number,
+    jobRoleId: number,
+    requestMeta?: { ipAddress?: string; device?: string; client?: string },
+  ): Promise<UserJobRole> {
     const user = await this.findOne(userId);
     if (!user) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, 'User not found.');
@@ -917,6 +943,25 @@ export class UserService {
       jobRole.title,
       jobRole.id,
     );
+
+    try {
+      await this.activityService.createActivity(
+        userId,
+        'Enrolled',
+        `enrolled in "${jobRole.title}".`,
+        {
+          dataId: String(jobRole.id),
+          dataType: 'job_role',
+          ipAddress: requestMeta?.ipAddress,
+          device: requestMeta?.device,
+          client: requestMeta?.client,
+        },
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to log enrollment activity for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
 
     return saved;
   }

@@ -1,4 +1,4 @@
-import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import axios from 'axios';
@@ -15,6 +15,7 @@ import { UserService } from 'src/core/users/providers/user.service';
 import { MasterService } from 'src/modules/master/providers/master.service';
 import { SubjectAnalysisService } from 'src/modules/master/providers/subject-analysis.service';
 import { TopicAnalysisService } from 'src/modules/master/providers/topic-analysis.service';
+import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import { UserPermissionService } from 'src/modules/user-permission/providers/user-permission.service';
 import { DataSource, Repository } from 'typeorm';
@@ -31,6 +32,7 @@ interface LinkedInProfile {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private readonly linkedinClientId = process.env.LINKEDIN_CLIENT_ID;
   private readonly linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET;
   private readonly linkedinRedirectUri = process.env.LINKEDIN_REDIRECT_URI;
@@ -48,6 +50,7 @@ export class AuthService {
     private readonly topicAnalysisProvider: TopicAnalysisService,
     private readonly apiUsageService: ApiUsageService,
     private readonly skillEnrollmentService: SkillEnrollmentService,
+    private readonly activityService: ActivityService,
 
     @InjectRepository(UserJobRole)
     private userJobRoleRepo: Repository<UserJobRole>,
@@ -76,7 +79,10 @@ export class AuthService {
     return null;
   }
 
-  async login(user: User) {
+  async login(
+    user: User,
+    requestMeta?: { ipAddress?: string; device?: string; client?: string },
+  ) {
     if (user.accountStatus === AccountStatusEnum.BLOCKED) {
       throw new AppCustomException(
         HttpStatus.FORBIDDEN,
@@ -89,6 +95,19 @@ export class AuthService {
         'Please verify your account using the OTP sent to your e-mail before signing in.',
       );
     }
+
+    try {
+      await this.activityService.createActivity(user.id, 'Signed In', 'signed in successfully.', {
+        ipAddress: requestMeta?.ipAddress,
+        device: requestMeta?.device,
+        client: requestMeta?.client,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to log login activity for userId=${user.id}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
     const payload: any = {
       username: user.username,
       sub: user.id,

@@ -250,6 +250,10 @@ export interface RecentActivityItem {
   dataType: string | null;
   dataId: string | null;
   createdAt: Date;
+  // Who performed the action, when it differs from the subject (null = system/self-triggered) —
+  // e.g. an admin-granted badge.
+  actorId: number | null;
+  actorName: string | null;
 }
 
 // ---------------------

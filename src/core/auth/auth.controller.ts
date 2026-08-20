@@ -154,7 +154,18 @@ export class AuthController {
     @Request() req,
     @Body() body: LoginDto,
   ): Promise<ApiResponse<any>> {
-    const result = await this.authService.login(req.user);
+    // Same X-Forwarded-For-over-req.ip precedence used at /register — never trust anything
+    // else client-supplied for IP, though device/client (UA-derived, not security-sensitive)
+    // are taken from the request body.
+    const forwardedFor = req.headers?.['x-forwarded-for'];
+    const ipAddress = (
+      typeof forwardedFor === 'string' ? forwardedFor.split(',')[0].trim() : undefined
+    ) || req.ip;
+    const result = await this.authService.login(req.user, {
+      ipAddress,
+      device: body.device,
+      client: body.client,
+    });
     return new ApiResponse('Succesfully Logged In', result);
   }
 

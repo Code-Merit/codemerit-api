@@ -44,6 +44,35 @@ export class Activity extends AbstractEntity {
   })
   dataType?: string;
 
+  // Who performed the action, when it differs from the subject (userId) — e.g. an admin
+  // granting a badge to another user. Null means system/self-triggered, mirroring the
+  // UserBadge.awardedBy / InterviewStatusHistory.changedBy actor-vs-subject pattern.
+  @Column({
+    nullable: true,
+  })
+  actorId?: number;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  device?: string;
+
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  client?: string;
+
+  @Column({
+    type: 'varchar',
+    length: 45,
+    nullable: true,
+  })
+  ipAddress?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -52,4 +81,10 @@ export class Activity extends AbstractEntity {
     name: 'userId',
   })
   user: User;
+
+  @ManyToOne(() => User)
+  @JoinColumn({
+    name: 'actorId',
+  })
+  actor?: User;
 }

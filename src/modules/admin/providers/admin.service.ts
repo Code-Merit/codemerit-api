@@ -235,6 +235,7 @@ export class AdminService {
     const rows = await this.activityRepo
       .createQueryBuilder('activity')
       .leftJoin('activity.user', 'user')
+      .leftJoin('activity.actor', 'actor')
       .select([
         'activity.id as id',
         'activity.title as title',
@@ -243,8 +244,11 @@ export class AdminService {
         'activity.dataType as dataType',
         'activity.dataId as dataId',
         'activity.createdAt as createdAt',
+        'activity.actorId as actorId',
         'user.firstName as firstName',
         'user.lastName as lastName',
+        'actor.firstName as actorFirstName',
+        'actor.lastName as actorLastName',
       ])
       .orderBy('activity.createdAt', 'DESC')
       .limit(limit)
@@ -259,6 +263,8 @@ export class AdminService {
       dataType: r.dataType ?? null,
       dataId: r.dataId ?? null,
       createdAt: r.createdAt,
+      actorId: r.actorId ? +r.actorId : null,
+      actorName: [r.actorFirstName, r.actorLastName].filter(Boolean).join(' ') || null,
     }));
   }
 }

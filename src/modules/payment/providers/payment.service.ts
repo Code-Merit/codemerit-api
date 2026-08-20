@@ -10,6 +10,7 @@ import { PaymentOrderStatusEnum } from 'src/common/enum/payment-order-status.enu
 import { EnrollmentBatchStatusEnum } from 'src/common/enum/enrollment-batch-status.enum';
 import { IPaymentConfig } from 'src/config/payment-config';
 import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
+import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import { DEFAULT_TIER_DURATION_MONTHS } from 'src/modules/skill-enrollment/constants/skill-enrollment.constants';
 import { CreateCheckoutDto } from '../dtos/create-checkout.dto';
@@ -34,6 +35,7 @@ export class PaymentService {
     private readonly stripeProvider: StripeProvider,
     private readonly skillEnrollmentService: SkillEnrollmentService,
     private readonly configService: ConfigService,
+    private readonly activityService: ActivityService,
   ) {}
 
   /** Public, no auth required — a pricing page needs this before a user has even
@@ -448,6 +450,19 @@ export class PaymentService {
       order.paidAt = new Date();
       order.enrollmentId = enrollment.id;
       await this.orderRepo.save(order);
+
+      try {
+        await this.activityService.createActivity(
+          order.userId,
+          'Payment Successful',
+          `payment successful — "${order.tier}" plan enrollment confirmed.`,
+          { dataId: String(enrollment.id), dataType: 'skill_enrollment' },
+        );
+      } catch (activityError) {
+        this.logger.error(
+          `Failed to log payment-success activity for order ${order.id}: ${activityError instanceof Error ? activityError.message : String(activityError)}`,
+        );
+      }
     } catch (error) {
       if (error instanceof AppCustomException) {
         order.status = PaymentOrderStatusEnum.Failed;

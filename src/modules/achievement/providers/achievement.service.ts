@@ -19,6 +19,7 @@ import { CertificationTrack } from 'src/common/typeorm/entities/certification-tr
 import { Question } from 'src/common/typeorm/entities/question.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
+import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
@@ -108,6 +109,8 @@ export class AchievementService {
     private readonly quizResultRepo: Repository<QuizResult>,
     @InjectRepository(QuestionAttempt)
     private readonly questionAttemptRepo: Repository<QuestionAttempt>,
+    @InjectRepository(Subject)
+    private readonly subjectRepo: Repository<Subject>,
     private readonly subjectTrackAnalyzer: SubjectTrackAnalysisService,
     private readonly topicAnalyzer: TopicAnalysisService,
     private readonly notificationService: NotificationService,
@@ -147,7 +150,7 @@ export class AchievementService {
       await this.activityService.createActivity(
         userId,
         'Streak Milestone',
-        `You're on a ${streakResult.milestoneHit}-day streak!`,
+        `reached a ${streakResult.milestoneHit}-day streak!`,
       );
       await this.awardBadgeIfNew(userId, `streak_${streakResult.milestoneHit}`, badgeContext);
     }
@@ -157,6 +160,7 @@ export class AchievementService {
     const subjectIds = [...new Set(questions.map((q) => q.subjectId))];
     await this.evaluateSubjectMasteredBadge(userId, subjectIds, badgeContext);
     await this.evaluateCustomBadgeRules(userId, subjectIds, badgeContext);
+    await this.evaluateSubjectCompletionActivity(userId, subjectIds);
 
     const certificatesEarned = await this.evaluateCertifications(userId, subjectIds);
     if (certificatesEarned.length) {
@@ -249,7 +253,7 @@ export class AchievementService {
       await this.activityService.createActivity(
         userId,
         'Level Up',
-        `You reached Level ${levelAfter.level}: ${levelAfter.title}.`,
+        `reached Level ${levelAfter.level}: ${levelAfter.title}.`,
       );
     }
 
@@ -320,6 +324,32 @@ export class AchievementService {
         await this.awardBadgeIfNew(userId, BADGE_CODES.SUBJECT_MASTERED, badgeContext);
         return;
       }
+    }
+  }
+
+  /** Fires a one-time "Subject Completed" activity the first time every trivia topic in a
+   * subject reaches 100% correctCoverage. Unlike SUBJECT_MASTERED (a single global badge at a
+   * 70% bar), this is per-subject and has no persisted completion flag to check, so it dedupes
+   * via ActivityService.existsForData against dataType 'subject_completed' + dataId=subjectId. */
+  private async evaluateSubjectCompletionActivity(
+    userId: number,
+    subjectIds: number[],
+  ): Promise<void> {
+    for (const subjectId of subjectIds) {
+      const topics = await this.topicAnalyzer.getTopicStatsBySubject(subjectId, userId);
+      const trivia = topics.filter((t: any) => (+t.numTrivia || 0) > 0);
+      if (!trivia.length || !trivia.every((t: any) => +t.correctCoverage >= 100)) continue;
+
+      const dataId = String(subjectId);
+      if (await this.activityService.existsForData(userId, 'subject_completed', dataId)) continue;
+
+      const subject = await this.subjectRepo.findOne({ where: { id: subjectId } });
+      await this.activityService.createActivity(
+        userId,
+        'Subject Completed',
+        `completed "${subject?.title ?? 'a subject'}".`,
+        { dataId, dataType: 'subject_completed' },
+      );
     }
   }
 
@@ -504,9 +534,8 @@ export class AchievementService {
       await this.activityService.createActivity(
         userId,
         'Certificate Earned',
-        `You earned the "${track?.title ?? 'Certification'}" certificate.`,
-        String(certificationTrackId),
-        'certification_track',
+        `earned the "${track?.title ?? 'Certification'}" certificate.`,
+        { dataId: String(certificationTrackId), dataType: 'certification_track' },
       );
 
       return { certificationTrackId, certificateNumber: cert.certificateNumber };
@@ -542,9 +571,8 @@ export class AchievementService {
     await this.activityService.createActivity(
       userId,
       'Badge Earned',
-      `You earned the "${badge.name}" badge.`,
-      String(badge.id),
-      'badge',
+      `earned the "${badge.name}" badge.`,
+      { dataId: String(badge.id), dataType: 'badge' },
     );
   }
 
@@ -713,9 +741,12 @@ export class AchievementService {
     await this.activityService.createActivity(
       dto.userId,
       'Badge Earned',
-      `You earned the "${badge.name}" badge.`,
-      String(badge.id),
-      'badge',
+      `earned the "${badge.name}" badge.`,
+      {
+        dataId: String(badge.id),
+        dataType: 'badge',
+        actorId: granter.id !== dto.userId ? granter.id : undefined,
+      },
     );
 
     return { code: badge.code, name: badge.name, earnedAt: userBadge.earnedAt, alreadyEarned: false };

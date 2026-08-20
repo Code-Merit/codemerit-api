@@ -233,12 +233,14 @@ export class LinkedinShareService {
         userId,
         'Shared on LinkedIn',
         dto.url
-          ? 'Shared content with a link on LinkedIn.'
+          ? 'shared content with a link on LinkedIn.'
           : dto.imageUrl || dto.imageDataUrl
-            ? 'Shared content with an image on LinkedIn.'
-            : 'Shared a text post on LinkedIn.',
-        postResponse.headers['x-restli-id'] ?? undefined,
-        'LINKEDIN_SHARE',
+            ? 'shared content with an image on LinkedIn.'
+            : 'shared a text post on LinkedIn.',
+        {
+          dataId: postResponse.headers['x-restli-id'] ?? undefined,
+          dataType: 'LINKEDIN_SHARE',
+        },
       );
 
       // update audit row as successful
