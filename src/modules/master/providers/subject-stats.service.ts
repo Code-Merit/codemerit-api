@@ -549,6 +549,7 @@ export class SubjectStatsService {
       .addSelect('l.slug', 'slug')
       .addSelect('l.summary', 'summary')
       .addSelect('l.level', 'level')
+      .addSelect('l.format', 'format')
       .addSelect('l.topicId', 'topicId')
       .addSelect('t.title', 'topicTitle')
       .addSelect('t.slug', 'topicSlug')
@@ -579,13 +580,14 @@ export class SubjectStatsService {
       slug: r.slug,
       summary: r.summary ?? null,
       level: +r.level,
+      format: r.format,
       topicId: r.topicId ? +r.topicId : null,
       topicTitle: r.topicTitle ?? null,
       topicSlug: r.topicSlug ?? null,
       numSections: +r.numSections || 0,
       status: userId ? (r.status ?? UserLessonTrackerStatusEnum.Pending) : null,
       views: userId ? +r.views || 0 : 0,
-      progressPercent: userId ? (+r.progressPercent || 0) : 0,
+      progressPercent: userId ? +r.progressPercent || 0 : 0,
       lastActivityAt: userId ? (r.lastActivityAt ?? null) : null,
     }));
 
@@ -597,10 +599,10 @@ export class SubjectStatsService {
       : 0;
     const totalViews = userId ? list.reduce((sum, l) => sum + l.views, 0) : 0;
     const lastActivityAt = userId
-      ? list.reduce<string | null>((latest, l) => {
+      ? list.reduce<Date | null>((latest, l) => {
           if (!l.lastActivityAt) return latest;
-          if (!latest || new Date(l.lastActivityAt).getTime() > new Date(latest).getTime()) return l.lastActivityAt;
-          return latest;
+          const ts = new Date(l.lastActivityAt);
+          return !latest || ts > latest ? ts : latest;
         }, null)
       : null;
 
@@ -608,7 +610,7 @@ export class SubjectStatsService {
     // question coverage — kept inline here since it's a single field, not shared across levels.
     const learningCompleteness = list.length > 0 ? +((completed / list.length) * 100).toFixed(1) : 0;
 
-    return { total: list.length, completed, inProgress, totalViews, lastActivityAt, learningCompleteness, list };
+    return { total: list.length, completed, inProgress, totalViews, learningCompleteness, lastActivityAt, list };
   }
 
   // ─── Related Job Roles ────────────────────────────────────────────────────────
