@@ -19,6 +19,7 @@ export interface TrendSeries {
   certificates: DailySeriesItem[] | WeeklySeriesItem[];
   badges: DailySeriesItem[] | WeeklySeriesItem[];
   interviews: DailySeriesItem[] | WeeklySeriesItem[];
+  enrollments: DailySeriesItem[] | WeeklySeriesItem[];
 }
 
 export interface TrendsStats {
@@ -46,6 +47,8 @@ export interface OverviewStats {
   certificatesIssued: number;
   badgesAwarded: number;
   totalInterviews: number;
+  totalActiveEnrollments: number;
+  payingUsers: number;
 }
 
 // ---------------------
@@ -189,6 +192,53 @@ export interface InterviewStats {
 }
 
 // ---------------------
+// Enrollments & Plans
+// ---------------------
+export interface EnrollmentStats {
+  summary: {
+    total: number;
+    active: number;
+    expired: number;
+    cancelled: number;
+    uniqueActiveUsers: number;
+  };
+  byTier: { basic: number; curious: number; pro: number; intern: number; serious: number };
+  bySource: { adminGrant: number; purchase: number; promo: number };
+  conversion: { payingUsers: number; freeOnlyUsers: number; conversionRate: number };
+  growth: { newToday: number; newThisWeek: number; newThisMonth: number };
+  expiringSoon: number;
+  topSubjectsByActiveEnrollments: { id: number; title: string; activeEnrollments: number }[];
+  batches: {
+    total: number;
+    byStatus: { pending: number; completed: number; partiallyCompleted: number; failed: number };
+  };
+  plans: { totalActiveOfferings: number; premiumSubjectsWithoutPaidPlan: number };
+}
+
+// ---------------------
+// Revenue
+// ---------------------
+export interface CurrencyRevenueBucket {
+  totalOrders: number;
+  byStatus: { created: number; paid: number; failed: number; cancelled: number };
+  totalPaid: number;
+  conversionRate: number;
+  avgOrderValue: number;
+}
+
+export interface RevenueStats {
+  byCurrency: { INR: CurrencyRevenueBucket; USD: CurrencyRevenueBucket };
+  paidThisWeek: { INR: number; USD: number };
+  paidThisMonth: { INR: number; USD: number };
+  byTier: {
+    curious: { INR: number; USD: number };
+    pro: { INR: number; USD: number };
+    intern: { INR: number; USD: number };
+    serious: { INR: number; USD: number };
+  };
+}
+
+// ---------------------
 // Recent Activity
 // ---------------------
 export interface RecentActivityItem {
@@ -221,6 +271,8 @@ export interface AdminDashboardData {
   engagement: EngagementStats;
   achievements: AchievementStats;
   interviews: InterviewStats;
+  enrollments: EnrollmentStats;
+  revenue: RevenueStats;
   recentActivity: RecentActivityItem[];
   trends: TrendsStats;
   meta: DashboardMeta;

@@ -7,6 +7,8 @@ import { AdminContentService } from './providers/admin-content.service';
 import { AdminEngagementService } from './providers/admin-engagement.service';
 import { AdminAchievementsService } from './providers/admin-achievements.service';
 import { AdminInterviewsService } from './providers/admin-interviews.service';
+import { AdminEnrollmentsService } from './providers/admin-enrollments.service';
+import { AdminRevenueService } from './providers/admin-revenue.service';
 import { AdminTrendsService } from './providers/admin-trends.service';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { Question } from 'src/common/typeorm/entities/question.entity';
@@ -28,6 +30,10 @@ import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { Activity } from 'src/common/typeorm/entities/activity.entity';
 import { Interview } from 'src/common/typeorm/entities/interview.entity';
 import { AssessmentSession } from 'src/common/typeorm/entities/assessment-session.entity';
+import { SkillEnrollment } from 'src/common/typeorm/entities/skill-enrollment.entity';
+import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offering.entity';
+import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
+import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
 
 @Module({
   imports: [
@@ -51,6 +57,10 @@ import { AssessmentSession } from 'src/common/typeorm/entities/assessment-sessio
       Activity,
       Interview,
       AssessmentSession,
+      SkillEnrollment,
+      SkillTierOffering,
+      EnrollmentBatch,
+      PaymentOrder,
     ]),
   ],
   providers: [
@@ -60,6 +70,8 @@ import { AssessmentSession } from 'src/common/typeorm/entities/assessment-sessio
     AdminEngagementService,
     AdminAchievementsService,
     AdminInterviewsService,
+    AdminEnrollmentsService,
+    AdminRevenueService,
     AdminTrendsService,
   ],
   controllers: [AdminController],

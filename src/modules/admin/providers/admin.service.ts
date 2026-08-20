@@ -7,6 +7,8 @@ import { AdminContentService } from './admin-content.service';
 import { AdminEngagementService } from './admin-engagement.service';
 import { AdminAchievementsService } from './admin-achievements.service';
 import { AdminInterviewsService } from './admin-interviews.service';
+import { AdminEnrollmentsService } from './admin-enrollments.service';
+import { AdminRevenueService } from './admin-revenue.service';
 import { AdminTrendsService } from './admin-trends.service';
 import {
   PeopleStats,
@@ -14,6 +16,8 @@ import {
   EngagementStats,
   AchievementStats,
   InterviewStats,
+  EnrollmentStats,
+  RevenueStats,
   RecentActivityItem,
   TrendsStats,
 } from '../dtos/admin-dashboard.model';
@@ -84,7 +88,37 @@ const EMPTY_INTERVIEWS: InterviewStats = {
   topInterviewers: [],
 };
 
-const EMPTY_TREND_SERIES = { users: [], questions: [], quizzes: [], attempts: [], certificates: [], badges: [], interviews: [] };
+const EMPTY_ENROLLMENTS: EnrollmentStats = {
+  summary: { total: 0, active: 0, expired: 0, cancelled: 0, uniqueActiveUsers: 0 },
+  byTier: { basic: 0, curious: 0, pro: 0, intern: 0, serious: 0 },
+  bySource: { adminGrant: 0, purchase: 0, promo: 0 },
+  conversion: { payingUsers: 0, freeOnlyUsers: 0, conversionRate: 0 },
+  growth: { newToday: 0, newThisWeek: 0, newThisMonth: 0 },
+  expiringSoon: 0,
+  topSubjectsByActiveEnrollments: [],
+  batches: { total: 0, byStatus: { pending: 0, completed: 0, partiallyCompleted: 0, failed: 0 } },
+  plans: { totalActiveOfferings: 0, premiumSubjectsWithoutPaidPlan: 0 },
+};
+
+const EMPTY_CURRENCY_BUCKET = { INR: 0, USD: 0 };
+const EMPTY_REVENUE: RevenueStats = {
+  byCurrency: {
+    INR: { totalOrders: 0, byStatus: { created: 0, paid: 0, failed: 0, cancelled: 0 }, totalPaid: 0, conversionRate: 0, avgOrderValue: 0 },
+    USD: { totalOrders: 0, byStatus: { created: 0, paid: 0, failed: 0, cancelled: 0 }, totalPaid: 0, conversionRate: 0, avgOrderValue: 0 },
+  },
+  paidThisWeek: { ...EMPTY_CURRENCY_BUCKET },
+  paidThisMonth: { ...EMPTY_CURRENCY_BUCKET },
+  byTier: {
+    curious: { ...EMPTY_CURRENCY_BUCKET },
+    pro: { ...EMPTY_CURRENCY_BUCKET },
+    intern: { ...EMPTY_CURRENCY_BUCKET },
+    serious: { ...EMPTY_CURRENCY_BUCKET },
+  },
+};
+
+const EMPTY_TREND_SERIES = {
+  users: [], questions: [], quizzes: [], attempts: [], certificates: [], badges: [], interviews: [], enrollments: [],
+};
 const EMPTY_TRENDS: TrendsStats = { daily: { ...EMPTY_TREND_SERIES }, weekly: { ...EMPTY_TREND_SERIES } };
 
 @Injectable()
@@ -100,6 +134,8 @@ export class AdminService {
     private readonly engagementService: AdminEngagementService,
     private readonly achievementsService: AdminAchievementsService,
     private readonly interviewsService: AdminInterviewsService,
+    private readonly enrollmentsService: AdminEnrollmentsService,
+    private readonly revenueService: AdminRevenueService,
     private readonly trendsService: AdminTrendsService,
   ) {}
 
@@ -110,6 +146,8 @@ export class AdminService {
       { value: engagement, failed: engagementFailed },
       { value: achievements, failed: achievementsFailed },
       { value: interviews, failed: interviewsFailed },
+      { value: enrollments, failed: enrollmentsFailed },
+      { value: revenue, failed: revenueFailed },
       { value: recentActivity, failed: recentActivityFailed },
       { value: trends, failed: trendsFailed },
     ] = await Promise.all([
@@ -118,6 +156,8 @@ export class AdminService {
       this.settle('engagement', this.engagementService.getEngagementStats(), EMPTY_ENGAGEMENT),
       this.settle('achievements', this.achievementsService.getAchievementStats(), EMPTY_ACHIEVEMENTS),
       this.settle('interviews', this.interviewsService.getInterviewStats(), EMPTY_INTERVIEWS),
+      this.settle('enrollments', this.enrollmentsService.getEnrollmentStats(), EMPTY_ENROLLMENTS),
+      this.settle('revenue', this.revenueService.getRevenueStats(), EMPTY_REVENUE),
       this.settle('recentActivity', this.getRecentActivity(), [] as RecentActivityItem[]),
       this.settle('trends', this.trendsService.getTrends(), EMPTY_TRENDS),
     ]);
@@ -139,6 +179,8 @@ export class AdminService {
       certificatesIssued: achievements.certificates.totalIssued,
       badgesAwarded: achievements.badges.totalAwarded,
       totalInterviews: interviews.total,
+      totalActiveEnrollments: enrollments.summary.active,
+      payingUsers: enrollments.conversion.payingUsers,
     };
 
     const failedSections = [
@@ -147,6 +189,8 @@ export class AdminService {
       engagementFailed && 'engagement',
       achievementsFailed && 'achievements',
       interviewsFailed && 'interviews',
+      enrollmentsFailed && 'enrollments',
+      revenueFailed && 'revenue',
       recentActivityFailed && 'recentActivity',
       trendsFailed && 'trends',
     ].filter((s): s is string => !!s);
@@ -158,6 +202,8 @@ export class AdminService {
       engagement,
       achievements,
       interviews,
+      enrollments,
+      revenue,
       recentActivity,
       trends,
       meta: { partial: failedSections.length > 0, failedSections },

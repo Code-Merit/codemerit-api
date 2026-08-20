@@ -8,6 +8,7 @@ import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.en
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { Interview } from 'src/common/typeorm/entities/interview.entity';
+import { SkillEnrollment } from 'src/common/typeorm/entities/skill-enrollment.entity';
 
 // ------------------- TIME SERIES (DAILY + WEEKLY) -------------------
 // Same MySQL YEAR()/WEEK() bucketing approach used across the admin dashboard.
@@ -35,6 +36,9 @@ export class AdminTrendsService {
 
     @InjectRepository(Interview)
     private readonly interviewRepo: Repository<Interview>,
+
+    @InjectRepository(SkillEnrollment)
+    private readonly enrollmentRepo: Repository<SkillEnrollment>,
   ) {}
 
   async getTrends() {
@@ -61,6 +65,7 @@ export class AdminTrendsService {
       { repo: this.certificateRepo, alias: 'c', key: 'certificates', dateColumn: 'issuedAt' },
       { repo: this.userBadgeRepo, alias: 'ub', key: 'badges', dateColumn: 'earnedAt' },
       { repo: this.interviewRepo, alias: 'iv', key: 'interviews', dateColumn: 'createdAt' },
+      { repo: this.enrollmentRepo, alias: 'se', key: 'enrollments', dateColumn: 'createdAt' },
     ];
 
     const [dailyResults, weeklyResults] = await Promise.all([
