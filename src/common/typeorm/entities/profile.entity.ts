@@ -11,7 +11,7 @@ import { ReferralSourceEnum } from 'src/core/users/enums/referral-source.enum';
 export class Profile extends AbstractEntity implements IProfile {
   @Column({
     type: 'varchar',
-    length: 50,
+    length: 200,
     nullable: true,
     default: null,
   })
@@ -19,7 +19,7 @@ export class Profile extends AbstractEntity implements IProfile {
 
   @Column({
     type: 'varchar',
-    length: 50,
+    length: 100,
     nullable: true,
     default: null,
   })
