@@ -7,6 +7,7 @@ import { AppCustomException } from 'src/common/exceptions/app-custom-exception.f
 import { MailService } from 'src/common/mail/providers/mail.service';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
+import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
 import { QuizQuestion } from 'src/common/typeorm/entities/quiz-quesion.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
@@ -35,10 +36,10 @@ import { GetQuestionsByIdsDto } from 'src/modules/question/dtos/get-questions-by
 import { QuestionService } from 'src/modules/question/providers/question.service';
 import { QuestionGeneratorService } from 'src/modules/question/providers/question-generator.service';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
-import { DataSource, In, MoreThanOrEqual, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { CreateQuizDto } from '../dtos/create-quiz.dto';
 import { PublishedQuizFilterDto } from '../dtos/published-quiz.dto';
-import { SubmitQuizDto } from '../dtos/submit-quiz.dto';
+import { AttemptDto, SubmitQuizDto } from '../dtos/submit-quiz.dto';
 import { UpdateQuizDto } from '../dtos/update-quiz.dto';
 import {
   DEFAULT_QUIZ_LENGTH,
@@ -433,12 +434,13 @@ export class QuizService {
 
   /** Tier-aware: non-premium subjects and Pro+ tiers are unlimited. Otherwise, the
    * MINIMUM effective tier across every target subject (all-or-nothing, same pattern
-   * as before) determines the daily cap — a mix of a Curious-tier subject and a
-   * Basic-tier one is treated as Basic for this request. Approximated as "today's
-   * total UserQuiz creation count", not a per-subject count, matching the equivalent
-   * simplification already made for the lesson cap's daily (not cumulative) counter.
-   * This never blocks a quiz on subjects the user actually has full access to; it
-   * only ever throttles the ones they don't. */
+   * as before) determines the daily cap for this request. The cap itself is enforced
+   * per-subject (each subject enrollment carries its own independent daily allowance,
+   * not a pool shared across every subject the user is enrolled in) — via a
+   * quiz_subject join, since Quiz has no direct subjectId column. A quiz spanning
+   * multiple target subjects is blocked if ANY one of those specific subjects has
+   * already exhausted its own cap. This never blocks a quiz on subjects the user
+   * actually has full access to; it only ever throttles the ones they don't. */
   private async enforceSubjectAccessForUserQuiz(
     userId: number,
     subjectIds: number[],
@@ -471,18 +473,23 @@ export class QuizService {
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
-    const todaysCount = await this.quizRepository.count({
-      where: {
-        createdBy: userId,
-        quizType: QuizTypeEnum.UserQuiz,
-        createdAt: MoreThanOrEqual(startOfDay),
-      },
-    });
+    const countsBySubject = await this.quizSubjectRepo
+      .createQueryBuilder('qs')
+      .innerJoin(Quiz, 'q', 'q.id = qs.quizId')
+      .select('qs.subjectId', 'subjectId')
+      .addSelect('COUNT(DISTINCT q.id)', 'cnt')
+      .where('q.createdBy = :userId', { userId })
+      .andWhere('q.quizType = :quizType', { quizType: QuizTypeEnum.UserQuiz })
+      .andWhere('q.createdAt >= :startOfDay', { startOfDay })
+      .andWhere('qs.subjectId IN (:...targetSubjectIds)', { targetSubjectIds })
+      .groupBy('qs.subjectId')
+      .getRawMany<{ subjectId: number; cnt: string }>();
 
-    if (todaysCount >= dailyCap) {
+    const exhausted = countsBySubject.find((row) => +row.cnt >= dailyCap);
+    if (exhausted) {
       throw new AppCustomException(
         HttpStatus.FORBIDDEN,
-        `You've used today's ${dailyCap} free practice quizzes on your current plan (${minTier}). ` +
+        `You've used today's ${dailyCap} free practice quizzes on this subject's plan (${minTier}). ` +
         `Upgrade for unlimited practice, or come back tomorrow.`,
       );
     }
@@ -566,6 +573,60 @@ export class QuizService {
     return { message: 'Initial assessment generated successfully.', quiz };
   }
 
+  /**
+   * Re-derives isCorrect server-side for every attempt against QuestionOption ground
+   * truth, so a client bug can never mis-file a question as wrong (or right) — the
+   * selection logic in QuestionGeneratorService permanently excludes a question once it
+   * has any all-time isCorrect=TRUE row, so a mis-scored question would otherwise keep
+   * resurfacing forever regardless of what the user actually answers afterward.
+   * Questions with zero QuestionOption rows (free-text General/Survey, never served by
+   * UserQuiz but possible on Standard quizzes) are left on the client-reported value —
+   * the server has no ground truth to check those against.
+   */
+  private async recomputeAttemptCorrectness(
+    rawAttempts: AttemptDto[],
+  ): Promise<AttemptDto[]> {
+    if (rawAttempts.length === 0) return rawAttempts;
+
+    const questionIds = [...new Set(rawAttempts.map((a) => a.questionId))];
+    const options = await this.dataSource.getRepository(QuestionOption).find({
+      where: { questionId: In(questionIds) },
+      select: ['id', 'questionId', 'correct'],
+    });
+
+    const correctIdsByQuestion = new Map<number, Set<number>>();
+    const questionsWithOptions = new Set<number>();
+    for (const opt of options) {
+      questionsWithOptions.add(opt.questionId);
+      if (opt.correct) {
+        if (!correctIdsByQuestion.has(opt.questionId)) {
+          correctIdsByQuestion.set(opt.questionId, new Set());
+        }
+        correctIdsByQuestion.get(opt.questionId).add(opt.id);
+      }
+    }
+
+    return rawAttempts.map((a) => {
+      if (!questionsWithOptions.has(a.questionId)) {
+        // No options at all -> free-text/ungradable question. Unchanged.
+        return a;
+      }
+      const correctIds = correctIdsByQuestion.get(a.questionId);
+      if (!correctIds || correctIds.size === 0) {
+        // Data-quality gap: question has options but none marked correct. Trusting the
+        // client here would silently reopen the trust-boundary hole this fix closes.
+        console.log(
+          `QuizBuilder: question ${a.questionId} has options but none marked correct; grading attempt as incorrect.`,
+        );
+        return { ...a, isCorrect: false };
+      }
+      return {
+        ...a,
+        isCorrect: !a.isSkipped && correctIds.has(a.selectedOption),
+      };
+    });
+  }
+
   async submitQuiz(
     submitQuizDto: SubmitQuizDto,
   ): Promise<QuizResult & { newlyEarned?: NewlyEarnedDto | null }> {
@@ -593,7 +654,8 @@ export class QuizService {
     // recomputed here from the submitted attempts using the same generateScore() formula
     // every other scoring surface (subject dashboard, job-role readiness, etc.) uses, so a
     // quiz's own result and the dashboards built from it can never silently diverge again.
-    const attempts = submitQuizDto?.attempts ?? [];
+    const rawAttempts = submitQuizDto?.attempts ?? [];
+    const attempts = await this.recomputeAttemptCorrectness(rawAttempts);
     const total = attempts.length;
     const correct = attempts.filter((a) => a?.isCorrect === true).length;
     const unanswered = attempts.filter((a) => a?.isSkipped === true).length;

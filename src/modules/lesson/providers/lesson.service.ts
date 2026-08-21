@@ -29,7 +29,10 @@ interface LessonAccessResult {
 interface FreeLessonContext {
   viewedLessonIdsEver: Set<number>;
   viewedCountBySubjectEver: Map<number, number>;
-  todaysViewedCount: number;
+  // Daily cap is enforced per-subject (each subject enrollment gets its own
+  // independent daily allowance), not pooled across every subject the user
+  // is enrolled in — keyed by subjectId rather than a single running total.
+  todaysViewedCountBySubject: Map<number, number>;
   lessonCountBySubject: Map<number, number>;
 }
 
@@ -81,7 +84,8 @@ export class LessonService {
     }
 
     const dailyCap = caps?.dailyLessonCap ?? Infinity;
-    if (ctx.todaysViewedCount >= dailyCap) {
+    const todaysViewedCount = ctx.todaysViewedCountBySubject.get(lesson.subjectId) ?? 0;
+    if (todaysViewedCount >= dailyCap) {
       return { locked: true, isNewFreeGrant: false };
     }
 
@@ -89,7 +93,7 @@ export class LessonService {
   }
 
   /** Batched access computation for a set of lessons in one pass (no N+1 queries).
-   * `ctx.todaysViewedCount` is intentionally NOT incremented while iterating — for a
+   * `ctx.todaysViewedCountBySubject` is intentionally NOT incremented while iterating — for a
    * list of several not-yet-seen lessons, each is evaluated independently against the
    * same starting count, so the list can optimistically show more than one as
    * unlocked even though opening all of them would eventually hit the cap (list is
@@ -115,7 +119,7 @@ export class LessonService {
     const ctx: FreeLessonContext = {
       viewedLessonIdsEver: new Set(),
       viewedCountBySubjectEver: new Map(),
-      todaysViewedCount: 0,
+      todaysViewedCountBySubject: new Map(),
       lessonCountBySubject: new Map(),
     };
 
@@ -140,7 +144,12 @@ export class LessonService {
           view.subjectId,
           (ctx.viewedCountBySubjectEver.get(view.subjectId) ?? 0) + 1,
         );
-        if (view.createdAt >= startOfDay) ctx.todaysViewedCount += 1;
+        if (view.createdAt >= startOfDay) {
+          ctx.todaysViewedCountBySubject.set(
+            view.subjectId,
+            (ctx.todaysViewedCountBySubject.get(view.subjectId) ?? 0) + 1,
+          );
+        }
       }
       counts.forEach((c) => ctx.lessonCountBySubject.set(+c.subjectId, +c.cnt));
     }

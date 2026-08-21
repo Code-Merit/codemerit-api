@@ -254,6 +254,8 @@ export interface RecentActivityItem {
   // e.g. an admin-granted badge.
   actorId: number | null;
   actorName: string | null;
+  device: string | null;
+  client: string | null;
 }
 
 // ---------------------

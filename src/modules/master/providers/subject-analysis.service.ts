@@ -11,6 +11,7 @@ import { TopicAnalysisService } from './topic-analysis.service';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
+import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
 
 // This service's only live entry point (reachable from outside this file) is
 // getJobSubjectDashboards(), consumed by auth.service.ts (login response) and
@@ -132,13 +133,14 @@ export class SubjectAnalysisService {
           'wrong'
         )
         .addSelect('SUM(CASE WHEN qa.isSkipped = 1 THEN 1 ELSE 0 END)', 'skipped')
-        // subscription flag
-        .addSelect('CASE WHEN us.userId IS NOT NULL THEN 1 ELSE 0 END', 'isSubscribed')
+        // isSubscribed = "has a SkillEnrollment here that isn't explicitly cancelled" —
+        // same semantics as SubjectStatsService/TopicAnalysisService (see those for why
+        // not status='active'/not-expired). UserSubject, which this used to read, is retired.
+        .addSelect('CASE WHEN se.userId IS NOT NULL THEN 1 ELSE 0 END', 'isSubscribed')
         .leftJoin(
-          'user_subject',
-          'us',
-          'us.subjectId = s.id AND us.userId = :userId',
-          { userId }
+          'skill_enrollment', 'se',
+          'se.subjectId = s.id AND se.userId = :userId AND se.status != :cancelledStatus',
+          { userId, cancelledStatus: EnrollmentStatusEnum.Cancelled },
         )
         .setParameter('userId', userId);
 

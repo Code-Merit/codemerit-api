@@ -38,6 +38,7 @@ export class QuizResultService {
         'u.firstName',
         'u.lastName',
         'u.username',
+        'u.image',
       ])
       .innerJoin('r.quiz', 'q')
       .innerJoin('r.user', 'u')
@@ -229,6 +230,7 @@ export class QuizResultService {
         firstName: base.u_firstName,
         lastName: base.u_lastName,
         username: base.u_username,
+        image: base.u_image,
       },
       quiz: {
         id: base.r_quizId,

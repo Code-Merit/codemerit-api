@@ -12,7 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class AttemptDto {
+export class AttemptDto {
   @ApiProperty({ example: 101 })
   @IsInt()
   questionId: number;
@@ -29,6 +29,11 @@ class AttemptDto {
   @IsString()
   answer: string;
 
+  // Advisory only for gradable (option-based) questions — the server re-derives the
+  // real value from QuestionOption.correct in quiz.service.ts#recomputeAttemptCorrectness
+  // rather than trusting this field, so a client-side scoring bug can never permanently
+  // misfile a question as wrong. Still authoritative for free-text questions with no
+  // QuestionOption rows, since the server has no ground truth to check those against.
   @ApiProperty({ example: true })
   @IsBoolean()
   isCorrect: boolean;

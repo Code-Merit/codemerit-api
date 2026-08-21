@@ -26,9 +26,6 @@ export class LoginResponseDto implements LoginUser {
   //other conditional fields
   profile: Profile;
   permissions?: UserPermission[];
-  courseStats?: any;
-  quizStats?: any;
-  topicStats?: any;
   // Career-path *targets* (UserJobRole) — aspirational, carries no access entitlement.
   // Kept separate from jobRoleEnrollments below, which reflects real SkillEnrollment
   // access; a role can appear in one list, both, or neither.
@@ -45,25 +42,6 @@ export class LoginResponseDto implements LoginUser {
   // SkillEnrollmentService.getMyEnrollmentSummary()).
   subjectEnrollments?: SubjectEnrollmentSummary[];
   jobRoleEnrollments?: JobRoleSubjectsBreakdown[];
-  apiUsage?: {
-    count: number;
-    lastHitAt: Date | null;
-  };
-  //fields for admin
-  lmsMetrics: {
-    numAllQuestions: number;
-    numAllPublishedQuestions: number;
-    numTriviaQuestions: number;
-    numAllTopics: number;
-    numAllSubjects: number;
-    numAllInterviews: number;
-    numAllQuiz: number;
-  };
-  userMetrics: {
-    totalUsers: number;
-    pendingUsers: number;
-    activeUsers: number;
-  };
 
   constructor(partial: Partial<LoginResponseDto>) {
     Object.assign(this, partial);

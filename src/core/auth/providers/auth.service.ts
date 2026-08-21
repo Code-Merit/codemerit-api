@@ -5,16 +5,12 @@ import axios from 'axios';
 import * as bcrypt from 'bcrypt';
 import { OAuth2Client } from 'google-auth-library';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
-import { ApiUsageService } from 'src/common/services/api-usage.service';
 import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { AccountStatusEnum } from 'src/core/users/enums/account-status.enum';
 import { UserOtpTagsEnum } from 'src/core/users/enums/user-otp-Tags.enum';
 import { UserProfileService } from 'src/core/users/providers/user-profile.service';
 import { UserService } from 'src/core/users/providers/user.service';
-import { MasterService } from 'src/modules/master/providers/master.service';
-import { SubjectAnalysisService } from 'src/modules/master/providers/subject-analysis.service';
-import { TopicAnalysisService } from 'src/modules/master/providers/topic-analysis.service';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import { UserPermissionService } from 'src/modules/user-permission/providers/user-permission.service';
@@ -43,12 +39,8 @@ export class AuthService {
   constructor(
     private readonly usersService: UserService,
     private readonly jwtService: JwtService,
-    private readonly masterService: MasterService,
     private readonly userProfileService: UserProfileService,
     private readonly userPermissionService: UserPermissionService,
-    private readonly subjectAnalyzer: SubjectAnalysisService,
-    private readonly topicAnalysisProvider: TopicAnalysisService,
-    private readonly apiUsageService: ApiUsageService,
     private readonly skillEnrollmentService: SkillEnrollmentService,
     private readonly activityService: ActivityService,
 
@@ -121,15 +113,6 @@ export class AuthService {
     );
     //console.log('User Login user', user);
     const userData = await this.usersService.findByEmail(user?.email);
-    const courseStats = await this.subjectAnalyzer.getJobSubjectDashboards(
-      user?.id,
-      false,
-    );
-    // const topicStats = await this.topicAnalysisProvider.getAllTopicStats(
-    //   user?.id,
-    //   false,
-    // );
-    const apiUsage = await this.apiUsageService.findByUserId(user?.id);
 
     // Fetch user job role enrollments
     const enrollments = await this.userJobRoleRepo.find({
@@ -143,8 +126,6 @@ export class AuthService {
       jobRoleTitle: enrollment.jobRole?.title || null,
       createdAt: enrollment.createdAt,
     }));
-
-    const quizStats = await this.masterService.getUserQuizStats(userData.id);
 
     // Real, active access — SkillEnrollment is the sole source of truth here, split
     // subject-wise and job-role-wise. Distinct from `userJobRoles` above, which is
@@ -172,13 +153,6 @@ export class AuthService {
       userJobRoles,
       subjectEnrollments,
       jobRoleEnrollments,
-      courseStats,
-      quizStats,
-      apiUsage: {
-        count: apiUsage?.count ?? 0,
-        lastHitAt: apiUsage?.lastHitAt ?? null,
-      },
-      //topicStats
     });
 
     return response;
@@ -197,8 +171,8 @@ export class AuthService {
     // the frontend's AuthGuard reliably detect profileCompleted:false right after
     // QuickRegistration and route to onboarding, instead of that happening only as a side
     // effect of `profile` being entirely absent from this response. Deliberately still not
-    // attaching permissions/userJobRoles/subjectEnrollments/jobRoleEnrollments/courseStats/
-    // quizStats/apiUsage here — this stays a minimal response otherwise, on purpose.
+    // attaching permissions/userJobRoles/subjectEnrollments/jobRoleEnrollments here —
+    // this stays a minimal response otherwise, on purpose.
     const profile = await this.userProfileService.findOneByUserId(user.id);
     const response = new LoginResponseDto({
       id: user.id,

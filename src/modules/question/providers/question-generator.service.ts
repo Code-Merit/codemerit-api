@@ -8,6 +8,8 @@ import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { QuestionTopic } from 'src/common/typeorm/entities/quesion-topic.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
+import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
+import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { DataSource, In } from 'typeorm';
 import { GetQuestionsByIdsDto } from '../dtos/get-questions-by-ids.dto';
@@ -85,13 +87,25 @@ export class QuestionGeneratorService {
     // Each topic gets its own max-eligible-difficulty cap from the user's attempt
     // history, then topics are bucketed by that cap (at most 3 buckets) so one query per
     // bucket can enforce it — avoids a dynamic per-topic cap join in raw SQL.
-    const topicCaps = await this.resolveTopicCaps(groupIds, userId);
+    const [topicCaps, cooldownQuestionIds] = await Promise.all([
+      this.resolveTopicCaps(groupIds, userId),
+      this.getCooldownQuestionIds(userId),
+    ]);
     const bucketsByCap = this.bucketTopicsByCap(groupIds, topicCaps);
 
+    // Single running list of ids already placed in this quiz, threaded through every
+    // selection call below — pass 1's per-bucket loop and pass 2's backfill passes
+    // alike — so a question whose two topics land in two *different* buckets can never
+    // be picked twice. (A question tagged to two topics within the SAME call is instead
+    // collapsed inside the query itself — see getUniqueQuestions()/getRandomQuestions().)
+    const existingIds: number[] = [];
     let uniqueQuestions: any[] = [];
     for (const [cap, bucketTopicIds] of bucketsByCap) {
-      const bucketQuestions = await this.getUniqueQuestions(userId, bucketTopicIds, cap, perGroupCount);
+      const bucketQuestions = await this.getUniqueQuestions(
+        userId, bucketTopicIds, cap, perGroupCount, cooldownQuestionIds, existingIds,
+      );
       uniqueQuestions = uniqueQuestions.concat(bucketQuestions);
+      existingIds.push(...bucketQuestions.map(q => q.questionId));
     }
 
     // perGroupCount is a ceil()'d per-topic quota, so it's always at least 1 — when the
@@ -106,21 +120,26 @@ export class QuestionGeneratorService {
 
     if (uniqueQuestions.length < numQuestions) {
       let missingCount = numQuestions - uniqueQuestions.length;
-      const existingIds = uniqueQuestions.map(q => q.questionId);
       msg = 'random';
 
-      // Same per-bucket cap here — a thin Easy pool can never spill into a locked tier
-      // just to hit the requested count. It's fine to come up short overall; only a
-      // zero-total-across-every-bucket result is treated as an error, below.
-      for (const [cap, bucketTopicIds] of bucketsByCap) {
-        if (missingCount <= 0) break;
-        const listOfExistingIds = existingIds.length ? existingIds : [0];
-        const randomQuestions = await this.getRandomQuestions(
-          userId, bucketTopicIds, cap, listOfExistingIds, missingCount,
+      // Pass 1: cooldown-safe backfill — skip anything the user got wrong/skipped in
+      // their immediately preceding quiz, so it doesn't resurface the very next time.
+      const pass1 = await this.runBackfillPass(
+        userId, bucketsByCap, existingIds, missingCount, cooldownQuestionIds,
+      );
+      uniqueQuestions = uniqueQuestions.concat(pass1.questions);
+      missingCount = pass1.missingCount;
+
+      // Pass 2: unconditional fallback, no cooldown exclusion. Only reached when the
+      // cooldown-flagged questions were the ONLY remaining candidates in some bucket —
+      // the cooldown rule must never itself cause a shortfall or the zero-total error
+      // below; a repeat is better than a quiz that can't be generated.
+      if (missingCount > 0) {
+        const pass2 = await this.runBackfillPass(
+          userId, bucketsByCap, existingIds, missingCount, [],
         );
-        uniqueQuestions = uniqueQuestions.concat(randomQuestions);
-        existingIds.push(...randomQuestions.map(q => q.questionId));
-        missingCount -= randomQuestions.length;
+        uniqueQuestions = uniqueQuestions.concat(pass2.questions);
+        missingCount = pass2.missingCount;
       }
     }
 
@@ -246,6 +265,61 @@ export class QuestionGeneratorService {
     return DifficultyLevelEnum.Advanced;
   }
 
+  /**
+   * QuestionIds the user got wrong or skipped in their single most-recently-completed
+   * quiz (QuizResult is written exactly once per submission, so its latest createdAt is
+   * an unambiguous "last quiz" marker). Used as a one-shot cooldown exclusion so a
+   * question doesn't immediately resurface in the very next quiz — only the immediately
+   * preceding quiz is cooled down, not a window, so this can't compound with small
+   * topic pools and exclude an entire pool for several quizzes in a row.
+   */
+  private async getCooldownQuestionIds(userId: number): Promise<number[]> {
+    const lastResult = await this.dataSource.getRepository(QuizResult).findOne({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+      // createdAt must stay in `select` even though only quizId is read below — TypeORM
+      // wraps this in a DISTINCT subquery to support the `order`, and drops any column
+      // that isn't selected from that subquery, which breaks the ORDER BY at runtime if
+      // createdAt isn't included (confirmed against the real dev DB: ER_BAD_FIELD_ERROR).
+      select: ['id', 'quizId', 'createdAt'],
+    });
+    if (!lastResult?.quizId) return [];
+
+    const rows = await this.dataSource.getRepository(QuestionAttempt).find({
+      where: [
+        { userId, quizId: lastResult.quizId, isCorrect: false },
+        { userId, quizId: lastResult.quizId, isSkipped: true },
+      ],
+      select: ['questionId'],
+    });
+    return [...new Set(rows.map((r) => r.questionId))];
+  }
+
+  /** Shared body of the wrong-question backfill loop, run once per pass in generateUserQuiz(). */
+  private async runBackfillPass(
+    userId: number,
+    bucketsByCap: Map<DifficultyLevelEnum, number[]>,
+    existingIds: number[],
+    missingCount: number,
+    cooldownIds: number[],
+  ): Promise<{ questions: any[]; missingCount: number }> {
+    let questions: any[] = [];
+    // Same per-bucket cap here — a thin Easy pool can never spill into a locked tier
+    // just to hit the requested count. It's fine to come up short overall; only a
+    // zero-total-across-every-bucket result is treated as an error, in generateUserQuiz().
+    for (const [cap, bucketTopicIds] of bucketsByCap) {
+      if (missingCount <= 0) break;
+      const listOfExistingIds = existingIds.length ? existingIds : [0];
+      const randomQuestions = await this.getRandomQuestions(
+        userId, bucketTopicIds, cap, listOfExistingIds, missingCount, cooldownIds,
+      );
+      questions = questions.concat(randomQuestions);
+      existingIds.push(...randomQuestions.map(q => q.questionId));
+      missingCount -= randomQuestions.length;
+    }
+    return { questions, missingCount };
+  }
+
   private async resolveTopicCaps(
     topicIds: number[],
     userId: number,
@@ -283,8 +357,14 @@ export class QuestionGeneratorService {
     groupIds: number[],
     levelCap: DifficultyLevelEnum,
     perGroupCount: number,
+    cooldownIds: number[] = [],
+    excludeIds: number[] = [],
   ): Promise<any[]> {
     const groupIdList = groupIds.map(() => '?').join(',');
+    // Sentinel 0 keeps the array non-empty (mirrors listOfExistingIds in
+    // getRandomQuestions below) — no question ever has id 0, so it's a safe no-op.
+    const cooldownList = cooldownIds.length ? cooldownIds : [0];
+    const excludeList = excludeIds.length ? excludeIds : [0];
 
     const rawQuery = `
       WITH correct_questions AS (
@@ -329,16 +409,30 @@ export class QuestionGeneratorService {
           AND NOT EXISTS (
             SELECT 1 FROM correct_questions cq WHERE cq.questionId = q.id
           )
+          AND q.id NOT IN (?)
+          AND q.id NOT IN (?)
+      ),
+      -- A question tagged to more than one topic in this bucket produces one
+      -- grouped_questions row per topic it belongs to (each with its own per-topic rn).
+      -- Collapse those down to at most one row per question — keeping whichever topic
+      -- ranked it best (lowest rn) — so the same question can never occupy two slots in
+      -- the same quiz just because it's cross-tagged.
+      deduped_questions AS (
+        SELECT *, ROW_NUMBER() OVER (PARTITION BY questionId ORDER BY rn) as globalRn
+        FROM grouped_questions
+        WHERE rn <= ?
       )
       SELECT *
-      FROM grouped_questions
-      WHERE rn <= ?
+      FROM deduped_questions
+      WHERE globalRn = 1
       `;
     const params = [
       userId,
       userId,
       ...groupIds,
       levelCap,
+      cooldownList,
+      excludeList,
       perGroupCount
     ];
     return this.dataSource.query(rawQuery, params);
@@ -350,27 +444,30 @@ export class QuestionGeneratorService {
     levelCap: DifficultyLevelEnum,
     listOfExistingIds: number[],
     missingCount: number,
+    cooldownIds: number[] = [],
   ): Promise<any[]> {
     const groupIdList = groupIds.map(() => '?').join(',');
+    const cooldownList = cooldownIds.length ? cooldownIds : [0];
 
     const checkExistQuestionIds = `
       SELECT questionId
       FROM question_attempt
       WHERE userId = ? AND isCorrect = TRUE`;
 
+    // No topic-related columns are read from this query's result anywhere downstream
+    // (the response's topic info is rebuilt separately via a dedicated QuestionTopic
+    // lookup in generateUserQuiz()) — so topic scope is checked via EXISTS rather than
+    // an INNER JOIN, which would otherwise fan out one row per topic a question belongs
+    // to and let a cross-tagged question win two of the LIMIT slots below.
     const query2 = `
       SELECT
         q.id AS questionId, q.title, q.question, q.questionType, q.level, q.marks, q.slug, q.timeAllowed, q.tag, q.status, q.answer,
         q.hint, q.orderId, q.createdAt,
 
-        s.id AS subjectId, s.title AS subjectName,
-
-        t.id AS topicId, t.title AS topicTitle, t.description AS topicDescription
+        s.id AS subjectId, s.title AS subjectName
 
       FROM question q
       LEFT JOIN subject s ON s.id = q.subjectId
-      INNER JOIN question_topic qt ON qt.questionId = q.id
-      LEFT JOIN topic t ON t.id = qt.topicId
       LEFT JOIN (
         SELECT DISTINCT questionId FROM question_attempt WHERE userId = ?
       ) aq ON aq.questionId = q.id
@@ -379,7 +476,11 @@ export class QuestionGeneratorService {
         AND q.status = ?
         AND q.id NOT IN (${checkExistQuestionIds})
         AND q.id NOT IN (?)
-        AND qt.topicId IN (${groupIdList})
+        AND q.id NOT IN (?)
+        AND EXISTS (
+          SELECT 1 FROM question_topic qt
+          WHERE qt.questionId = q.id AND qt.topicId IN (${groupIdList})
+        )
         AND q.level <= ?
 
       ORDER BY q.level, (aq.questionId IS NOT NULL) ASC, RAND()
@@ -391,6 +492,7 @@ export class QuestionGeneratorService {
       QuestionStatusEnum.Active,       // status
       userId,                     // already-correctly-answered exclusion
       listOfExistingIds,                 // existingIds from earlier selection
+      cooldownList,                // wrong/skipped in the user's immediately preceding quiz
       ...groupIds,
       levelCap,
       missingCount                     // limit

@@ -245,6 +245,8 @@ export class AdminService {
         'activity.dataId as dataId',
         'activity.createdAt as createdAt',
         'activity.actorId as actorId',
+        'activity.device as device',
+        'activity.client as client',
         'user.firstName as firstName',
         'user.lastName as lastName',
         'actor.firstName as actorFirstName',
@@ -263,6 +265,8 @@ export class AdminService {
       dataType: r.dataType ?? null,
       dataId: r.dataId ?? null,
       createdAt: r.createdAt,
+      device: r.device ?? null,
+      client: r.client ?? null,
       actorId: r.actorId ? +r.actorId : null,
       actorName: [r.actorFirstName, r.actorLastName].filter(Boolean).join(' ') || null,
     }));
