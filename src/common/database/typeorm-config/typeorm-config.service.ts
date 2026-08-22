@@ -35,6 +35,7 @@ import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
 import { QuizSubject } from 'src/common/typeorm/entities/quiz-subject.entity';
 import { QuizTopic } from 'src/common/typeorm/entities/quiz-topic.entity';
 import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
+import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { SkillMetric } from 'src/common/typeorm/entities/skill-metric.entity';
 import { SkillRating } from 'src/common/typeorm/entities/skill-rating.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
@@ -82,6 +83,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         SkillRating,
         QuestionAttempt,
         Quiz,
+        UserQuiz,
         QuizResult,
         QuizQuestion,
         QuizSubject,

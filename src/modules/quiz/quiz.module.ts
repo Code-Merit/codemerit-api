@@ -6,6 +6,7 @@ import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { QuizSubject } from 'src/common/typeorm/entities/quiz-subject.entity';
 import { QuizTopic } from 'src/common/typeorm/entities/quiz-topic.entity';
 import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
+import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
 import { MasterModule } from '../master/master.module';
 import { NotificationModule } from '../notification/notification.module';
@@ -23,6 +24,7 @@ import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.modu
   imports: [
     TypeOrmModule.forFeature([
       Quiz,
+      UserQuiz,
       QuestionAttempt,
       QuizResult,
       QuizQuestion,

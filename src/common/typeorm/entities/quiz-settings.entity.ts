@@ -6,7 +6,9 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Quiz } from './quiz.entity';
+import { UserQuiz } from './user-quiz.entity';
 import { OrderingEnum, ModeEnum } from '../../enum/quiz-settings.enum';
+import { QuizTypeEnum } from '../../enum/quiz-type.enum';
 import { IQuizSettings } from '../interface/quiz-settings.interface';
 
 @Entity('quiz_settings')
@@ -58,10 +60,24 @@ export class QuizSettings implements IQuizSettings {
   @Column({ type: 'boolean', default: false })
   enableReview: boolean;
 
-  @Column({ type: 'int' })
-  quizId: number;
+  // Exactly one of quizId/userQuizId is populated per row — see QuizQuestion for
+  // the same convention/rationale.
+  @Column({ type: 'int', nullable: true })
+  quizId: number | null;
 
-  @OneToOne(() => Quiz, (quiz) => quiz.settings)
+  @Column({ type: 'int', nullable: true })
+  userQuizId: number | null;
+
+  // Nullable purely so `synchronize: true` can add this column to a table that
+  // already has rows without a default — see QuizQuestion for the same rationale.
+  @Column({ type: 'enum', enum: QuizTypeEnum, nullable: true })
+  quizType: QuizTypeEnum | null;
+
+  @OneToOne(() => Quiz, (quiz) => quiz.settings, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'quizId' })
   quiz: Quiz;
+
+  @OneToOne(() => UserQuiz, (userQuiz) => userQuiz.settings, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userQuizId' })
+  userQuiz: UserQuiz;
 }

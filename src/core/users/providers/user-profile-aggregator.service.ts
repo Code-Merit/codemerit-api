@@ -157,9 +157,13 @@ export class UserProfileAggregatorService {
   }
 
   private async getRecentQuizzes(userId: number) {
+    // QuizResult's quizId/userQuizId are mutually exclusive (Standard/UserQuiz
+    // split) — LEFT JOIN both possible parents and COALESCE, since only one will
+    // ever match per row.
     const rows = await this.dataSource
       .createQueryBuilder(QuizResult, 'qr')
       .leftJoin('qr.quiz', 'q')
+      .leftJoin('qr.userQuiz', 'uq')
       .select([
         'qr.id AS id',
         'qr.resultCode AS resultCode',
@@ -171,11 +175,11 @@ export class UserProfileAggregatorService {
         'qr.score AS score',
         'qr.status AS status',
         'qr.createdAt AS createdAt',
-        'q.id AS quizId',
-        'q.title AS quizTitle',
-        'q.slug AS quizSlug',
-        'q.quizType AS quizType',
-        'q.level AS quizLevel',
+        'qr.quizType AS quizType',
+        'COALESCE(qr.quizId, qr.userQuizId) AS quizId',
+        'COALESCE(q.title, uq.title) AS quizTitle',
+        'COALESCE(q.slug, uq.slug) AS quizSlug',
+        'COALESCE(q.level, uq.level) AS quizLevel',
       ])
       .where('qr.userId = :userId', { userId })
       .orderBy('qr.createdAt', 'DESC')

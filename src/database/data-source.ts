@@ -24,6 +24,7 @@ import { QuestionOption } from 'src/common/typeorm/entities/question-option.enti
 import { Question } from 'src/common/typeorm/entities/question.entity';
 import { QuestionTopic } from 'src/common/typeorm/entities/quesion-topic.entity';
 import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
+import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { QuizQuestion } from 'src/common/typeorm/entities/quiz-quesion.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
@@ -74,6 +75,7 @@ export const AppDataSource = new DataSource({
     SkillRating,
     QuestionAttempt,
     Quiz,
+    UserQuiz,
     QuizResult,
     QuizQuestion,
     QuizSubject,
@@ -118,6 +120,7 @@ export const AppDataSource = new DataSource({
     SkillRating,
     QuestionAttempt,
     Quiz,
+    UserQuiz,
     QuizResult,
     QuizQuestion,
     QuizSubject,

@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
+  IsEnum,
   IsInt,
   IsNumber,
   IsString,
@@ -11,6 +12,7 @@ import {
   IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 
 export class AttemptDto {
   @ApiProperty({ example: 101 })
@@ -52,6 +54,16 @@ export class SubmitQuizDto {
   @IsInt()
   @Min(1)
   quizId: number;
+
+  // Optional fast path: quizId alone is now ambiguous (it could be a `quiz.id` or a
+  // `user_quiz.id` in two independent id spaces) since the Standard/UserQuiz split.
+  // The frontend already holds the fetched quiz's quizType at submission time — send
+  // it along to skip the resolve-by-probing-both-tables fallback. Left optional
+  // (not required) so older/uncoordinated clients still work, just marginally slower.
+  @ApiPropertyOptional({ enum: QuizTypeEnum, example: QuizTypeEnum.UserQuiz })
+  @IsOptional()
+  @IsEnum(QuizTypeEnum)
+  quizType?: QuizTypeEnum;
 
   @ApiProperty({ example: 10 })
   @IsInt()

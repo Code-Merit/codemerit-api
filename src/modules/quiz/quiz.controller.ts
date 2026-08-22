@@ -173,6 +173,22 @@ export class QuizController {
   }
 
   @ApiOperation({
+    summary: 'Get my practice quizzes',
+    description:
+      'Every practice quiz (UserQuiz) the authenticated caller has generated for ' +
+      'themselves, each with question/attempt counts and a link to the latest ' +
+      'result if taken. Always scoped to the authenticated caller, never a ' +
+      'client-supplied id — distinct from GET /:userId below, which lists ' +
+      'Standard quizzes a user authored.',
+  })
+  @UseGuards(AuthGuard('jwt'))
+  @Get('me')
+  async getMyPracticeQuizzes(@Request() req: any): Promise<ApiResponse<any>> {
+    const result = await this.quizService.getMyPracticeQuizzes(req.user.id);
+    return new ApiResponse('My quizzes fetched successfully', result);
+  }
+
+  @ApiOperation({
     summary: 'Get user created quizzes with attempt count',
   })
   @Get('/:userId')

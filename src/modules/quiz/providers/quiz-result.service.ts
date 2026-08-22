@@ -1,5 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
+import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
@@ -14,13 +15,17 @@ export class QuizResultService {
     private readonly dataSource: DataSource
   ) { }
   async getQuizResultByCode(resultCode: string) {
-    // 1. Fetch base quiz + user + quiz result
+    // 1. Fetch base quiz + user + quiz result. QuizResult's quizId/userQuizId are
+    // now mutually exclusive (Standard/UserQuiz split) — LEFT JOIN both possible
+    // parents and COALESCE the fields, since only one will ever match.
     const base = await this.dataSource
       .createQueryBuilder(QuizResult, 'r')
       .select([
         'r.id',
         'r.resultCode',
         'r.quizId',
+        'r.userQuizId',
+        'r.quizType',
         'r.userId',
         'r.total',
         'r.correct',
@@ -30,17 +35,17 @@ export class QuizResultService {
         'r.remarks',
         'r.feedback',
         'r.createdAt',
-        'q.title',
-        'q.description',
-        'q.slug',
-        'q.quizType',
         'u.id',
         'u.firstName',
         'u.lastName',
         'u.username',
         'u.image',
       ])
-      .innerJoin('r.quiz', 'q')
+      .leftJoin('r.quiz', 'q')
+      .leftJoin('r.userQuiz', 'uq')
+      .addSelect('COALESCE(q.title, uq.title)', 'title')
+      .addSelect('COALESCE(q.description, uq.description)', 'description')
+      .addSelect('COALESCE(q.slug, uq.slug)', 'slug')
       .innerJoin('r.user', 'u')
       .where('r.resultCode = :resultCode', { resultCode })
       .getRawOne();
@@ -49,8 +54,13 @@ export class QuizResultService {
       throw new AppCustomException(HttpStatus.NOT_FOUND, 'Result not found');
     }
 
-    const quizId = base.r_quizId;
     const userId = base.r_userId;
+    // Whichever of quizId/userQuizId is populated identifies the anchor; the
+    // hanger-table column to join on for the attempt/question query below
+    // depends on which table this result's quiz actually lives in.
+    const isStandard = base.r_quizType === QuizTypeEnum.Standard;
+    const quizId = isStandard ? base.r_quizId : base.r_userQuizId;
+    const quizIdColumn = isStandard ? 'quizId' : 'userQuizId';
 
     // 2. Fetch QuestionAttempts for this quiz + user
     const questionRows = await this.dataSource
@@ -76,9 +86,14 @@ export class QuizResultService {
       .innerJoin('q.subject', 's')
       .leftJoin('q.questionTopics', 'qt')
       .leftJoin('qt.topic', 't')
-      .innerJoin(QuizQuestion, 'qq', 'qq.questionId = q.id AND qq.quizId = :quizId', { quizId })
+      .innerJoin(
+        QuizQuestion,
+        'qq',
+        `qq.questionId = q.id AND qq.${quizIdColumn} = :quizId`,
+        { quizId },
+      )
       .where('qa.userId = :userId', { userId })
-      .andWhere('qa.quizId = :quizId', { quizId })
+      .andWhere(`qa.${quizIdColumn} = :quizId`, { quizId })
       .getRawMany();
 
     // 3. Build questions array with options
@@ -233,11 +248,11 @@ export class QuizResultService {
         image: base.u_image,
       },
       quiz: {
-        id: base.r_quizId,
-        title: base.q_title,
-        description: base.q_description,
-        slug: base.q_slug,
-        quizType: base.q_quizType,
+        id: quizId,
+        title: base.title,
+        description: base.description,
+        slug: base.slug,
+        quizType: base.r_quizType,
       },
       subjects,
       topics,

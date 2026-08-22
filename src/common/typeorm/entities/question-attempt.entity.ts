@@ -13,6 +13,8 @@ import { QuestionOption } from './question-option.entity';
 import { Question } from './question.entity';
 import { User } from './user.entity';
 import { Quiz } from './quiz.entity';
+import { UserQuiz } from './user-quiz.entity';
+import { QuizTypeEnum } from '../../enum/quiz-type.enum';
 
 // Speeds up the "latest attempt per question for a user" queries used throughout
 // subject/topic/subject-track stats (WHERE userId = ? GROUP BY questionId) —
@@ -38,8 +40,20 @@ export class QuestionAttempt extends AbstractEntity implements IQuestionAttempt 
   })
   questionId: number;
 
+  // Exactly one of quizId/userQuizId is populated per row — see QuizResult for the
+  // same convention/rationale (SET NULL, not CASCADE, to preserve attempt history
+  // past a UserQuiz purge).
   @Column({ type: 'int', nullable: true })
-  quizId: number;
+  quizId: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  userQuizId: number | null;
+
+  // Nullable purely so `synchronize: true` can add this column to a table that
+  // already has rows without a default — see QuizQuestion (quiz-quesion.entity.ts)
+  // for the same rationale.
+  @Column({ type: 'enum', enum: QuizTypeEnum, nullable: true })
+  quizType: QuizTypeEnum | null;
 
   @Column({
     type: 'integer',
@@ -96,7 +110,11 @@ export class QuestionAttempt extends AbstractEntity implements IQuestionAttempt 
   @JoinColumn({ name: 'questionId', referencedColumnName: 'id' })
   question: Question;
 
-  @ManyToOne(() => Quiz, (quiz) => quiz.questionAttempts)
+  @ManyToOne(() => Quiz, (quiz) => quiz.questionAttempts, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'quizId' })
   quiz: Quiz;
+
+  @ManyToOne(() => UserQuiz, (userQuiz) => userQuiz.questionAttempts, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'userQuizId' })
+  userQuiz: UserQuiz;
 }

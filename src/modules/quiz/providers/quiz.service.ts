@@ -14,6 +14,7 @@ import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
 import { QuizSubject } from 'src/common/typeorm/entities/quiz-subject.entity';
 import { QuizTopic } from 'src/common/typeorm/entities/quiz-topic.entity';
 import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
+import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import {
@@ -56,6 +57,8 @@ export class QuizService {
   constructor(
     @InjectRepository(Quiz)
     private quizRepository: Repository<Quiz>,
+    @InjectRepository(UserQuiz)
+    private userQuizRepository: Repository<UserQuiz>,
     @InjectRepository(QuizQuestion)
     private quizQuestionRepo: Repository<QuizQuestion>,
     @InjectRepository(QuizSettings)
@@ -77,12 +80,25 @@ export class QuizService {
   ) { }
 
   async fetchQuizBySlug(slug: string): Promise<any> {
-    const quiz = await this.quizRepository
+    // Slugs stay globally unique across both tables (enforced at creation time in
+    // createQuiz()) — Standard is checked first since `quiz` is the smaller,
+    // curated table.
+    let quiz: Quiz | UserQuiz = await this.quizRepository
       .createQueryBuilder('quiz')
       .leftJoinAndSelect('quiz.quizQuestions', 'quizQuestion')
       .leftJoinAndSelect('quiz.settings', 'settings')
       .where('quiz.slug = :slug', { slug })
       .getOne();
+
+    if (!quiz) {
+      quiz = await this.userQuizRepository
+        .createQueryBuilder('quiz')
+        .leftJoinAndSelect('quiz.quizQuestions', 'quizQuestion')
+        .leftJoinAndSelect('quiz.settings', 'settings')
+        .where('quiz.slug = :slug', { slug })
+        .getOne();
+      if (quiz) (quiz as any).quizType = QuizTypeEnum.UserQuiz;
+    }
 
     if (!quiz) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz not found.`);
@@ -108,7 +124,7 @@ export class QuizService {
     // then Intermediate, then Advanced (random order within a level). Derived purely
     // from each question's own level at read time, so this works retroactively for
     // quizzes generated before this ordering existed. Standard quizzes are untouched.
-    if (quiz.quizType === QuizTypeEnum.UserQuiz) {
+    if ((quiz as any).quizType === QuizTypeEnum.UserQuiz) {
       questions = shuffleArray(questions).sort((a: any, b: any) => a.level - b.level);
     }
 
@@ -279,19 +295,35 @@ export class QuizService {
           if (!shortDesc) shortDesc = `Quick quiz on ${names}.`;
         }
       }
-      const quiz = new Quiz();
+      const isStandard = createQuizDto.quizType === QuizTypeEnum.Standard;
+      // Standard quizzes stay in `quiz` (curated, permanent); everything else lands
+      // in `user_quiz` (ephemeral, prunable) — see the entity split rationale on
+      // UserQuiz. The two tables share the same column shape, so building the
+      // in-memory instance is identical either way, only the target entity differs.
+      const quiz: Quiz | UserQuiz = isStandard ? new Quiz() : new UserQuiz();
       quiz.title = title;
       quiz.tag = createQuizDto.tag;
-      quiz.quizType = createQuizDto.quizType;
+      if (isStandard) (quiz as Quiz).quizType = createQuizDto.quizType;
       quiz.shortDesc = shortDesc ? shortDesc.slice(0, 200) : shortDesc;
       quiz.description = createQuizDto.description;
       quiz.goal = createQuizDto.goal ?? null;
       quiz.label = createQuizDto.label;
       quiz.category = createQuizDto.category ?? 'Default';
-      quiz.isPublished = createQuizDto.isPublished ?? false;
+      if (isStandard) (quiz as Quiz).isPublished = createQuizDto.isPublished ?? false;
+
+      // Slugs stay globally unique across BOTH tables (fetchQuizBySlug checks `quiz`
+      // then `user_quiz`, and can't disambiguate a collision), so every candidate is
+      // checked against both regardless of which table this quiz is landing in.
+      const slugExists = async (candidate: string): Promise<boolean> => {
+        const [inStandard, inUser] = await Promise.all([
+          this.quizRepository.findOne({ where: { slug: candidate } }),
+          this.userQuizRepository.findOne({ where: { slug: candidate } }),
+        ]);
+        return !!(inStandard || inUser);
+      };
 
       let slug: string;
-      if (createQuizDto.quizType === QuizTypeEnum.UserQuiz) {
+      if (!isStandard) {
         // Auto-generated UserQuiz titles are templated from scope names (e.g. every
         // "HTML Document Structure" topic quiz gets the same title), so the plain
         // title-slug collides constantly — baking in the creator's username + a short
@@ -299,17 +331,13 @@ export class QuizService {
         // as: html-document-structure-quiz-by-vishal-kumar-md41k2a0
         const username = await this.getUsernameForSlug(userId);
         slug = this.buildUserQuizSlug(title, username);
-        let existingSlug = await this.quizRepository.findOne({ where: { slug } });
-        while (existingSlug) {
+        while (await slugExists(slug)) {
           slug = this.buildUserQuizSlug(title, username);
-          existingSlug = await this.quizRepository.findOne({ where: { slug } });
         }
       } else {
         slug = generateSlug(title);
-        let existingSlug = await this.quizRepository.findOne({ where: { slug } });
-        while (existingSlug) {
+        while (await slugExists(slug)) {
           slug = generateUniqueSlug(title);
-          existingSlug = await this.quizRepository.findOne({ where: { slug } });
         }
       }
       quiz.slug = slug;
@@ -317,14 +345,27 @@ export class QuizService {
       quiz.level = createQuizDto.level ?? DifficultyLevelEnum.Easy;
       console.log('QuizBuilder #4: QuizToSave', quiz);
       return this.dataSource.transaction(async (manager) => {
-        const savedQuizzes = await manager.save(Quiz, quiz);
+        const savedQuizzes = isStandard
+          ? await manager.save(Quiz, quiz as Quiz)
+          : await manager.save(UserQuiz, quiz as UserQuiz);
+        // UserQuiz has no quizType column of its own (the table IS the type) — attach
+        // it to the in-memory/response object so every existing consumer that reads
+        // `.quizType` off a created/fetched quiz keeps working unchanged.
+        (savedQuizzes as any).quizType = createQuizDto.quizType;
         console.log('QuizBuilder #5: savedQuizzes', savedQuizzes);
+        // Every hanger row gets exactly one of quizId/userQuizId set, plus the
+        // denormalized quizType — see the entity comments for why both are kept.
+        const anchor = isStandard
+          ? { quizId: savedQuizzes.id, userQuizId: null as number | null }
+          : { quizId: null as number | null, userQuizId: savedQuizzes.id };
+
         const quizQuestion: QuizQuestion[] = [];
         const quizSubject: QuizSubject[] = [];
         const quizTopic: QuizTopic[] = [];
         for (const question of questions) {
           const quizQuestionItem = new QuizQuestion();
-          quizQuestionItem.quizId = savedQuizzes.id;
+          Object.assign(quizQuestionItem, anchor);
+          quizQuestionItem.quizType = createQuizDto.quizType;
           quizQuestionItem.questionId = question.id;
           quizQuestion.push(quizQuestionItem);
         }
@@ -333,7 +374,8 @@ export class QuizService {
         if (subjectIds && subjectIds.length > 0) {
           for (const id of subjectIds) {
             const quizSubjectItem = new QuizSubject();
-            quizSubjectItem.quizId = savedQuizzes.id;
+            Object.assign(quizSubjectItem, anchor);
+            quizSubjectItem.quizType = createQuizDto.quizType;
             quizSubjectItem.subjectId = id;
             quizSubject.push(quizSubjectItem);
           }
@@ -342,7 +384,8 @@ export class QuizService {
         if (topicIds && topicIds.length > 0) {
           for (const id of topicIds) {
             const quizTopicItem = new QuizTopic();
-            quizTopicItem.quizId = savedQuizzes.id;
+            Object.assign(quizTopicItem, anchor);
+            quizTopicItem.quizType = createQuizDto.quizType;
             quizTopicItem.topicId = id;
             quizTopic.push(quizTopicItem);
           }
@@ -350,12 +393,13 @@ export class QuizService {
         }
 
         // Create quiz settings if Standard quiz (settings optional in payload, defaults applied in DTO)
-        if (createQuizDto.quizType === 'Standard' && createQuizDto.settings) {
+        if (isStandard && createQuizDto.settings) {
           const quizSettings = manager.create(QuizSettings, {
             ...createQuizDto.settings,
-            quizId: savedQuizzes.id,
+            ...anchor,
+            quizType: createQuizDto.quizType,
           });
-          savedQuizzes.settings = await manager.save(
+          (savedQuizzes as Quiz).settings = await manager.save(
             QuizSettings,
             quizSettings,
           );
@@ -473,13 +517,15 @@ export class QuizService {
 
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
+    // UserQuiz rows (and their QuizSubject tags) live in user_quiz/userQuizId now —
+    // this function only ever concerns UserQuiz, so join there directly rather than
+    // via the old quizId/Quiz path.
     const countsBySubject = await this.quizSubjectRepo
       .createQueryBuilder('qs')
-      .innerJoin(Quiz, 'q', 'q.id = qs.quizId')
+      .innerJoin(UserQuiz, 'q', 'q.id = qs.userQuizId')
       .select('qs.subjectId', 'subjectId')
       .addSelect('COUNT(DISTINCT q.id)', 'cnt')
       .where('q.createdBy = :userId', { userId })
-      .andWhere('q.quizType = :quizType', { quizType: QuizTypeEnum.UserQuiz })
       .andWhere('q.createdAt >= :startOfDay', { startOfDay })
       .andWhere('qs.subjectId IN (:...targetSubjectIds)', { targetSubjectIds })
       .groupBy('qs.subjectId')
@@ -508,8 +554,9 @@ export class QuizService {
     userId: number,
     firstName: string,
     jobRoleId: number,
-  ): Promise<{ message: string; quiz: Quiz }> {
-    const existing = await this.quizRepository.findOne({
+  ): Promise<{ message: string; quiz: UserQuiz }> {
+    // Initial assessments are UserQuiz rows (tag-marked) — live in user_quiz now.
+    const existing = await this.userQuizRepository.findOne({
       where: { createdBy: userId, tag: INITIAL_ASSESSMENT_TAG },
       relations: ['settings'],
     });
@@ -553,18 +600,19 @@ export class QuizService {
     // { message, quiz } at runtime (pre-existing mismatch — see how
     // quiz.controller.ts's own create-quiz route already works around it).
     const created: any = await this.createQuiz(createQuizDto, userId);
-    const quiz: Quiz = created.quiz;
+    const quiz: UserQuiz = created.quiz;
 
     // createQuiz() only fails if it finds zero questions — fewer than the
     // requested 20 (e.g. a job role whose subjects only have 12 available) is
     // allowed and already succeeds. Reflect the ACTUAL count here rather than
     // hardcoding 20, since that's what really got saved as QuizQuestion rows.
     const actualQuestionCount = await this.quizQuestionRepo.count({
-      where: { quizId: quiz.id },
+      where: { userQuizId: quiz.id },
     });
 
     const quizSettings = this.quizSettingsRepository.create({
-      quizId: quiz.id,
+      userQuizId: quiz.id,
+      quizType: QuizTypeEnum.UserQuiz,
       numQuestions: actualQuestionCount,
       maxAttempts: 1,
     });
@@ -627,20 +675,51 @@ export class QuizService {
     });
   }
 
+  /** Resolves a bare quizId — ambiguous across two independent id spaces since the
+   * Standard/UserQuiz split (a `quiz.id` and a `user_quiz.id` can collide) — to
+   * which table it actually belongs to. Trusts an explicitly-provided quizType (the
+   * fast path — the frontend already has it from the quiz it fetched); falls back
+   * to probing `quiz` then `user_quiz` for older/uncoordinated callers. Throws if
+   * the id exists in neither. */
+  private async resolveQuizAnchor(
+    quizId: number,
+    quizType?: QuizTypeEnum,
+  ): Promise<{ quizType: QuizTypeEnum; title: string }> {
+    if (quizType !== QuizTypeEnum.UserQuiz) {
+      const standard = await this.quizRepository.findOne({ where: { id: quizId }, select: ['id', 'title'] });
+      if (standard) return { quizType: QuizTypeEnum.Standard, title: standard.title };
+      if (quizType === QuizTypeEnum.Standard) {
+        throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz with ID ${quizId} not found.`);
+      }
+    }
+    const userQuiz = await this.userQuizRepository.findOne({ where: { id: quizId }, select: ['id', 'title'] });
+    if (userQuiz) return { quizType: QuizTypeEnum.UserQuiz, title: userQuiz.title };
+    throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz with ID ${quizId} not found.`);
+  }
+
   async submitQuiz(
     submitQuizDto: SubmitQuizDto,
   ): Promise<QuizResult & { newlyEarned?: NewlyEarnedDto | null }> {
+    const { quizType, title: quizTitle } = await this.resolveQuizAnchor(
+      submitQuizDto?.quizId,
+      submitQuizDto?.quizType,
+    );
+    const isStandard = quizType === QuizTypeEnum.Standard;
+    const anchor = isStandard
+      ? { quizId: submitQuizDto.quizId, userQuizId: null as number | null }
+      : { quizId: null as number | null, userQuizId: submitQuizDto.quizId };
+
     // Enforce QuizSettings.maxAttempts (stored but previously never checked anywhere) —
     // without this, XP/leaderboard rank can be farmed for free by simply resubmitting
     // the same quiz. Quizzes without a settings row are left unrestricted (unchanged
     // behavior for legacy/ad-hoc quizzes that predate QuizSettings).
     const settings = await this.quizSettingsRepository.findOne({
-      where: { quizId: submitQuizDto?.quizId },
+      where: anchor,
       select: ['maxAttempts', 'passMarks'],
     });
     if (settings?.maxAttempts) {
       const priorAttempts = await this.quizResultRepository.count({
-        where: { quizId: submitQuizDto?.quizId, userId: submitQuizDto?.userId },
+        where: { ...anchor, userId: submitQuizDto?.userId },
       });
       if (priorAttempts >= settings.maxAttempts) {
         throw new AppCustomException(
@@ -682,7 +761,8 @@ export class QuizService {
     try {
       questionResult = await this.dataSource.transaction(async (manager) => {
         const result = manager.create(QuizResult, {
-          quizId: submitQuizDto?.quizId,
+          ...anchor,
+          quizType,
           userId: submitQuizDto?.userId,
           resultCode: generate6DigitNumber(),
           total,
@@ -699,14 +779,9 @@ export class QuizService {
 
         const savedResult = await manager.save(QuizResult, result);
 
-        const quiz = await manager.findOne(Quiz, {
-          where: { id: submitQuizDto?.quizId },
-          select: ['id', 'title'],
-        });
-
         await this.notificationService.notifyQuizCompleted(
           submitQuizDto?.userId,
-          quiz?.title ?? 'Quiz',
+          quizTitle ?? 'Quiz',
           score,
           submitQuizDto?.quizId,
         );
@@ -714,8 +789,9 @@ export class QuizService {
         // 3. Save QuestionAttempts
         for (const attempt of attempts) {
           const questionAttempt = manager.create(QuestionAttempt, {
+            ...anchor,
+            quizType,
             userId: submitQuizDto?.userId,
-            quizId: submitQuizDto?.quizId,
             questionId: attempt.questionId,
             selectedOption: attempt?.selectedOption,
             timeTaken: attempt?.timeTaken,
@@ -818,6 +894,57 @@ export class QuizService {
       author: item.createdBy,
       totalQuestions: parseInt(item.totalQuestions, 10) || 0,
       totalAttempts: parseInt(item.totalAttempts, 10) || 0,
+    }));
+  }
+
+  /** The "My Quizzes" list — every practice quiz (UserQuiz) this learner has
+   * generated for themselves, in `user_quiz` since the Standard/UserQuiz split,
+   * each with its question/attempt counts and (if taken) a direct link to the
+   * latest result. Distinct from getUserQuizzes() above, which lists Standard
+   * quizzes the caller *authored* (admin/quiz-builder use) — unrelated lists. */
+  async getMyPracticeQuizzes(userId: number): Promise<any[]> {
+    const quizzes = await this.userQuizRepository
+      .createQueryBuilder('uq')
+      .leftJoin(QuizResult, 'qr', 'qr.userQuizId = uq.id')
+      .leftJoin(QuizQuestion, 'qq', 'qq.userQuizId = uq.id')
+      .select('uq.id', 'id')
+      .addSelect('uq.title', 'title')
+      .addSelect('uq.slug', 'slug')
+      .addSelect('uq.tag', 'tag')
+      .addSelect('uq.category', 'category')
+      .addSelect('uq.level', 'level')
+      .addSelect('uq.createdAt', 'createdAt')
+      .addSelect('COUNT(DISTINCT qr.id)', 'totalAttempts')
+      .addSelect('COUNT(DISTINCT qq.id)', 'totalQuestions')
+      .addSelect(
+        `(SELECT qr2.resultCode FROM quiz_result qr2
+          WHERE qr2.userQuizId = uq.id
+          ORDER BY qr2.createdAt DESC LIMIT 1)`,
+        'latestResultCode',
+      )
+      .where('uq.createdBy = :userId', { userId })
+      .groupBy('uq.id')
+      .addGroupBy('uq.title')
+      .addGroupBy('uq.slug')
+      .addGroupBy('uq.tag')
+      .addGroupBy('uq.category')
+      .addGroupBy('uq.level')
+      .addGroupBy('uq.createdAt')
+      .orderBy('uq.createdAt', 'DESC')
+      .getRawMany();
+
+    return quizzes.map((item) => ({
+      id: parseInt(item.id, 10),
+      title: item.title,
+      slug: item.slug,
+      tag: item.tag,
+      category: item.category,
+      level: item.level,
+      createdAt: item.createdAt,
+      totalQuestions: parseInt(item.totalQuestions, 10) || 0,
+      totalAttempts: parseInt(item.totalAttempts, 10) || 0,
+      isQuizTaken: parseInt(item.totalAttempts, 10) > 0,
+      latestResultCode: item.latestResultCode ?? null,
     }));
   }
 
@@ -1229,6 +1356,7 @@ export class QuizService {
         for (const qId of questionIds) {
           const quizQuestion = new QuizQuestion();
           quizQuestion.quizId = updatedQuiz.id;
+          quizQuestion.quizType = QuizTypeEnum.Standard;
           quizQuestion.questionId = qId;
           quizQuestions.push(quizQuestion);
         }
@@ -1246,6 +1374,7 @@ export class QuizService {
           for (const sId of subjectIds) {
             const quizSubject = new QuizSubject();
             quizSubject.quizId = updatedQuiz.id;
+            quizSubject.quizType = QuizTypeEnum.Standard;
             quizSubject.subjectId = sId;
             quizSubjects.push(quizSubject);
           }
@@ -1264,6 +1393,7 @@ export class QuizService {
           for (const tId of topicIds) {
             const quizTopic = new QuizTopic();
             quizTopic.quizId = updatedQuiz.id;
+            quizTopic.quizType = QuizTypeEnum.Standard;
             quizTopic.topicId = tId;
             quizTopics.push(quizTopic);
           }
@@ -1286,6 +1416,7 @@ export class QuizService {
           const quizSettings = manager.create(QuizSettings, {
             ...updateQuizDto.settings,
             quizId: updatedQuiz.id,
+            quizType: QuizTypeEnum.Standard,
           });
           await manager.save(QuizSettings, quizSettings);
         }

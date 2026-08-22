@@ -8,8 +8,10 @@ import {
 import { IQuizResult } from '../interface/quiz-result.interface';
 import { AbstractEntity } from './abstract.entity';
 import { Quiz } from './quiz.entity';
+import { UserQuiz } from './user-quiz.entity';
 import { User } from './user.entity';
 import { QuizStatusEnum } from 'src/common/enum/quiz-status.enum';
+import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 
 @Entity()
 export class QuizResult extends AbstractEntity implements IQuizResult {
@@ -28,12 +30,34 @@ export class QuizResult extends AbstractEntity implements IQuizResult {
     })
     userId: number;
 
+    // Exactly one of quizId/userQuizId is populated per row — quizId for a Standard
+    // quiz (FK -> quiz.id), userQuizId for a UserQuiz (FK -> user_quiz.id). Both use
+    // ON DELETE SET NULL (not CASCADE): a future UserQuiz purge job can delete the
+    // practice quiz + its authoring rows while this result/score history survives —
+    // quizType stays put on the row even after the FK nulls out, so "this was a
+    // UserQuiz that's since been deleted" is still knowable.
     @Column({
         type: 'integer',
         name: 'quizId',
-        nullable: false,
+        nullable: true,
     })
-    quizId: number;
+    quizId: number | null;
+
+    @Column({
+        type: 'integer',
+        name: 'userQuizId',
+        nullable: true,
+    })
+    userQuizId: number | null;
+
+    // Nullable purely so `synchronize: true` can add this column to a table that
+    // already has rows without a default — see QuizQuestion for the same rationale.
+    @Column({
+        type: 'enum',
+        enum: QuizTypeEnum,
+        nullable: true,
+    })
+    quizType: QuizTypeEnum | null;
 
     @Column({
         type: 'integer',
@@ -126,9 +150,13 @@ export class QuizResult extends AbstractEntity implements IQuizResult {
     })
     status: QuizStatusEnum;
 
-     @ManyToOne(() => Quiz, (quiz) => quiz.results, { eager: true })
+     @ManyToOne(() => Quiz, (quiz) => quiz.results, { eager: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'quizId', referencedColumnName: 'id' })
   quiz: Quiz;
+
+  @ManyToOne(() => UserQuiz, (userQuiz) => userQuiz.results, { eager: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'userQuizId', referencedColumnName: 'id' })
+  userQuiz: UserQuiz;
 
   @ManyToOne(() => User, (user) => user.quizResults, { eager: true })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
