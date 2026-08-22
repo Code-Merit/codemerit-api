@@ -36,6 +36,18 @@ export const welcomeRoutes = [
     submenu: [],
   },
   {
+    path: '/app/my-quizzes',
+    title: 'My Quizzes',
+    iconType: 'material-icons-outlined',
+    icon: 'quiz',
+    class: '',
+    groupTitle: false,
+    badge: '',
+    badgeClass: '',
+    role: ['All'],
+    submenu: [],
+  },
+  {
     path: '/select-job-role',
     title: 'Explore Tech Roles',
     iconType: 'material-icons-outlined',

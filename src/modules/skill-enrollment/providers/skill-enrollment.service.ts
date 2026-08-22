@@ -430,6 +430,17 @@ export class SkillEnrollmentService {
     return !!(await this.findActiveEnrollment(userId, subjectId));
   }
 
+  /** Same lookup as hasActiveEnrollment() but returns the row itself — used by
+   * PaymentService to recover from the race where a payment's webhook delivery and its
+   * client-driven POST /apis/payments/verify call both attempt fulfillment concurrently:
+   * whichever loses createEnrollment()'s per-(userId,subjectId) lock sees a CONFLICT
+   * from an enrollment the *other* caller just created for this exact purchase, not a
+   * genuinely unrelated one, so the loser should record THAT enrollment against its
+   * order rather than treating the conflict as a real failure. */
+  async getActiveEnrollment(userId: number, subjectId: number): Promise<SkillEnrollment | null> {
+    return this.findActiveEnrollment(userId, subjectId);
+  }
+
   async revokeEnrollment(id: number, reason?: string): Promise<SkillEnrollment> {
     const enrollment = await this.enrollmentRepo.findOne({ where: { id } });
     if (!enrollment) {

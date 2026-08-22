@@ -14,8 +14,12 @@ import { PaymentProviderEnum } from 'src/common/enum/payment-provider.enum';
 import { PaymentOrderStatusEnum } from 'src/common/enum/payment-order-status.enum';
 
 // One row per checkout attempt. Created in `created` state when the gateway order/
-// session is requested, flipped to `paid` (idempotently) by the matching webhook,
-// which is also what fulfills the SkillEnrollment — never on the client's say-so.
+// session is requested, flipped to `paid` (idempotently) by the matching webhook OR by
+// POST /apis/payments/verify (signature-checked server-side against the gateway's own
+// secret, never on the client's unverified say-so) — whichever lands first fulfills the
+// SkillEnrollment; the other is a no-op. verify() exists because Razorpay's webhook
+// cannot reach a local/dev backend at all, so relying on it alone would leave every
+// local checkout stuck at `created` forever.
 @Index(['provider', 'providerOrderId'])
 @Entity()
 export class PaymentOrder extends AbstractEntity {

@@ -17,6 +17,7 @@ import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
+import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { Lesson } from 'src/common/typeorm/entities/lesson.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
@@ -44,6 +45,7 @@ import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
       Question,
       QuestionAttempt,
       Quiz,
+      UserQuiz,
       QuizResult,
       Lesson,
       UserLessonTracker,

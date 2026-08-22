@@ -20,6 +20,7 @@ import { Public } from 'src/core/auth/decorators/public.decorator';
 import { ApiResponse } from 'src/common/utils/api-response';
 import { CreateCheckoutDto } from './dtos/create-checkout.dto';
 import { CreateBatchCheckoutDto } from './dtos/create-batch-checkout.dto';
+import { VerifyCheckoutDto } from './dtos/verify-checkout.dto';
 import { PaymentService } from './providers/payment.service';
 
 @ApiTags('Payments')
@@ -97,6 +98,28 @@ export class PaymentController {
   async myOrders(@Request() req: any): Promise<ApiResponse<any>> {
     const result = await this.service.listMyOrders(req.user.id);
     return new ApiResponse('Your orders fetched successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: 'Verify a Razorpay payment and fulfill its order immediately',
+    description:
+      'Call this from Checkout.js\'s success `handler` right after payment completes, ' +
+      'passing back razorpay_order_id/razorpay_payment_id/razorpay_signature. Verifies ' +
+      'the signature against RAZORPAY_KEY_SECRET server-side and fulfills the matched ' +
+      'order(s) synchronously — this is what makes checkout work end-to-end on an ' +
+      'environment the Razorpay webhook can\'t reach (e.g. localhost). Idempotent and ' +
+      'safe to call even if the webhook also lands for the same order.',
+  })
+  @ApiResponseDoc({ status: 400, description: 'Signature does not match — payment could not be verified.' })
+  @ApiResponseDoc({ status: 404, description: 'No order owned by the caller matches this orderId/batchId + razorpayOrderId.' })
+  @ApiBearerAuth('access-token')
+  @Post('verify')
+  async verify(
+    @Body() dto: VerifyCheckoutDto,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.verifyAndFulfillCheckout(req.user.id, dto);
+    return new ApiResponse('Payment verified and order fulfilled.', result);
   }
 
   @ApiOperation({

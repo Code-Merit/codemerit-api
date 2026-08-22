@@ -15,6 +15,7 @@ import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/s
 import { DEFAULT_TIER_DURATION_MONTHS } from 'src/modules/skill-enrollment/constants/skill-enrollment.constants';
 import { CreateCheckoutDto } from '../dtos/create-checkout.dto';
 import { CreateBatchCheckoutDto } from '../dtos/create-batch-checkout.dto';
+import { VerifyCheckoutDto } from '../dtos/verify-checkout.dto';
 import { RazorpayProvider } from './razorpay.provider';
 import { StripeProvider } from './stripe.provider';
 import {
@@ -351,6 +352,44 @@ export class PaymentService {
     return this.orderRepo.find({ where: { userId }, order: { id: 'DESC' } });
   }
 
+  /** Client-driven counterpart to handleRazorpayWebhook() — called right after
+   * Checkout.js's `handler` fires with the payment result, so a checkout can be
+   * fulfilled immediately without depending on Razorpay's webhook actually being able
+   * to reach this server (never true for a local/dev backend). Signature is verified
+   * against RAZORPAY_KEY_SECRET (never trust the client's say-so that payment
+   * succeeded); the matched order(s) must belong to the caller AND already carry this
+   * exact razorpayOrderId (set at checkout-creation time) — this is what stops a caller
+   * from replaying a real signature from one of their own past orders against a
+   * different, unrelated order id. fulfillOrder() is already idempotent, so a webhook
+   * delivery landing before or after this call (or a page refresh replaying this call)
+   * is harmless either way. */
+  async verifyAndFulfillCheckout(userId: number, dto: VerifyCheckoutDto): Promise<{ status: string }> {
+    const valid = this.razorpayProvider.verifyPaymentSignature(
+      dto.razorpayOrderId,
+      dto.razorpayPaymentId,
+      dto.razorpaySignature,
+    );
+    if (!valid) {
+      // 400, not 401 — this is an authenticated request (real JWT attached) being
+      // rejected on business grounds (bad signature), not an auth failure. The
+      // frontend's global ErrorInterceptor force-logs-out + reloads on ANY 401 seen on a
+      // request that carried a token, regardless of *why* the backend returned it — a
+      // 401 here would silently log a customer out right after they paid.
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'Payment signature could not be verified.');
+    }
+
+    const where = dto.batchId != null
+      ? { batchId: dto.batchId, userId, provider: PaymentProviderEnum.Razorpay, providerOrderId: dto.razorpayOrderId }
+      : { id: dto.orderId, userId, provider: PaymentProviderEnum.Razorpay, providerOrderId: dto.razorpayOrderId };
+    const orders = await this.orderRepo.find({ where });
+    if (!orders.length) {
+      throw new AppCustomException(HttpStatus.NOT_FOUND, 'No matching order found for this payment.');
+    }
+
+    await this.fulfillOrders(orders, dto.razorpayPaymentId);
+    return { status: 'ok' };
+  }
+
   async handleRazorpayWebhook(rawBody: Buffer, signature: string): Promise<void> {
     const valid = this.razorpayProvider.verifyWebhookSignature(rawBody, signature);
     if (!valid) {
@@ -465,6 +504,25 @@ export class PaymentService {
       }
     } catch (error) {
       if (error instanceof AppCustomException) {
+        // A CONFLICT here almost always means the webhook and POST /apis/payments/verify
+        // raced for this exact purchase — one of them already created the enrollment via
+        // createEnrollment()'s per-(userId,subjectId) lock, and this call just lost that
+        // race. That is NOT a real failure (the payment was captured and access was
+        // granted, just via the other caller) — recording it as Failed would be wrong and
+        // would hide a successful purchase behind a scary status. Attach this order to
+        // whichever active enrollment now exists instead.
+        if (error.status === HttpStatus.CONFLICT) {
+          const existing = await this.skillEnrollmentService.getActiveEnrollment(order.userId, order.subjectId);
+          if (existing) {
+            order.status = PaymentOrderStatusEnum.Paid;
+            order.providerPaymentId = providerPaymentId;
+            order.paidAt = new Date();
+            order.enrollmentId = existing.id;
+            await this.orderRepo.save(order);
+            return;
+          }
+        }
+
         order.status = PaymentOrderStatusEnum.Failed;
         order.failureReason = `Payment captured but enrollment could not be fulfilled: ${error.message}`;
         await this.orderRepo.save(order);

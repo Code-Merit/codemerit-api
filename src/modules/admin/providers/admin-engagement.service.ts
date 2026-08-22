@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
+import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
@@ -13,6 +14,9 @@ export class AdminEngagementService {
   constructor(
     @InjectRepository(Quiz)
     private readonly quizRepo: Repository<Quiz>,
+
+    @InjectRepository(UserQuiz)
+    private readonly userQuizRepo: Repository<UserQuiz>,
 
     @InjectRepository(QuizResult)
     private readonly quizResultRepo: Repository<QuizResult>,
@@ -35,29 +39,45 @@ export class AdminEngagementService {
   }
 
   private async getQuizStats() {
-    const baseStats = await this.quizRepo
-      .createQueryBuilder('qz')
-      .select([
-        'COUNT(qz.id) as total',
-        `SUM(CASE WHEN qz.isPublished = true THEN 1 ELSE 0 END) as published`,
-        `SUM(CASE WHEN qz.isPublished = false THEN 1 ELSE 0 END) as draft`,
-        `SUM(CASE WHEN qz.quizType = :userQuiz THEN 1 ELSE 0 END) as userQuizType`,
-        `SUM(CASE WHEN qz.quizType = :standard THEN 1 ELSE 0 END) as standardType`,
-        `SUM(
-          CASE WHEN EXISTS (
-            SELECT 1 FROM quiz_result qr WHERE qr.quizId = qz.id
-          ) THEN 1 ELSE 0 END
-        ) as playedQuizzes`,
-      ])
-      .setParameters({ userQuiz: QuizTypeEnum.UserQuiz, standard: QuizTypeEnum.Standard })
-      .getRawOne();
+    // Standard/UserQuiz now live in separate tables (`quiz` is Standard-only,
+    // `user_quiz` holds the ephemeral practice quizzes) — query each and combine,
+    // rather than the single-table quizType breakdown this used to be.
+    const [standardStats, userQuizStats] = await Promise.all([
+      this.quizRepo
+        .createQueryBuilder('qz')
+        .select([
+          'COUNT(qz.id) as total',
+          `SUM(CASE WHEN qz.isPublished = true THEN 1 ELSE 0 END) as published`,
+          `SUM(CASE WHEN qz.isPublished = false THEN 1 ELSE 0 END) as draft`,
+          `SUM(
+            CASE WHEN EXISTS (
+              SELECT 1 FROM quiz_result qr WHERE qr.quizId = qz.id
+            ) THEN 1 ELSE 0 END
+          ) as playedQuizzes`,
+        ])
+        .getRawOne(),
+      this.userQuizRepo
+        .createQueryBuilder('uq')
+        .select([
+          'COUNT(uq.id) as total',
+          `SUM(
+            CASE WHEN EXISTS (
+              SELECT 1 FROM quiz_result qr WHERE qr.userQuizId = uq.id
+            ) THEN 1 ELSE 0 END
+          ) as playedQuizzes`,
+        ])
+        .getRawOne(),
+    ]);
 
     const [totalPlaysResult, avgScoreResult, topQuizzesRaw] = await Promise.all([
       this.quizResultRepo.createQueryBuilder('qr').select('COUNT(qr.id)', 'totalPlays').getRawOne(),
       this.quizResultRepo.createQueryBuilder('qr').select('AVG(qr.score)', 'avgScore').getRawOne(),
+      // Scoped to Standard content only — a "top quizzes by plays" leaderboard isn't
+      // a meaningful metric for ephemeral, largely one-off UserQuiz rows.
       this.quizResultRepo
         .createQueryBuilder('qr')
         .select(['qr.quizId as quizId', 'COUNT(qr.id) as plays'])
+        .where('qr.quizType = :standard', { standard: QuizTypeEnum.Standard })
         .groupBy('qr.quizId')
         .orderBy('plays', 'DESC')
         .limit(5)
@@ -66,18 +86,20 @@ export class AdminEngagementService {
 
     const topQuizzes = await this.attachQuizTitles(topQuizzesRaw);
 
-    const total = +baseStats.total || 0;
-    const playedQuizzes = +baseStats.playedQuizzes || 0;
+    const standardTotal = +standardStats.total || 0;
+    const userQuizTotal = +userQuizStats.total || 0;
+    const total = standardTotal + userQuizTotal;
+    const playedQuizzes = (+standardStats.playedQuizzes || 0) + (+userQuizStats.playedQuizzes || 0);
     const totalPlays = +totalPlaysResult.totalPlays || 0;
     const avgScore = +avgScoreResult.avgScore || 0;
 
     return {
       total,
-      published: +baseStats.published || 0,
-      draft: +baseStats.draft || 0,
+      published: +standardStats.published || 0,
+      draft: +standardStats.draft || 0,
       byType: {
-        userQuiz: +baseStats.userQuizType || 0,
-        standard: +baseStats.standardType || 0,
+        userQuiz: userQuizTotal,
+        standard: standardTotal,
       },
       playedQuizzes,
       totalPlays,

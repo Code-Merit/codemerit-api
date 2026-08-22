@@ -32,6 +32,32 @@ export class RazorpayProvider {
     return this.getConfig().keyId;
   }
 
+  /** Verifies Checkout.js's post-payment callback params against RAZORPAY_KEY_SECRET —
+   * per Razorpay's documented client-side verification scheme:
+   * HMAC-SHA256(`${razorpayOrderId}|${razorpayPaymentId}`, key_secret) must equal
+   * razorpaySignature. This is what lets a checkout get fulfilled immediately after the
+   * Checkout.js `handler` fires, without depending on the webhook actually being
+   * reachable (e.g. localhost during development) — the webhook path stays as a second,
+   * independent confirmation for whenever it *is* reachable. */
+  verifyPaymentSignature(razorpayOrderId: string, razorpayPaymentId: string, razorpaySignature: string): boolean {
+    const config = this.getConfig();
+    if (!config.keySecret) {
+      throw new AppCustomException(
+        HttpStatus.SERVICE_UNAVAILABLE,
+        'Razorpay is not configured yet — set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.',
+      );
+    }
+    if (!razorpaySignature) return false;
+    const expected = crypto
+      .createHmac('sha256', config.keySecret)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+      .digest('hex');
+    const expectedBuf = Buffer.from(expected);
+    const actualBuf = Buffer.from(razorpaySignature);
+    if (expectedBuf.length !== actualBuf.length) return false;
+    return crypto.timingSafeEqual(expectedBuf, actualBuf);
+  }
+
   async createOrder(params: {
     amount: number;
     currency: string;
