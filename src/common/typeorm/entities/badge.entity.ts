@@ -19,13 +19,13 @@ export class Badge {
 
   @Column({ type: 'varchar', length: 50, unique: true, nullable: false })
   code: string;
-
+  
   @IsNotEmpty()
   @IsString()
   @MinLength(2)
-  @MaxLength(30)
+  @MaxLength(80)
   @Transform(({ value }) => value.trim())
-  @Column({ type: 'varchar', length: 30 })
+  @Column({ type: 'varchar', length: 80 })
   name: string;
 
   @IsNotEmpty()

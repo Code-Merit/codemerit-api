@@ -46,9 +46,12 @@ export class Topic extends AbstractEntity implements ITopic {
   })
   label: TopicLabelEnum;
 
+  // Widened from 20 on 2026-08-23 — a 20-char cap meant 159 of 218 topics (73%) had
+  // this silently truncated mid-word (MySQL varchar truncates, doesn't error). Kept
+  // in sync with the DB-side ALTER TABLE — see feedback_synchronize_true_danger.
   @Column({
     type: 'varchar',
-    length: 20,
+    length: 150,
     nullable: true,
     default: null,
   })

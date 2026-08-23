@@ -12,7 +12,11 @@ import { Question } from './question.entity';
 
 @Entity()
 export class QuestionOption extends AbstractEntity implements IQuestionOption {
-  @Column({ type: 'varchar', length: 100, nullable: false })
+  // Widened from 100 on 2026-08-23 — MySQL was silently truncating longer
+  // scenario-explanation correct answers mid-word (varchar truncates, doesn't
+  // error). Kept in sync with the DB-side ALTER TABLE so synchronize:true never
+  // has to reconcile a length drift on its own — see feedback_synchronize_true_danger.
+  @Column({ type: 'varchar', length: 255, nullable: false })
   option: string;
 
   @Column({ default: false })
