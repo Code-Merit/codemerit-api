@@ -227,7 +227,10 @@ export class AuthService {
           auth_provider: 'Google',
         });
 
-        if (existingUser.accountStatus !== AccountStatusEnum.ACTIVE) {
+        // Only auto-activate accounts still pending e-mail verification — a BLOCKED
+        // account must stay BLOCKED here too, otherwise OAuth login silently
+        // overwrites the block and lets login() below wave it through.
+        if (existingUser.accountStatus === AccountStatusEnum.PENDING) {
           await this.usersService.updateUser(existingUser.id, {
             accountStatus: AccountStatusEnum.ACTIVE,
           });
@@ -273,7 +276,10 @@ export class AuthService {
         auth_provider: 'LinkedIn',
       });
 
-      if (existingUser.accountStatus !== AccountStatusEnum.ACTIVE) {
+      // Only auto-activate accounts still pending e-mail verification — a BLOCKED
+      // account must stay BLOCKED here too, otherwise OAuth login silently
+      // overwrites the block and lets login() below wave it through.
+      if (existingUser.accountStatus === AccountStatusEnum.PENDING) {
         await this.usersService.updateUser(existingUser.id, {
           accountStatus: AccountStatusEnum.ACTIVE,
         });
