@@ -6,8 +6,8 @@ import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 export const DEFAULT_TIER_CAPS: Partial<
   Record<EnrollmentTierEnum, { dailyQuizCap: number; dailyLessonCap: number }>
 > = {
-  [EnrollmentTierEnum.Basic]: { dailyQuizCap: 10, dailyLessonCap: 3 },
-  [EnrollmentTierEnum.Curious]: { dailyQuizCap: 20, dailyLessonCap: 7 },
+  [EnrollmentTierEnum.Basic]: { dailyQuizCap: 5, dailyLessonCap: 2 },
+  [EnrollmentTierEnum.Curious]: { dailyQuizCap: 11, dailyLessonCap: 5 },
 };
 
 // Basic-tier ceiling on premium subjects: once a user has viewed this fraction of a

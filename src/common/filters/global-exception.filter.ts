@@ -19,6 +19,7 @@ export class GlobalExceptionsFilter implements ExceptionFilter {
 
     let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     let message: any = 'Internal server error';
+    let code: string | undefined;
 
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
@@ -53,6 +54,7 @@ export class GlobalExceptionsFilter implements ExceptionFilter {
     else if (exception instanceof AppCustomException) {
       statusCode = exception.status;
       message = exception.message;
+      code = exception.code;
     }
 
     // Fallback for other types
@@ -68,6 +70,7 @@ export class GlobalExceptionsFilter implements ExceptionFilter {
       error: true,
       statusCode: statusCode,
       message: message && Array.isArray(message) ? message[0].message : message,
+      code,
       data: null,
     });
   }

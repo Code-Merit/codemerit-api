@@ -507,6 +507,7 @@ export class QuizService {
         HttpStatus.FORBIDDEN,
         `You're not enrolled in one or more of these subjects yet. ` +
         `Enroll in the free Basic plan (or higher) to start practicing.`,
+        'SUBJECT_NOT_ENROLLED',
       );
     }
     if (isTierAtLeast(minTier, EnrollmentTierEnum.Pro)) return;
@@ -537,6 +538,7 @@ export class QuizService {
         HttpStatus.FORBIDDEN,
         `You've used today's ${dailyCap} free practice quizzes on this subject's plan (${minTier}). ` +
         `Upgrade for unlimited practice, or come back tomorrow.`,
+        'DAILY_QUOTA_EXCEEDED',
       );
     }
   }
