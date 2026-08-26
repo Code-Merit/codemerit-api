@@ -33,6 +33,7 @@ import { NotificationService } from 'src/modules/notification/providers/notifica
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import { In, Repository } from 'typeorm';
 import { BadgeExplorerBadgeDto, BadgeExplorerGroupDto, BadgeExplorerResponseDto, RelevantBadgeDto } from '../dtos/badge-explorer.dto';
+import { BadgeDetailDto, BadgeDetailTopicDto } from '../dtos/badge-detail.dto';
 import { GrantBadgeDto } from '../dtos/grant-badge.dto';
 import { BadgeQueryService } from './badge-query.service';
 import { SubjectTrackAnalysisService } from '../../master/providers/subject-track-analysis.service';
@@ -857,6 +858,77 @@ export class AchievementService {
     }
 
     return { earned, relevant, groups };
+  }
+
+  /**
+   * One badge's full detail — backs the unearned-badge detail modal (thumbnail, "what you need"
+   * rule sentence, progress, required topics, enrollment status). Anonymous-safe like
+   * getBadgeExplorer: rule/progress/enrollment/topics.attempted are simply null/false without a
+   * userId. Computed on-demand per badge rather than folded into getBadgeExplorer's `groups` (which
+   * every visitor loads on every Badges-page visit) — this only runs when a caller actually opens
+   * one badge's detail.
+   */
+  async getBadgeDetail(code: string, userId?: number): Promise<BadgeDetailDto> {
+    const badge = await this.badgeRepo.findOne({ where: { code, isPublished: true } });
+    if (!badge) {
+      throw new AppCustomException(HttpStatus.NOT_FOUND, `Badge "${code}" not found.`);
+    }
+
+    const [ub, rule, earnedCount] = await Promise.all([
+      userId ? this.userBadgeRepo.findOne({ where: { userId, badgeId: badge.id } }) : Promise.resolve(null),
+      this.badgeRuleRepo.findOne({ where: { badgeId: badge.id } }),
+      this.userBadgeRepo.count({ where: { badgeId: badge.id } }),
+    ]);
+
+    const { resolveTitle, topicSubjectById, subjectSlugById } = await this.buildScopeTitleResolver([badge]);
+    const scopeTitle = resolveTitle(badge);
+    // Same "resolve a Topic-scoped badge to its parent SUBJECT" rule getBadgeExplorer's `relevant`
+    // computation uses — the CTA/enrollment check always mean "this subject's dashboard."
+    const parentSubjectId =
+      badge.scopeType === BadgeScopeEnum.SUBJECT ? badge.scopeId
+        : badge.scopeType === BadgeScopeEnum.TOPIC ? topicSubjectById.get(badge.scopeId!) ?? null
+        : null;
+    const scopeSlug = parentSubjectId != null ? subjectSlugById.get(parentSubjectId) ?? null : null;
+
+    const progressPercent = userId && rule ? await this.computeRuleProgress(userId, badge, rule) : null;
+
+    let isEnrolled: boolean | null = null;
+    if (userId && parentSubjectId != null) {
+      const subjectTierMap = await this.skillEnrollmentService.getSubjectTierMap(userId);
+      isEnrolled = subjectTierMap.has(parentSubjectId);
+    }
+
+    let topics: BadgeDetailTopicDto[] = [];
+    const scopeId = badge.scopeId;
+    if (badge.scopeType === BadgeScopeEnum.SUBJECT && scopeId != null) {
+      const topicStats = await this.topicAnalyzer.getTopicStatsBySubject(scopeId, userId);
+      topics = topicStats.map((t: any) => ({ id: t.id, title: t.title, attempted: !!t.isStarted }));
+    } else if (badge.scopeType === BadgeScopeEnum.TOPIC && scopeId != null) {
+      const [topicStat] = await this.topicAnalyzer.getTopicStatsByIds([scopeId], userId);
+      if (topicStat) topics = [{ id: topicStat.id, title: topicStat.title, attempted: !!topicStat.isStarted }];
+    }
+
+    return {
+      code: badge.code,
+      name: badge.name,
+      description: badge.description,
+      iconUrl: badge.iconUrl,
+      points: badge.points,
+      scopeType: badge.scopeType,
+      scopeId: badge.scopeId,
+      scopeTitle,
+      scopeSlug,
+      earnedAt: ub?.earnedAt ?? null,
+      source: ub?.source ?? null,
+      unlocked: !!ub,
+      metric: rule?.metric ?? null,
+      threshold: rule?.threshold ?? null,
+      difficultyLevel: rule?.difficultyLevel ?? null,
+      progressPercent,
+      isEnrolled,
+      topics,
+      earnedCount,
+    };
   }
 
   /**

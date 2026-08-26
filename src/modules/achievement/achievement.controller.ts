@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import {
   ApiTags,
@@ -158,6 +158,28 @@ export class AchievementController {
   @Get('explorer')
   async getBadgeExplorer(@Request() req: any) {
     return this.achievementService.getBadgeExplorer(req.user?.id);
+  }
+
+  /** One badge's full detail — backs the unearned-badge detail modal (rule sentence, progress,
+   * required topics, enrollment status). Visitor-accessible like /explorer: rule/topics come back
+   * regardless of auth, but progress/enrollment/topic-attempted are only populated for a signed-in
+   * caller. Computed on-demand per badge, not part of /explorer's payload, so Browse All stays
+   * cheap for every visitor while the detail modal still gets everything it needs. */
+  @ApiOperation({
+    summary: "One badge's full detail (rule, progress, required topics, enrollment status)",
+    description:
+      "Returns the same fields as /explorer's badge entries plus the BadgeRule (metric/threshold/" +
+      'difficultyLevel), this caller\'s progressPercent toward it, whether they\'re enrolled in its ' +
+      "subject, and the list of topics it covers (each tagged `attempted` for the caller). No " +
+      'authentication required — those caller-specific fields are simply null/false for an ' +
+      'anonymous caller.',
+  })
+  @ApiResponseDoc({ status: 404, description: 'No published badge with that code.' })
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('badges/:code/detail')
+  async getBadgeDetail(@Param('code') code: string, @Request() req: any) {
+    return this.achievementService.getBadgeDetail(code, req.user?.id);
   }
 
   /** Manually award a MANUAL-method badge to a user, e.g. an interviewer granting
