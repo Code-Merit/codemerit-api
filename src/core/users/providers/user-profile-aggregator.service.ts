@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
@@ -13,10 +13,22 @@ import { BadgeQueryService } from 'src/modules/achievement/providers/badge-query
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
 import { computeLevel } from 'src/modules/achievement/constants/gamification.constants';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
+import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { UserService } from './user.service';
+
+// Who's asking — drives the PII gate below. Anonymous callers never reach getFullProfile at all
+// (see getPublicProfile / users.controller.ts's separate, unguarded route for that case); this
+// type only needs to distinguish the profile owner and an Admin from everyone else who can
+// still legally load this page (e.g. today's Admin+Manager route guard on /users/view/:userName).
+export interface ProfileViewer {
+  id: number;
+  role: string;
+}
 
 @Injectable()
 export class UserProfileAggregatorService {
+  private readonly logger = new Logger(UserProfileAggregatorService.name);
+
   constructor(
     private readonly userService: UserService,
     private readonly userPermissionService: UserPermissionService,
@@ -30,8 +42,22 @@ export class UserProfileAggregatorService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async getFullProfile(username: string) {
+  // Job-role-derived subjects (getJobSubjectDashboards) and directly-enrolled subjects
+  // (getEnrolledSubjectDashboards) can legitimately overlap — union by subject id rather than
+  // concatenating, so a subject reachable both ways only ever shows once.
+  private async getCourseStats(userId: number) {
+    const [byJobRole, byEnrollment] = await Promise.all([
+      this.subjectAnalysisService.getJobSubjectDashboards(userId, false),
+      this.subjectAnalysisService.getEnrolledSubjectDashboards(userId, false),
+    ]);
+    const byId = new Map<number, any>();
+    for (const s of [...byJobRole, ...byEnrollment]) byId.set(s.id, s);
+    return [...byId.values()];
+  }
+
+  async getFullProfile(username: string, viewer: ProfileViewer) {
     const user = await this.userService.findByUsername(username);
+    const canViewContactInfo = viewer.id === user.id || viewer.role === UserRoleEnum.ADMIN;
 
     const [
       courseStats,
@@ -45,7 +71,7 @@ export class UserProfileAggregatorService {
       activities,
       streak,
     ] = await Promise.all([
-      this.subjectAnalysisService.getJobSubjectDashboards(user.id, false),
+      this.getCourseStats(user.id),
       this.userPermissionService.getPermissionsForProfile(user.id),
       this.getRecentQuizzes(user.id),
       this.getAssessmentSessions(user.id),
@@ -57,8 +83,20 @@ export class UserProfileAggregatorService {
       this.userStreakRepository.findOne({ where: { userId: user.id } }),
     ]);
 
+    // Scope title resolution needs badgeData.earned's actual contents, so it can't join the
+    // Promise.all above — was previously unresolvable at all (getUserBadges' earned rows carry
+    // no title, only scopeType/scopeId numbers), which is exactly why Platform Achievements
+    // couldn't show a real scope label for anything beyond the hardcoded Global badges.
+    const earnedBadges = await this.achievementService.enrichWithScopeTitles(badgeData.earned);
+
     return {
       ...user,
+      // Overexposed previously: this endpoint had no viewer awareness at all, so any caller who
+      // cleared the route guard (e.g. a Manager on /users/view/:userName) received full contact
+      // info in the raw response even though the frontend only ever rendered it for self/Admin
+      // (UserComponent.canViewPrivateInfo). Enforced here now instead of trusting the template.
+      email: canViewContactInfo ? user.email : null,
+      mobile: canViewContactInfo ? user.mobile : null,
       permissions,
       courseStats,
       quizzes: quizData,
@@ -69,7 +107,10 @@ export class UserProfileAggregatorService {
       self_assessments: assessmentData.self_assessments,
       external_assessments: assessmentData.external_assessments,
       certificates,
-      badges: badgeData.earned,
+      // Earned-only, every scope mixed together — each now carries scopeType/scopeId/scopeLabel
+      // (see enrichWithScopeTitles above), so the profile's Platform Achievements widget can
+      // show a real caption instead of nothing/"Global" for every non-Global badge.
+      badges: earnedBadges,
       // Platform-wide (non-subject/job-role/topic) badges — earned + locked, unlocked-tagged and
       // sortOrder-ordered, same shape subjectDashboard/programDetails embed for their own scopes.
       // Distinct from `badges` above, which is earned-only and mixes every scope together.
@@ -93,29 +134,100 @@ export class UserProfileAggregatorService {
     };
   }
 
+  /**
+   * Anonymous-safe "credential card" — deliberately a separate method and query surface from
+   * getFullProfile rather than one endpoint with conditional field-stripping. A dedicated method
+   * that simply never selects/returns email, mobile, quizzes, enrollments, permissions, or
+   * settings is safe by construction; a shared method whose safety depends on an if-branch being
+   * correct every time is one missed branch away from leaking PII to a visitor. Called from an
+   * unguarded route (see users.controller.ts) — no viewer parameter at all, since every caller
+   * gets the identical minimal shape regardless of who (or whether anyone) is signed in.
+   */
+  async getPublicProfile(username: string) {
+    const user = await this.userService.findByUsername(username);
+
+    const [courseStats, certificates, badgeData, globalBadges, streak] = await Promise.all([
+      this.getCourseStats(user.id),
+      this.getCertificates(user.id),
+      this.achievementService.getUserBadges(user.id),
+      this.badgeQueryService.getUserBadgesForScope(BadgeScopeEnum.GLOBAL, undefined, user.id),
+      this.userStreakRepository.findOne({ where: { userId: user.id } }),
+    ]);
+
+    return {
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      designation: user.designation ?? null,
+      image: user.image ?? null,
+      city: user.city ?? null,
+      country: user.country ?? null,
+      about: user.profile?.about ?? null,
+      createdAt: user.createdAt,
+      gamification: {
+        points: user.points ?? 0,
+        level: computeLevel(user.points ?? 0),
+        streak: {
+          current: streak?.currentStreak ?? 0,
+          longest: streak?.longestStreak ?? 0,
+        },
+      },
+      // Titles + top-line numbers only — no per-question scores/accuracy, which reads more like
+      // a performance review than a public "what they're learning" credential card.
+      subjects: courseStats.map((s) => ({ id: s.id, title: s.title, slug: s.slug, image: s.image, color: s.color })),
+      badges: badgeData.earned,
+      globalBadges,
+      certificates: certificates.map((c) => ({
+        certificateNumber: c.certificateNumber,
+        issuedAt: c.issuedAt,
+        skillName: c.skillName,
+        tierDisplayName: c.tierDisplayName,
+        verificationCode: c.verificationCode,
+      })),
+    };
+  }
+
+  // Wrapped end-to-end (not just logged) — certificates are optional/degradable data (the
+  // Certificates tab already has a "No certificates yet" empty state), so a failure here must
+  // never take down the rest of getFullProfile/getPublicProfile the way it did once already:
+  // this dev DB has had its schema rewritten out from under a running app at least once this
+  // week by something outside this codebase (no migration runner or seeder in this repo touches
+  // `certificate`'s columns — see project_profile_redesign_v2_implementation.md), dropping the
+  // scorePercentage/skillName/tierDisplayName columns added alongside this query and breaking
+  // every profile load with a raw "Unknown column" SQL error. This can't be fully prevented from
+  // application code, but it no longer needs to be fatal.
   private async getCertificates(userId: number) {
-    const rows = await this.dataSource
-      .createQueryBuilder()
-      .select('c.id', 'certificateId')
-      .addSelect('c.certificateNumber', 'certificateNumber')
-      .addSelect('c.status', 'status')
-      .addSelect('c.issuedAt', 'issuedAt')
-      .addSelect('c.expiresAt', 'expiresAt')
-      .addSelect('c.pdfUrl', 'pdfUrl')
-      .addSelect('c.verificationCode', 'verificationCode')
-      .addSelect('ct.id', 'certificationTrackId')
-      .addSelect('ct.title', 'certificationTrackTitle')
-      .addSelect('jr.id', 'jobRoleId')
-      .addSelect('jr.title', 'jobRoleTitle')
-      .addSelect('jr.slug', 'jobRoleSlug')
-      .from('certificate', 'c')
-      .innerJoin('certification_track', 'ct', 'ct.id = c.certificationTrackId')
-      .leftJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id')
-      .leftJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId')
-      .where('c.userId = :userId', { userId })
-      .orderBy('c.issuedAt', 'DESC')
-      .addOrderBy('ctjr.sortOrder', 'ASC')
-      .getRawMany();
+    let rows: any[];
+    try {
+      rows = await this.dataSource
+        .createQueryBuilder()
+        .select('c.id', 'certificateId')
+        .addSelect('c.certificateNumber', 'certificateNumber')
+        .addSelect('c.status', 'status')
+        .addSelect('c.issuedAt', 'issuedAt')
+        .addSelect('c.expiresAt', 'expiresAt')
+        .addSelect('c.pdfUrl', 'pdfUrl')
+        .addSelect('c.verificationCode', 'verificationCode')
+        .addSelect('c.scorePercentage', 'scorePercentage')
+        .addSelect('c.skillName', 'skillName')
+        .addSelect('c.tierDisplayName', 'tierDisplayName')
+        .addSelect('ct.id', 'certificationTrackId')
+        .addSelect('ct.title', 'certificationTrackTitle')
+        .addSelect('jr.id', 'jobRoleId')
+        .addSelect('jr.title', 'jobRoleTitle')
+        .addSelect('jr.slug', 'jobRoleSlug')
+        .from('certificate', 'c')
+        .innerJoin('certification_track', 'ct', 'ct.id = c.certificationTrackId')
+        .leftJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id')
+        .leftJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId')
+        .where('c.userId = :userId', { userId })
+        .orderBy('c.issuedAt', 'DESC')
+        .addOrderBy('ctjr.sortOrder', 'ASC')
+        .getRawMany();
+    } catch (err) {
+      this.logger.error(`getCertificates failed for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`);
+      return [];
+    }
 
     const byCertificate = new Map<
       number,
@@ -126,6 +238,9 @@ export class UserProfileAggregatorService {
         expiresAt: Date;
         pdfUrl: string;
         verificationCode: string;
+        scorePercentage: number | null;
+        skillName: string | null;
+        tierDisplayName: string | null;
         certificationTrack: { id: number; title: string };
         jobRoles: Array<{ id: number; title: string; slug: string }>;
       }
@@ -140,6 +255,12 @@ export class UserProfileAggregatorService {
           expiresAt: r.expiresAt,
           pdfUrl: r.pdfUrl,
           verificationCode: r.verificationCode,
+          // Null on any certificate issued before this snapshot was added — the frontend degrades
+          // gracefully (omits the score/tier line) rather than showing a fabricated number for
+          // pre-existing certs.
+          scorePercentage: r.scorePercentage != null ? +r.scorePercentage : null,
+          skillName: r.skillName ?? r.certificationTrackTitle ?? null,
+          tierDisplayName: r.tierDisplayName ?? null,
           certificationTrack: { id: +r.certificationTrackId, title: r.certificationTrackTitle },
           jobRoles: [],
         });

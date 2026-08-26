@@ -19,7 +19,9 @@ import { CertificationTrack } from 'src/common/typeorm/entities/certification-tr
 import { Question } from 'src/common/typeorm/entities/question.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
+import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
+import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
@@ -28,7 +30,9 @@ import { generate6DigitNumber } from 'src/common/utils/common-functions';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { NotificationService } from 'src/modules/notification/providers/notification.service';
+import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import { In, Repository } from 'typeorm';
+import { BadgeExplorerBadgeDto, BadgeExplorerGroupDto, BadgeExplorerResponseDto, RelevantBadgeDto } from '../dtos/badge-explorer.dto';
 import { GrantBadgeDto } from '../dtos/grant-badge.dto';
 import { BadgeQueryService } from './badge-query.service';
 import { SubjectTrackAnalysisService } from '../../master/providers/subject-track-analysis.service';
@@ -111,12 +115,17 @@ export class AchievementService {
     private readonly questionAttemptRepo: Repository<QuestionAttempt>,
     @InjectRepository(Subject)
     private readonly subjectRepo: Repository<Subject>,
+    @InjectRepository(JobRole)
+    private readonly jobRoleRepo: Repository<JobRole>,
+    @InjectRepository(Topic)
+    private readonly topicRepo: Repository<Topic>,
     private readonly subjectTrackAnalyzer: SubjectTrackAnalysisService,
     private readonly topicAnalyzer: TopicAnalysisService,
     private readonly notificationService: NotificationService,
     private readonly activityService: ActivityService,
     private readonly permissionsService: PermissionsService,
     private readonly badgeQueryService: BadgeQueryService,
+    private readonly skillEnrollmentService: SkillEnrollmentService,
   ) {}
 
   /**
@@ -395,33 +404,47 @@ export class AchievementService {
   }
 
   private async isBadgeRuleSatisfied(userId: number, badge: Badge, rule: BadgeRule): Promise<boolean> {
+    const progress = await this.computeRuleProgress(userId, badge, rule);
+    return progress != null && progress >= rule.threshold;
+  }
+
+  /**
+   * The percentage math behind isBadgeRuleSatisfied, extracted so the Badges page's Relevant tab
+   * can show real "how close" progress (see achievement.controller.ts's explorer route) using the
+   * exact same number that decides pass/fail at quiz-submit time — never a second, drift-prone
+   * approximation. Returns null only when there's no data yet (zero attempts in scope), the same
+   * case isBadgeRuleSatisfied previously folded straight into `false`.
+   */
+  private async computeRuleProgress(userId: number, badge: Badge, rule: BadgeRule): Promise<number | null> {
     if (rule.metric === BadgeRuleMetricEnum.SUBJECT_CORRECT_COVERAGE) {
       const topics = await this.topicAnalyzer.getTopicStatsBySubject(badge.scopeId, userId);
       const trivia = topics.filter((t: any) => (+t.numTrivia || 0) > 0);
-      if (!trivia.length) return false;
+      if (!trivia.length) return null;
       if (rule.difficultyLevel) {
         // A single overall percentage across the whole subject at this difficulty, not a
         // per-topic-every check — a "Beginner" bar shouldn't be broken by one topic having only
         // 2 Easy questions and missing 1.
         const { correct, total } = this.sumCorrectByDifficulty(trivia, rule.difficultyLevel);
-        return total > 0 && (correct / total) * 100 >= rule.threshold;
+        return total > 0 ? +((correct / total) * 100).toFixed(1) : null;
       }
-      // No difficulty filter: every topic must individually clear the bar — same strict
-      // definition subject_mastered/javascript_expert already use.
-      return trivia.every((t: any) => +t.correctCoverage >= rule.threshold);
+      // No difficulty filter: every topic must individually clear the bar (same strict
+      // definition subject_mastered/javascript_expert already use) — so the weakest topic is the
+      // real bottleneck. Reporting its coverage as "progress" is what closeness actually means
+      // here; an average across topics could read as "close" while one topic still fails outright.
+      return Math.min(...trivia.map((t: any) => +t.correctCoverage || 0));
     }
 
     if (rule.metric === BadgeRuleMetricEnum.TOPIC_CORRECT_COVERAGE) {
       const [topic] = await this.topicAnalyzer.getTopicStatsByIds([badge.scopeId], userId);
-      if (!topic || (+topic.numTrivia || 0) === 0) return false;
+      if (!topic || (+topic.numTrivia || 0) === 0) return null;
       if (rule.difficultyLevel) {
         const { correct, total } = this.sumCorrectByDifficulty([topic], rule.difficultyLevel);
-        return total > 0 && (correct / total) * 100 >= rule.threshold;
+        return total > 0 ? +((correct / total) * 100).toFixed(1) : null;
       }
-      return +topic.correctCoverage >= rule.threshold;
+      return +topic.correctCoverage || 0;
     }
 
-    return false;
+    return null;
   }
 
   /** Sums correct/total for one difficulty level across one or more topic-stat rows (from
@@ -503,28 +526,39 @@ export class AchievementService {
       const progressPercent = (completed / total) * 100;
       if (progressPercent < CERT_ACHIEVED) continue;
 
-      const issued = await this.issueCertificate(userId, certTrackId);
+      const issued = await this.issueCertificate(userId, certTrackId, progressPercent);
       if (issued) certificatesEarned.push(issued);
     }
 
     return certificatesEarned;
   }
 
+  // Cosmetic banding of the issuing score — this product has no separate tier concept beyond
+  // the single CERT_ACHIEVED pass bar (see completion-thresholds.ts), so "Distinction" is just
+  // a nicer way of saying "well above the bar," not a stored grade.
+  private tierForScore(scorePercentage: number): string {
+    return scorePercentage >= 90 ? 'Certified with Distinction' : 'Certified';
+  }
+
   private async issueCertificate(
     userId: number,
     certificationTrackId: number,
+    scorePercentage: number,
   ): Promise<{ certificationTrackId: number; certificateNumber: string } | null> {
     try {
+      const track = await this.certificationTrackRepo.findOne({ where: { id: certificationTrackId } });
       const cert = await this.certificateRepo.save(
         this.certificateRepo.create({
           userId,
           certificationTrackId,
           certificateNumber: `CM-${certificationTrackId}-${generate6DigitNumber()}`,
           verificationCode: `${generate6DigitNumber()}${generate6DigitNumber()}`,
+          scorePercentage: +scorePercentage.toFixed(2),
+          skillName: track?.title ?? null,
+          tierDisplayName: this.tierForScore(scorePercentage),
         }),
       );
 
-      const track = await this.certificationTrackRepo.findOne({ where: { id: certificationTrackId } });
       await this.notificationService.notifyCertificateIssued(
         userId,
         track?.title ?? 'Certification',
@@ -662,6 +696,167 @@ export class AchievementService {
     // guaranteed to correlate with isManuallyGrantable for every badge.
     if (isManuallyGrantable !== undefined) where.isManuallyGrantable = isManuallyGrantable;
     return this.badgeRepo.find({ where, relations: ['rule'], order: { sortOrder: 'ASC', id: 'ASC' } });
+  }
+
+  // Shared by getBadgeExplorer (whole catalog) and enrichWithScopeTitles (an arbitrary badge
+  // list, e.g. one user's earned set) — batch-resolves Subject/JobRole/Topic titles for
+  // whatever scopeType/scopeId pairs are actually present, one query per scope type rather than
+  // one per badge. No existing badge endpoint does this; every other consumer resolves titles
+  // client-side via the cached master catalog, which an anonymous visitor may not have loaded.
+  private async buildScopeTitleResolver(
+    items: { scopeType: BadgeScopeEnum; scopeId: number | null }[],
+  ): Promise<{
+    resolveTitle: (item: { scopeType: BadgeScopeEnum; scopeId: number | null }) => string | null;
+    // Exposed separately (not swallowed into resolveTitle) — getBadgeExplorer's "relevant"
+    // computation needs a Topic's parent subjectId, not just its title, plus each Subject's
+    // slug (for the frontend's "Continue in <Subject> →" CTA, /dashboard/learn/:slug).
+    topicSubjectById: Map<number, number>;
+    subjectSlugById: Map<number, string>;
+    subjectTitleById: Map<number, string>;
+  }> {
+    const idsFor = (scopeType: BadgeScopeEnum) =>
+      [...new Set(items.filter((d) => d.scopeType === scopeType && d.scopeId != null).map((d) => d.scopeId!))];
+    const subjectIds = idsFor(BadgeScopeEnum.SUBJECT);
+    const jobRoleIds = idsFor(BadgeScopeEnum.JOBROLE);
+    const topicIds = idsFor(BadgeScopeEnum.TOPIC);
+
+    const [subjects, jobRoles, topics] = await Promise.all([
+      subjectIds.length ? this.subjectRepo.find({ where: { id: In(subjectIds) } }) : Promise.resolve([]),
+      jobRoleIds.length ? this.jobRoleRepo.find({ where: { id: In(jobRoleIds) } }) : Promise.resolve([]),
+      topicIds.length ? this.topicRepo.find({ where: { id: In(topicIds) } }) : Promise.resolve([]),
+    ]);
+    const subjectTitleById = new Map(subjects.map((s) => [s.id, s.title]));
+    const jobRoleTitleById = new Map(jobRoles.map((j) => [j.id, j.title]));
+    const topicTitleById = new Map(topics.map((t) => [t.id, t.title]));
+    const topicSubjectById = new Map(topics.map((t) => [t.id, t.subjectId]));
+    const subjectSlugById = new Map(subjects.map((s) => [s.id, s.slug]));
+
+    const resolveTitle = (item: { scopeType: BadgeScopeEnum; scopeId: number | null }): string | null => {
+      switch (item.scopeType) {
+        case BadgeScopeEnum.SUBJECT: return subjectTitleById.get(item.scopeId!) ?? null;
+        case BadgeScopeEnum.JOBROLE: return jobRoleTitleById.get(item.scopeId!) ?? null;
+        case BadgeScopeEnum.TOPIC: return topicTitleById.get(item.scopeId!) ?? null;
+        default: return null; // Global has no scoped title
+      }
+    };
+    return { resolveTitle, topicSubjectById, subjectSlugById, subjectTitleById };
+  }
+
+  // Enriches an arbitrary badge list (e.g. user-profile-aggregator.service.ts's earned-badges
+  // field) with a resolved scopeTitle — same title-resolution logic getBadgeExplorer uses, on a
+  // caller-supplied list instead of the whole catalog.
+  async enrichWithScopeTitles<T extends { scopeType: BadgeScopeEnum; scopeId: number | null }>(
+    items: T[],
+  ): Promise<(T & { scopeTitle: string | null })[]> {
+    const { resolveTitle } = await this.buildScopeTitleResolver(items);
+    return items.map((item) => ({ ...item, scopeTitle: resolveTitle(item) }));
+  }
+
+  /**
+   * Anonymous-safe, single-call backing for the public Badges page — the full published catalog,
+   * grouped by scope with server-resolved Subject/JobRole/Topic titles, plus `earned` and
+   * `relevant` slices for `userId` (both empty when `userId` is omitted). `relevant` = not-yet-
+   * unlocked badges tied to the caller's *real* enrollment via SkillEnrollmentService
+   * (getSubjectTierMap/getDerivedJobRoleIds) — never UserJobRole, the aspirational wishlist that
+   * caused the same class of bug in badge-grid.component.ts earlier (see
+   * feedback_enrollment_authority_source).
+   */
+  async getBadgeExplorer(userId?: number): Promise<BadgeExplorerResponseDto> {
+    const [catalog, earnedRows] = await Promise.all([
+      this.badgeRepo.find({ where: { isPublished: true }, order: { sortOrder: 'ASC', id: 'ASC' } }),
+      userId ? this.userBadgeRepo.find({ where: { userId } }) : Promise.resolve([]),
+    ]);
+    const earnedByBadgeId = new Map(earnedRows.map((ub) => [ub.badgeId, ub]));
+
+    const toDto = (badge: Badge): BadgeExplorerBadgeDto => {
+      const ub = earnedByBadgeId.get(badge.id);
+      return {
+        code: badge.code,
+        name: badge.name,
+        description: badge.description,
+        iconUrl: badge.iconUrl,
+        points: badge.points,
+        scopeType: badge.scopeType,
+        scopeId: badge.scopeId,
+        sortOrder: badge.sortOrder,
+        earnedAt: ub?.earnedAt ?? null,
+        source: ub?.source ?? null,
+        unlocked: !!ub,
+      };
+    };
+    const dtos = catalog.map(toDto);
+
+    const { resolveTitle, topicSubjectById, subjectSlugById, subjectTitleById } = await this.buildScopeTitleResolver(dtos);
+
+    // Group, preserving each badge's own sortOrder within its group (catalog was already
+    // fetched sortOrder-ordered) — Global first, then alphabetically by resolved title.
+    const groupsByKey = new Map<string, BadgeExplorerGroupDto>();
+    for (const d of dtos) {
+      const key = `${d.scopeType}:${d.scopeId ?? 'null'}`;
+      if (!groupsByKey.has(key)) {
+        groupsByKey.set(key, { scopeType: d.scopeType, scopeId: d.scopeId, scopeTitle: resolveTitle(d), badges: [] });
+      }
+      groupsByKey.get(key)!.badges.push(d);
+    }
+    const groups = [...groupsByKey.values()].sort((a, b) => {
+      if (a.scopeType === BadgeScopeEnum.GLOBAL) return -1;
+      if (b.scopeType === BadgeScopeEnum.GLOBAL) return 1;
+      return (a.scopeTitle ?? '').localeCompare(b.scopeTitle ?? '');
+    });
+
+    const earned = dtos.filter((d) => d.unlocked);
+
+    let relevant: RelevantBadgeDto[] = [];
+    if (userId) {
+      const [subjectTierMap, derivedJobRoleIds] = await Promise.all([
+        this.skillEnrollmentService.getSubjectTierMap(userId),
+        this.skillEnrollmentService.getDerivedJobRoleIds(userId),
+      ]);
+      const enrolledSubjectIds = new Set(subjectTierMap.keys());
+      const enrolledJobRoleIds = new Set(derivedJobRoleIds);
+      const relevantDtos = dtos.filter((d) => {
+        if (d.unlocked) return false;
+        switch (d.scopeType) {
+          case BadgeScopeEnum.GLOBAL: return true;
+          case BadgeScopeEnum.SUBJECT: return enrolledSubjectIds.has(d.scopeId!);
+          case BadgeScopeEnum.JOBROLE: return enrolledJobRoleIds.has(d.scopeId!);
+          case BadgeScopeEnum.TOPIC: {
+            const subjectId = topicSubjectById.get(d.scopeId!);
+            return subjectId != null && enrolledSubjectIds.has(subjectId);
+          }
+          default: return false;
+        }
+      });
+
+      // Progress is only computable for Subject/Topic-scoped badges that carry a BadgeRule
+      // (Global/JobRole badges have no rule-based progress concept in this codebase) — batch the
+      // rule fetch rather than one query per relevant badge.
+      const badgeByCode = new Map(catalog.map((b) => [b.code, b]));
+      const relevantBadgeIds = relevantDtos.map((d) => badgeByCode.get(d.code)!.id);
+      const rules = relevantBadgeIds.length
+        ? await this.badgeRuleRepo.find({ where: { badgeId: In(relevantBadgeIds) } })
+        : [];
+      const ruleByBadgeId = new Map(rules.map((r) => [r.badgeId, r]));
+
+      relevant = await Promise.all(
+        relevantDtos.map(async (d): Promise<RelevantBadgeDto> => {
+          const badge = badgeByCode.get(d.code)!;
+          const rule = ruleByBadgeId.get(badge.id);
+          const progressPercent = rule ? await this.computeRuleProgress(userId, badge, rule) : null;
+          // Both resolve to the parent SUBJECT (not the topic itself) for a Topic-scoped badge —
+          // the hero CTA and "Continue in X" copy always mean "go to this subject's dashboard."
+          const parentSubjectId =
+            d.scopeType === BadgeScopeEnum.SUBJECT ? d.scopeId
+              : d.scopeType === BadgeScopeEnum.TOPIC ? topicSubjectById.get(d.scopeId!) ?? null
+              : null;
+          const scopeSlug = parentSubjectId != null ? subjectSlugById.get(parentSubjectId) ?? null : null;
+          const scopeTitle = parentSubjectId != null ? subjectTitleById.get(parentSubjectId) ?? null : null;
+          return { ...d, progressPercent, thresholdPercent: rule?.threshold ?? null, scopeSlug, scopeTitle };
+        }),
+      );
+    }
+
+    return { earned, relevant, groups };
   }
 
   /**

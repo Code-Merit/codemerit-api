@@ -43,6 +43,26 @@ export class Certificate extends AbstractEntity {
   @Column({ type: 'varchar', length: 100, nullable: true, default: null })
   verificationCode: string;
 
+  // Snapshot of the completion metric that actually earned this certificate, taken at issuance —
+  // not recomputed later, since the underlying subject-track progress can keep changing after the
+  // cert is issued. Nullable purely so `synchronize: true` can add this column to a table that
+  // already has rows (pre-existing certificates stay null rather than being backfilled with a
+  // guess). Column-per-cert rather than joining back to progress data on read, since "what score
+  // earned this" is a historical fact, not a live-derived one.
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: null })
+  scorePercentage: number | null;
+
+  // certificationTrack.title snapshot — stored alongside rather than read fresh so a later track
+  // rename doesn't silently rewrite the wording on a certificate someone already has.
+  @Column({ type: 'varchar', length: 150, nullable: true, default: null })
+  skillName: string | null;
+
+  // Display label derived from scorePercentage at issuance (see achievement.service.ts
+  // issueCertificate()) — this product has no separate tiering concept beyond the single
+  // CERT_ACHIEVED pass bar, so this is cosmetic banding of the score, not a stored grade.
+  @Column({ type: 'varchar', length: 100, nullable: true, default: null })
+  tierDisplayName: string | null;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 

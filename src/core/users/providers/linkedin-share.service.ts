@@ -11,6 +11,8 @@ import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { LinkedinShareDto } from '../dtos/linkedin-share.dto';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
+import { LinkedInOAuthService } from 'src/core/auth/providers/linkedin-oauth.service';
+import { UserProfileService } from './user-profile.service';
 
 @Injectable()
 export class LinkedinShareService {
@@ -21,7 +23,30 @@ export class LinkedinShareService {
     @InjectRepository(LinkedinShare)
     private readonly linkedinShareRepo: Repository<LinkedinShare>,
     private readonly activityService: ActivityService,
+    private readonly linkedInOAuth: LinkedInOAuthService,
+    private readonly userProfileService: UserProfileService,
   ) {}
+
+  /**
+   * "Connect LinkedIn for sharing" — a narrower sibling of AuthService.handleLinkedinCallback()
+   * for a user who's already signed in and just wants posting access, not a login/account-match/
+   * JWT-issue. Same OAuth code exchange (LinkedInOAuthService, shared to avoid a second copy),
+   * but deliberately omits `auth_provider` so this never overwrites how the caller's account
+   * actually signs in.
+   */
+  async connectAccount(userId: number, code: string) {
+    const accessToken = await this.linkedInOAuth.exchangeCodeForToken(code);
+    const profile = await this.linkedInOAuth.fetchLinkedInProfile(accessToken);
+    const linkedinTokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60 days, matches the login flow's own grant window
+
+    await this.userProfileService.updateSocialProfile(userId, {
+      linkedinId: profile.sub,
+      linkedinAccessToken: accessToken,
+      linkedinTokenExpiresAt,
+    });
+
+    return { connected: true, expiresAt: linkedinTokenExpiresAt };
+  }
 
   async getStatus(userId: number) {
     const profile = await this.profileRepository.findOne({

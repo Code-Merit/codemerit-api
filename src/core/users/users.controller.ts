@@ -11,6 +11,7 @@ import {
   Request,
 } from '@nestjs/common';
 import { ApiResponse } from 'src/common/utils/api-response';
+import { Public } from 'src/core/auth/decorators/public.decorator';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { QuizService } from 'src/modules/quiz/providers/quiz.service';
 import { CreateUserDto } from '../auth/dto/create-user.dto';
@@ -18,6 +19,7 @@ import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { LinkedinShareDto } from './dtos/linkedin-share.dto';
+import { ConnectLinkedInDto } from './dtos/connect-linkedin.dto';
 import { UserProfileService } from './providers/user-profile.service';
 import { UserProfileAggregatorService } from './providers/user-profile-aggregator.service';
 import { UserService } from './providers/user.service';
@@ -165,17 +167,16 @@ export class UsersController {
     return new ApiResponse('User created successfully.', result);
   }
 
-  // @UseGuards(RolesGuard)
-  // @Roles(UserRoleEnum.ADMIN)
   @ApiOperation({
-    summary: "Get a user's full public-facing profile by username",
+    summary: "Get a user's full profile by username (requires a session)",
     description:
       'Aggregates the user row with course dashboards, granted permissions, the 10 most recent quiz ' +
       'results (with score/avg summary), self- and interview-assessment sessions (5 most recent of ' +
       'each, with skill ratings + avg summary), issued certificates, earned badges (subject/global), ' +
-      'the last 20 activity entries, and gamification (points/level/streak). No role check is ' +
-      'currently enforced beyond being logged in — this is the same aggregator used to render any ' +
-      "user's public profile page. Throws 400 if the username does not exist.",
+      'the last 20 activity entries, and gamification (points/level/streak). Contact info ' +
+      '(email/mobile) is only populated when the caller is the profile owner or an Admin — anyone ' +
+      "else viewing this profile (e.g. a Manager) gets those fields as null. Anonymous callers " +
+      "should use GET public-profile/:username instead. Throws 400 if the username does not exist.",
   })
   @ApiParam({
     name: 'username',
@@ -184,12 +185,38 @@ export class UsersController {
   })
   @Get('profile/:username')
   async getUserByUsername(
+    @Request() req: any,
     @Param('username') username: string,
   ): Promise<ApiResponse<any>> {
-    const result =
-      await this.userProfileAggregatorService.getFullProfile(username);
+    const result = await this.userProfileAggregatorService.getFullProfile(
+      username,
+      { id: req.user.id, role: req.user.role },
+    );
     return new ApiResponse('User found.', result);
   }
+
+  @ApiOperation({
+    summary: "Get a user's minimal public credential card by username (no session required)",
+    description:
+      'Anonymous-safe subset for sharing/discovery: name, avatar, headline, level, top platform ' +
+      'achievements, certificates, and subjects followed — never email, mobile, quiz history, ' +
+      'enrollments, or permissions, regardless of who (or whether anyone) is signed in. Throws 400 ' +
+      'if the username does not exist.',
+  })
+  @ApiParam({
+    name: 'username',
+    description: "Target user's username (not id)",
+    type: String,
+  })
+  @Public()
+  @Get('public-profile/:username')
+  async getPublicProfileByUsername(
+    @Param('username') username: string,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.userProfileAggregatorService.getPublicProfile(username);
+    return new ApiResponse('User found.', result);
+  }
+
   @ApiOperation({
     summary:
       "Update a user's core account fields (Admin or Talent Partner only)",
@@ -254,7 +281,26 @@ export class UsersController {
     return new ApiResponse('User profile updated successfully.', result);
   }
 
-   @ApiOperation({
+  @ApiOperation({
+    summary: 'Connect the authenticated user\'s LinkedIn account for sharing',
+    description:
+      'Exchanges a LinkedIn OAuth authorization `code` (from the same popup/scope the "Sign in ' +
+      'with LinkedIn" flow already uses) for an access token and saves it on the caller\'s own ' +
+      'profile. Unlike `POST auth/linkedin/callback`, this never logs in, creates an account, or ' +
+      "changes the caller's `auth_provider` — it only grants posting access for an account that " +
+      'already signed in some other way. Always authenticated: the target user is the caller, ' +
+      'never client-supplied.',
+  })
+  @Post('linkedin/connect')
+  async connectLinkedin(
+    @Request() req,
+    @Body() dto: ConnectLinkedInDto,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.linkedinShareService.connectAccount(req.user.id, dto.code);
+    return new ApiResponse('LinkedIn connected successfully.', result);
+  }
+
+  @ApiOperation({
     summary: 'Check LinkedIn connection status',
     description:
       'Returns whether the authenticated user has a valid LinkedIn connection available for sharing.',

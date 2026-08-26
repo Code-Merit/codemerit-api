@@ -180,7 +180,11 @@ export class UserProfileService {
       linkedinId?: string;
       linkedinAccessToken?: string;
       linkedinTokenExpiresAt?: Date;
-      auth_provider: string;
+      // Optional — omitted by the "connect LinkedIn for sharing while already signed in" flow
+      // (LinkedinShareService.connectAccount), which must never overwrite how an existing
+      // email/password (or Google-signed-in) account thinks it signs in just because the owner
+      // also linked LinkedIn for posting.
+      auth_provider?: string;
     },
   ): Promise<Profile> {
     const profile = await this.profileRepository.findOne({
@@ -210,7 +214,9 @@ export class UserProfileService {
       profile.linkedinTokenExpiresAt = data.linkedinTokenExpiresAt;
     }
 
-    profile.auth_provider = data.auth_provider;
+    if (data.auth_provider) {
+      profile.auth_provider = data.auth_provider;
+    }
 
     return this.profileRepository.save(profile);
   }

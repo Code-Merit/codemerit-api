@@ -17,6 +17,10 @@ export interface UserProfileResponseDto {
   level?: string;
   points?: number;
   accountStatus?: AccountStatusEnum;
+  // Already flows through getFullProfile's `...user` spread into the real response today
+  // (UserProfileResponse.createdAt on the frontend reads it) — just missing from this type
+  // until getPublicProfile() needed to reference it directly instead of via a blind spread.
+  createdAt?: Date;
   profile: Profile;
   /** The caller's own permission grants (only populated on the self "/users/me" lookup). */
   permissions?: unknown[];

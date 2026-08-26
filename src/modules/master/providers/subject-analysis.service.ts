@@ -5,7 +5,7 @@ import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.ent
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { Topic } from 'src/common/typeorm/entities/topic.entity';
-import { computeAttemptMetrics } from 'src/common/utils/common-functions';
+import { computeAttemptMetrics, getAggregateUserLevel } from 'src/common/utils/common-functions';
 import { DataSource, Repository } from 'typeorm';
 import { TopicAnalysisService } from './topic-analysis.service';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
@@ -204,9 +204,23 @@ export class SubjectAnalysisService {
     const journeyWrong = +row.journeyWrong || 0;
     // computeAttemptMetrics() is the one shared implementation of this formula —
     // every level (subject/topic/subjectTrack) calls it instead of reimplementing it.
-    const { coverage, currentAccuracy, score, journeyAccuracy, journeyScore } = computeAttemptMetrics({
+    const { coverage, correctCoverage, currentAccuracy, score, journeyAccuracy, journeyScore } = computeAttemptMetrics({
       numTrivia, attempted, correct, wrong, journeyAttempts, journeyCorrect, journeyWrong,
     });
+
+    // Same aggregate-level classification SubjectStatsService's own dashboard uses (see
+    // getAggregateUserLevel's doc comment) — this service previously never computed it at all,
+    // so any consumer reading userLevel off this shape (e.g. the profile page's subject cards)
+    // silently got undefined. 'Not Started' without a userId, matching every other per-user
+    // field in this row when userId is omitted.
+    const userLevel = userId
+      ? getAggregateUserLevel(
+          +row.attemptedEasy || 0, +row.correctEasy || 0,
+          +row.attemptedMedium || 0, +row.correctMedium || 0,
+          +row.attemptedHard || 0, +row.correctHard || 0,
+          correctCoverage,
+        )
+      : 'Not Started';
 
     const dashboard: any = {
       id: +row.subjectId,
@@ -235,6 +249,7 @@ export class SubjectAnalysisService {
       currentAccuracy,
       coverage,
       score,
+      userLevel,
       journeyAttempts,
       journeyCorrect,
       journeyWrong,
@@ -289,6 +304,36 @@ export class SubjectAnalysisService {
     ),
   );
 }
+
+  /**
+   * Real-enrollment-sourced companion to getJobSubjectDashboards() above. That method stays
+   * untouched (job-role-picks-only, per its own doc comment) since it also backs the login
+   * response — changing its source would ripple into every consumer that expects "subjects
+   * matching this user's job-role picks." This method answers a different, narrower question —
+   * "which subjects has this user actually enrolled in" — via SkillEnrollment directly, the
+   * same authoritative source AuthService.getSubjectEnrollments() reads on the frontend (see
+   * feedback_enrollment_authority_source). Needed because a user can hold a direct subject
+   * enrollment with no job-role pick behind it at all, and such a subject was previously
+   * invisible on the profile page's Subjects tab (and its KPI/hero subject strip) even though
+   * it's real, paid-for or free-Basic access. `status != Cancelled` mirrors getSubjectStats'
+   * own isSubscribed definition, not a stricter 'active'-only filter.
+   */
+  async getEnrolledSubjectDashboards(userId: number, fullData = false) {
+    const enrolledRows = await this.dataSource
+      .createQueryBuilder()
+      .select('DISTINCT se.subjectId', 'subjectId')
+      .from('skill_enrollment', 'se')
+      .where('se.userId = :userId', { userId })
+      .andWhere('se.status != :cancelledStatus', { cancelledStatus: EnrollmentStatusEnum.Cancelled })
+      .getRawMany();
+
+    if (!enrolledRows.length) return [];
+
+    const dashboards = await Promise.all(
+      enrolledRows.map((r) => this.getSubjectDashboard(+r.subjectId, userId, fullData)),
+    );
+    return dashboards.filter((d) => d != null);
+  }
 
   /** popular topics: unchanged */
   private async getPopularTopics(subjectId: number) {

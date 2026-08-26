@@ -9,6 +9,8 @@ import {
 } from '@nestjs/swagger';
 import { BadgeAwardMethodEnum } from 'src/common/enum/badge-award-method.enum';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
+import { Public } from 'src/core/auth/decorators/public.decorator';
+import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard';
 import { GrantBadgeDto } from './dtos/grant-badge.dto';
 import { AchievementService } from './providers/achievement.service';
 
@@ -135,6 +137,27 @@ export class AchievementController {
       awardMethod,
       isManuallyGrantable !== undefined ? isManuallyGrantable === 'true' : undefined,
     );
+  }
+
+  /** Powers the public Badges page (`/badges` on the frontend) — the full published catalog,
+   * grouped by scope with server-resolved titles, plus this caller's earned/relevant slices.
+   * Visitor-accessible on purpose: `earned`/`relevant` come back empty for an anonymous caller,
+   * but `groups` is always the full catalog, so a logged-out visitor can still browse what the
+   * platform offers. */
+  @ApiOperation({
+    summary: 'Badge explorer — full catalog grouped by scope, plus earned/relevant for the caller',
+    description:
+      'Returns `groups` (every published badge, grouped by scope with a server-resolved Subject/' +
+      'JobRole/Topic title, each tagged `unlocked`), `earned` (this caller\'s unlocked badges ' +
+      'across every scope), and `relevant` (not-yet-unlocked badges tied to subjects/job roles ' +
+      'the caller is really enrolled in). No authentication required — `earned`/`relevant` are ' +
+      'simply empty for an anonymous caller, `groups` is always the full catalog.',
+  })
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('explorer')
+  async getBadgeExplorer(@Request() req: any) {
+    return this.achievementService.getBadgeExplorer(req.user?.id);
   }
 
   /** Manually award a MANUAL-method badge to a user, e.g. an interviewer granting

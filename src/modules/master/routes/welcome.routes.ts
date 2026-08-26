@@ -72,6 +72,21 @@ export const welcomeRoutes = [
     submenu: [],
   },
   {
+    // Public badge explorer (Earned/Relevant/Browse All) — standalone route (see codemerit's
+    // app.routes.ts), backed by the equally-public apis/achievements/explorer. Not scoped to any
+    // job role, same reasoning as leaderboard below, and kept immediately above it by request.
+    path: '/badges',
+    title: 'Badges',
+    iconType: 'material-icons-outlined',
+    icon: 'military_tech',
+    class: '',
+    groupTitle: false,
+    badge: '',
+    badgeClass: '',
+    role: ['All'],
+    submenu: [],
+  },
+  {
     // Public global XP leaderboard — standalone route (see codemerit's app.routes.ts), not
     // scoped to any job role, so it belongs in the base nav rather than under a specific
     // dashboard/role area.

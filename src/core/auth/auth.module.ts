@@ -12,6 +12,7 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { LocalStrategy } from './guards/local.strategy';
 import { JwtStrategy } from './jwt/jwt.strategy';
+import { LinkedInOAuthModule } from './linkedin-oauth.module';
 import { LoginValidationMiddleware } from './middleware/login-validation.middleware';
 import { AuthService } from './providers/auth.service';
 
@@ -29,6 +30,7 @@ import { AuthService } from './providers/auth.service';
     MasterModule,
     SkillEnrollmentModule,
     ActivityModule,
+    LinkedInOAuthModule,
   ],
   providers: [AuthService, JwtStrategy, LocalStrategy],
   controllers: [AuthController],

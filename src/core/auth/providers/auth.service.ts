@@ -1,7 +1,6 @@
 import { BadRequestException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import axios from 'axios';
 import * as bcrypt from 'bcrypt';
 import { OAuth2Client } from 'google-auth-library';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
@@ -18,20 +17,11 @@ import { DataSource, Repository } from 'typeorm';
 import { AccountVerificationDto } from '../dto/account-verification.dto';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginResponseDto } from '../dto/login-response.dto';
-
-interface LinkedInProfile {
-  sub: string;
-  email: string;
-  given_name: string;
-  picture: string;
-}
+import { LinkedInOAuthService } from './linkedin-oauth.service';
 
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly linkedinClientId = process.env.LINKEDIN_CLIENT_ID;
-  private readonly linkedinClientSecret = process.env.LINKEDIN_CLIENT_SECRET;
-  private readonly linkedinRedirectUri = process.env.LINKEDIN_REDIRECT_URI;
 
   private readonly googleClient = new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
@@ -43,6 +33,7 @@ export class AuthService {
     private readonly userPermissionService: UserPermissionService,
     private readonly skillEnrollmentService: SkillEnrollmentService,
     private readonly activityService: ActivityService,
+    private readonly linkedInOAuth: LinkedInOAuthService,
 
     @InjectRepository(UserJobRole)
     private userJobRoleRepo: Repository<UserJobRole>,
@@ -258,8 +249,8 @@ export class AuthService {
   }
 
   async handleLinkedinCallback(code: string) {
-    const accessToken = await this.exchangeCodeForToken(code);
-    const profile = await this.fetchLinkedInProfile(accessToken);
+    const accessToken = await this.linkedInOAuth.exchangeCodeForToken(code);
+    const profile = await this.linkedInOAuth.fetchLinkedInProfile(accessToken);
 
     const [firstName, ...lastNameParts] = (profile.given_name || '')
       .trim()
@@ -306,41 +297,6 @@ export class AuthService {
     });
 
     return this.login(user);
-  }
-
-  private async exchangeCodeForToken(code: string): Promise<string> {
-    const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
-
-    const params = new URLSearchParams({
-      grant_type: 'authorization_code',
-      code,
-      client_id: this.linkedinClientId,
-      client_secret: this.linkedinClientSecret,
-      redirect_uri: this.linkedinRedirectUri,
-    });
-
-    const response = await axios.post(tokenUrl, params.toString(), {
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-    });
-
-    return response.data.access_token;
-  }
-
-  private async fetchLinkedInProfile(
-    accessToken: string,
-  ): Promise<LinkedInProfile> {
-    const response = await axios.get<LinkedInProfile>(
-      'https://api.linkedin.com/v2/userinfo',
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      },
-    );
-
-    return response.data;
   }
 
   /**

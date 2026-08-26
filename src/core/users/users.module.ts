@@ -23,6 +23,7 @@ import { ActivityModule } from 'src/modules/activity/activity.module';
 import { QuizModule } from 'src/modules/quiz/quiz.module';
 import { AchievementModule } from 'src/modules/achievement/achievement.module';
 import { BadgeQueryModule } from 'src/modules/achievement/badge-query.module';
+import { LinkedInOAuthModule } from 'src/core/auth/linkedin-oauth.module';
 import { LinkedinShareService } from './providers/linkedin-share.service';
 
 @Module({
@@ -46,6 +47,7 @@ import { LinkedinShareService } from './providers/linkedin-share.service';
     QuizModule,
     AchievementModule,
     BadgeQueryModule,
+    LinkedInOAuthModule,
   ],
   providers: [
     UserService,
