@@ -8,40 +8,16 @@ export const welcomeRoutes = [
     groupTitle: false,
     badge: '',
     badgeClass: '',
-    role: ['User', 'All'],
-    submenu: [],
-  },
-  // {
-  //   path: '/app/welcome',
-  //   title: 'Welcome',
-  //   iconType: 'material-icons-outlined',
-  //   icon: 'insights',
-  //   class: '',
-  //   groupTitle: false,
-  //   badge: '',
-  //   badgeClass: '',
-  //   role: ['All'],
-  //   submenu: [],
-  // },
-  {
-    path: '/app/standard-quiz',
-    title: 'Browse Quizzes',
-    iconType: 'material-icons-outlined',
-    icon: 'extension',
-    class: '',
-    groupTitle: false,
-    badge: '',
-    badgeClass: '',
-    role: ['All'],
+    role: ['User'],
     submenu: [],
   },
   {
-    path: '/app/my-quizzes',
-    title: 'My Quizzes',
-    iconType: 'material-icons-outlined',
-    icon: 'quiz',
+    path: '',
+    title: 'Explore',
+    iconType: '',
+    icon: '',
     class: '',
-    groupTitle: false,
+    groupTitle: true,
     badge: '',
     badgeClass: '',
     role: ['All'],
@@ -49,7 +25,7 @@ export const welcomeRoutes = [
   },
   {
     path: '/select-job-role',
-    title: 'Explore Tech Roles',
+    title: 'Explore Job Roles',
     iconType: 'material-icons-outlined',
     icon: 'school',
     class: '',
@@ -72,13 +48,10 @@ export const welcomeRoutes = [
     submenu: [],
   },
   {
-    // Public badge explorer (Earned/Relevant/Browse All) — standalone route (see codemerit's
-    // app.routes.ts), backed by the equally-public apis/achievements/explorer. Not scoped to any
-    // job role, same reasoning as leaderboard below, and kept immediately above it by request.
-    path: '/badges',
-    title: 'Badges',
+    path: '/app/standard-quiz',
+    title: 'Practice Quizzes',
     iconType: 'material-icons-outlined',
-    icon: 'military_tech',
+    icon: 'extension',
     class: '',
     groupTitle: false,
     badge: '',
@@ -87,18 +60,30 @@ export const welcomeRoutes = [
     submenu: [],
   },
   {
-    // Public global XP leaderboard — standalone route (see codemerit's app.routes.ts), not
-    // scoped to any job role, so it belongs in the base nav rather than under a specific
-    // dashboard/role area.
-    path: '/leaderboard',
-    title: 'Leaderboard',
+    path: '',
+    title: 'My Assessments',
+    iconType: '',
+    icon: '',
+    class: '',
+    groupTitle: true,
+    badge: '',
+    badgeClass: '',
+    role: ['User'],
+    submenu: [],
+  },
+  {
+    path: '/app/my-quizzes',
+    title: 'My Quizzes',
     iconType: 'material-icons-outlined',
-    icon: 'leaderboard',
+    icon: 'quiz',
     class: '',
     groupTitle: false,
     badge: '',
     badgeClass: '',
-    role: ['All'],
+    role: ['User'],
     submenu: [],
-  }
+  },
+  // interviewRoutes (Schedule Mock Interview, My Interviews) is unioned in right after this
+  // array in route.service.ts — it continues this same "My Assessments" group without its own
+  // header. See interview.routes.ts.
 ];

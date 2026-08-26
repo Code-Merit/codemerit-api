@@ -46,28 +46,8 @@ export const lmsRoutes = [
     role: ['User', 'Admin'],
     submenu: [],
   },
-  {
-    path: '/lms/topics',
-    title: 'Topics Manager',
-    iconType: 'material-icons-outlined',
-    icon: 'grain',
-    class: '',
-    groupTitle: false,
-    badge: '',
-    badgeClass: '',
-    role: ['Admin'],
-    submenu: [],
-  },
-  {
-    path: '/lms/certificates',
-    title: 'Certificates',
-    iconType: 'material-icons-outlined',
-    icon: 'card_membership',
-    class: '',
-    groupTitle: false,
-    badge: '',
-    badgeClass: '',
-    role: ['Admin'],
-    submenu: [],
-  }
+  // Topics Manager and Certificates (both were role: ['Admin']-only here, i.e. never actually
+  // reachable by a non-admin LmsManager permission holder) moved to the Administration menu —
+  // see admin.routes.ts. This group now holds only the personal content-authoring workspace,
+  // shared by Admins and non-admin LmsManager permission holders alike.
 ];

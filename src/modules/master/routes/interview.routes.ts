@@ -1,4 +1,6 @@
-// Visible to every signed-in user — mirrors welcomeRoutes' `role: ['All']` convention.
+// Continues the "My Assessments" group started in welcome.routes.ts (see the union order in
+// route.service.ts: welcomeRoutes, then interviewRoutes) — personal activity, so learner-only
+// rather than visitor-visible.
 export const interviewRoutes = [
   {
     path: '/assessment/schedule',
@@ -9,7 +11,7 @@ export const interviewRoutes = [
     groupTitle: false,
     "badge": "New",
     "badgeClass": "badge bg-blue sidebar-badge float-end",
-    role: ['All'],
+    role: ['User'],
     submenu: [],
   },
   {
@@ -21,7 +23,7 @@ export const interviewRoutes = [
     groupTitle: false,
     badge: '',
     badgeClass: '',
-    role: ['All'],
+    role: ['User'],
     submenu: [],
   },
 ];

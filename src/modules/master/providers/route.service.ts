@@ -4,6 +4,7 @@ import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { lmsRoutes } from '../routes/lms.routes';
 import { welcomeRoutes } from '../routes/welcome.routes';
+import { achievementsRoutes } from '../routes/achievements.routes';
 import { quizRoutes } from '../routes/quiz.routes';
 import { adminRoutes, manageUsersRoutes } from '../routes/admin.routes';
 import { uiRoutes } from '../routes/ui.routes';
@@ -54,10 +55,13 @@ export class RouteService {
 
     let routes: any[] = [
       ...welcomeRoutes,
-      ...interviewRoutes
+      ...interviewRoutes,
+      ...achievementsRoutes
     ];
 
     const permissionNames = userPermissions.map((p) => p.permissionName);
+    const isAdmin = this.normalizeRole(userRole) === UserRoleEnum.ADMIN;
+
     if (permissionNames.includes(UserPermissionEnum.Sme)) {
       routes = [...routes, ...smeInterviewRoutes];
     }
@@ -65,21 +69,19 @@ export class RouteService {
       routes = [...routes, ...lmsRoutes, ...quizRoutes, ...smeRoutes];
     }
     // Mirrors InterviewManagerGuard's own access check (Admin role OR Role:InterviewManager
-    // permission) so the nav item only shows up for users who can actually use the page.
-    if (
-      this.normalizeRole(userRole) === UserRoleEnum.ADMIN ||
-      permissionNames.includes(UserPermissionEnum.InterviewManager)
-    ) {
+    // permission). Admins get "Manage Interviews" nested inside the Administration menu instead
+    // (see adminRoutes below) — this standalone group is only for non-admin permission holders,
+    // so the same destination doesn't appear twice for an Admin who also holds the permission.
+    if (!isAdmin && permissionNames.includes(UserPermissionEnum.InterviewManager)) {
       routes = [...routes, ...interviewManagerRoutes];
     }
 
-    if (permissionNames.includes(UserPermissionEnum.TalentPartner)
-    ) {
+    // Same reasoning as above: Admins reach /users/list via Administration > Manage Users, so
+    // this standalone group is only for non-admin Talent Partner permission holders.
+    if (!isAdmin && permissionNames.includes(UserPermissionEnum.TalentPartner)) {
       routes = [...routes, ...manageUsersRoutes];
     }
-    if (
-      this.normalizeRole(userRole) === UserRoleEnum.ADMIN
-    ) {
+    if (isAdmin) {
       routes = [...routes, ...adminRoutes];
     }
     routes = [...routes,
