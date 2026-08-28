@@ -35,7 +35,10 @@ export class Badge {
   @Column({ type: 'varchar', length: 100 })
   description: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(255)
+  @Column({ type: 'varchar', length: 255 })
   content: string;
 
   @IsNotEmpty()
