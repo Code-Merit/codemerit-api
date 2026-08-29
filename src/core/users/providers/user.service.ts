@@ -219,6 +219,22 @@ export class UserService {
         } catch (error) {
           console.log('CMRegistration Send otp exception => ', error);
         }
+      } else {
+        // Native signup only logs "User Registration" later, once the OTP is verified
+        // (acoountVerification()) — social signup has no such step (account is ACTIVE
+        // immediately), so this is its only registration trigger point.
+        try {
+          await this.activityService.createActivity(
+            savedUser.id,
+            'User Registration',
+            `account created and signed in via ${data.auth_provider}.`,
+            { dataId: String(savedUser.id), dataType: 'USER' },
+          );
+        } catch (err) {
+          this.logger.error(
+            `Failed to log social registration activity: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
       }
 
       const userResponse = this.findOne(savedUser?.id);
@@ -829,9 +845,13 @@ export class UserService {
       }
     }
 
-    const { linkedinUrl, ...userFields } = updateUserDto as UpdateUserDto & {
-      linkedinUrl?: string;
-    };
+    // `id` is the routing target (already consumed as userId above), not an entity field —
+    // dropped here too so merge() never touches the primary key.
+    const { id: _id, linkedinUrl, ...userFields } =
+      updateUserDto as UpdateUserDto & { linkedinUrl?: string };
+
+    const previousRole = user.role;
+    const previousAccountStatus = user.accountStatus;
 
     this.userRepo.merge(user, userFields);
     const savedUser = await this.userRepo.save(user);
@@ -857,6 +877,51 @@ export class UserService {
       } catch (err) {
         this.logger.error(
           `Failed to log profile-update activity for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    // Role/accountStatus previously went through with no audit trail at all — worth logging
+    // separately from "Profile Updated" above since these are admin-privilege changes, not
+    // self-service edits. actorId is only set when someone else made the change (caller may be
+    // absent entirely for trusted system calls, e.g. auto-activation after a social login).
+    if (updateUserDto.role !== undefined && savedUser.role !== previousRole) {
+      try {
+        await this.activityService.createActivity(
+          userId,
+          'Role Changed',
+          `role changed from "${previousRole}" to "${savedUser.role}".`,
+          {
+            dataId: String(userId),
+            dataType: 'USER',
+            actorId: caller && caller.id !== userId ? caller.id : undefined,
+          },
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed to log role-change activity for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    if (
+      updateUserDto.accountStatus !== undefined &&
+      savedUser.accountStatus !== previousAccountStatus
+    ) {
+      try {
+        await this.activityService.createActivity(
+          userId,
+          'Account Status Changed',
+          `account status changed from "${previousAccountStatus}" to "${savedUser.accountStatus}".`,
+          {
+            dataId: String(userId),
+            dataType: 'USER',
+            actorId: caller && caller.id !== userId ? caller.id : undefined,
+          },
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed to log account-status-change activity for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }

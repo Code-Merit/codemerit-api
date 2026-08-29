@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -225,13 +226,8 @@ export class UsersController {
       'while that user is not yet ACTIVE — 403 otherwise — and may never change `accountStatus` or ' +
       '`role` (403 if attempted); Admins have no such restrictions. Passing `linkedinUrl` also ' +
       "upserts the user's Profile row (creating one if it does not exist yet) alongside the base " +
-      'user fields.',
-  })
-  @ApiQuery({
-    name: 'userId',
-    required: true,
-    type: Number,
-    description: 'Id of the user to update.',
+      'user fields. The target user id is read from `id` on the request body, not a query ' +
+      'param, so it never ends up in URLs, server logs, or browser history.',
   })
   @ApiResponseDoc({
     status: 403,
@@ -241,14 +237,20 @@ export class UsersController {
   })
   @Put('update')
   async updateUser(
-    @Query('userId', ParseIntPipe) userId: number,
     @Body() updateUserDto: UpdateUserDto,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.usersService.updateUser(userId, updateUserDto, {
-      id: req.user.id,
-      role: req.user.role,
-    });
+    if (updateUserDto.id === undefined) {
+      throw new AppCustomException(
+        HttpStatus.BAD_REQUEST,
+        'id is required in the request body.',
+      );
+    }
+    const result = await this.usersService.updateUser(
+      updateUserDto.id,
+      updateUserDto,
+      { id: req.user.id, role: req.user.role },
+    );
     return new ApiResponse('User profile updated successfully.', result);
   }
 

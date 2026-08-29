@@ -436,6 +436,9 @@ export class SubjectStatsService {
   ) {
     if (!subjectTrackIds.length) return [];
 
+    // Left-joined so a subject-native track (ct.subjectId set, no job-role link) still
+    // surfaces here — the WHERE below is what actually gates visibility in that case,
+    // since there's no job-role isPublished flag to filter on.
     const rows = await this.dataSource
       .createQueryBuilder()
       .select('ct.id', 'ctId')
@@ -450,9 +453,10 @@ export class SubjectStatsService {
       .addSelect('ctst.subjectTrackId', 'stId')
       .from('certification_track_subject_track', 'ctst')
       .innerJoin('certification_track', 'ct', 'ct.id = ctst.certificationTrackId')
-      .innerJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id AND ctjr.isPublished = 1')
-      .innerJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId AND jr.isPublished = 1')
+      .leftJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id AND ctjr.isPublished = 1')
+      .leftJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId AND jr.isPublished = 1')
       .where('ctst.subjectTrackId IN (:...subjectTrackIds)', { subjectTrackIds })
+      .andWhere('(ctjr.id IS NOT NULL OR (ct.subjectId IS NOT NULL AND ct.isPublished = 1))')
       .orderBy('ctjr.sortOrder', 'ASC')
       .getRawMany();
 
@@ -484,19 +488,20 @@ export class SubjectStatsService {
     const ctIndex = new Map<string, CtEntry>();
     for (const row of rows) {
       const ctId = +row.ctId;
-      const jrId = +row.jrId;
-      const key = `${ctId}-${jrId}`;
+      const jrId = row.jrId != null ? +row.jrId : null;
+      // Subject-native tracks with no job-role link (jrId null) still get their own
+      // key per certification track — there's only ever one such "no job role" entry.
+      const key = jrId != null ? `${ctId}-${jrId}` : `${ctId}-none`;
       if (!ctIndex.has(key)) {
         ctIndex.set(key, {
           meta: {
             id: ctId,
             title: row.ctTitle,
             description: row.ctDesc,
-            sortOrder: +row.ctSortOrder,
-            jobRole: {
-              id: jrId, title: row.jrTitle, slug: row.jrSlug,
-              image: row.jrImage, color: row.jrColor,
-            },
+            sortOrder: row.ctSortOrder != null ? +row.ctSortOrder : 0,
+            jobRole: jrId != null
+              ? { id: jrId, title: row.jrTitle, slug: row.jrSlug, image: row.jrImage, color: row.jrColor }
+              : null,
           },
           stIds: [],
         });
@@ -517,6 +522,11 @@ export class SubjectStatsService {
             correctEasy: st.correctEasy, correctMedium: st.correctMedium, correctHard: st.correctHard,
             wrongEasy: st.wrongEasy, wrongMedium: st.wrongMedium, wrongHard: st.wrongHard,
             userLevel: st.userLevel,
+            // Same fields certificate.service.ts's explorer reads off this identical
+            // subjectTrackMap entry — kept consistent across both producers of this shape.
+            totalQuestions: st.numTrivia ?? 0,
+            attempted: st.attempted ?? 0,
+            correct: st.correct ?? 0,
           }));
 
         const card: any = {

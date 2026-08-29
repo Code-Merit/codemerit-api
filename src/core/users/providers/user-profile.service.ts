@@ -88,6 +88,8 @@ export class UserProfileService {
     }
     this.assertWorkStatusConsistency(dto);
 
+    const wasProfileCompleted = profile.profileCompleted;
+
     // profileCompleted is server-managed, never client-writable — strip it even though
     // UpdateUserProfileDto doesn't declare it (the global ValidationPipe isn't whitelisted, so
     // an unknown body property would otherwise pass straight through to Object.assign below).
@@ -105,6 +107,24 @@ export class UserProfileService {
     }
 
     const savedProfile = await this.profileRepository.save(profile);
+
+    // The true "onboarding finished" moment — profileCompleted's one-time false→true flip —
+    // logged separately from the generic "Profile Updated" below since it's a distinct,
+    // higher-signal event (not just an edit, the end of the post-registration wizard).
+    if (!wasProfileCompleted && savedProfile.profileCompleted) {
+      try {
+        await this.activityService.createActivity(
+          userId,
+          'Onboarding Completed',
+          `completed onboarding as ${savedProfile.workStatus ?? 'a learner'}.`,
+          { dataId: String(userId), dataType: 'USER' },
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed to log onboarding-completed activity for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
 
     // Only `about` reads as a visible "profile update" in the social-feed sense — everything
     // else here is onboarding-form data (education/experience/workStatus), not worth an activity.

@@ -4,10 +4,9 @@ import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
-import { QuizQuestion } from 'src/common/typeorm/entities/quiz-quesion.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { generateScore } from 'src/common/utils/common-functions';
-import { DataSource } from 'typeorm';
+import { DataSource, SelectQueryBuilder } from 'typeorm';
 
 @Injectable()
 export class QuizResultService {
@@ -62,39 +61,51 @@ export class QuizResultService {
     const quizId = isStandard ? base.r_quizId : base.r_userQuizId;
     const quizIdColumn = isStandard ? 'quizId' : 'userQuizId';
 
-    // 2. Fetch QuestionAttempts for this quiz + user
-    const questionRows = await this.dataSource
-      .createQueryBuilder(QuestionAttempt, 'qa')
-      .select([
-        'qa.id AS attemptId',
-        'qa.selectedOption AS selectedOptionId',
-        'q.id AS questionId',
-        'q.question AS text',
-        'q.subjectId AS subjectId',
-        's.title AS subjectTitle',
-        's.slug AS subjectSlug',
-        's.image AS subjectImage',
-        't.id AS topicId',
-        't.title AS topicTitle',
-        'qa.isSkipped AS isSkipped',
-        'qa.isCorrect AS isCorrect',
-        'qa.timeTaken AS timeTaken',
-        'q.level AS level',
-        'q.answer AS answer'
-      ])
-      .innerJoin('qa.question', 'q')
-      .innerJoin('q.subject', 's')
-      .leftJoin('q.questionTopics', 'qt')
-      .leftJoin('qt.topic', 't')
-      .innerJoin(
-        QuizQuestion,
-        'qq',
-        `qq.questionId = q.id AND qq.${quizIdColumn} = :quizId`,
-        { quizId },
-      )
-      .where('qa.userId = :userId', { userId })
-      .andWhere(`qa.${quizIdColumn} = :quizId`, { quizId })
+    const attemptSelect = (qb: SelectQueryBuilder<QuestionAttempt>) =>
+      qb
+        .select([
+          'qa.id AS attemptId',
+          'qa.selectedOption AS selectedOptionId',
+          'q.id AS questionId',
+          'q.question AS text',
+          'q.subjectId AS subjectId',
+          's.title AS subjectTitle',
+          's.slug AS subjectSlug',
+          's.image AS subjectImage',
+          't.id AS topicId',
+          't.title AS topicTitle',
+          'qa.isSkipped AS isSkipped',
+          'qa.isCorrect AS isCorrect',
+          'qa.timeTaken AS timeTaken',
+          'q.level AS level',
+          'q.answer AS answer'
+        ])
+        .innerJoin('qa.question', 'q')
+        .innerJoin('q.subject', 's')
+        .leftJoin('q.questionTopics', 'qt')
+        .leftJoin('qt.topic', 't');
+
+    // 2. Fetch QuestionAttempts for this specific submission. Primary scope is
+    // qa.resultId — stamped once at submit time, so it can never merge in
+    // attempts from a different submission of the same quiz (unlike the old
+    // userId+quizId scoping, which did exactly that on a retake). Pre-migration
+    // rows may not have resultId backfilled, so fall back to the legacy scoping
+    // for those specifically (resultId IS NULL), never mixing the two.
+    let questionRows = await attemptSelect(
+      this.dataSource.createQueryBuilder(QuestionAttempt, 'qa'),
+    )
+      .where('qa.resultId = :resultId', { resultId: base.r_id })
       .getRawMany();
+
+    if (questionRows.length === 0) {
+      questionRows = await attemptSelect(
+        this.dataSource.createQueryBuilder(QuestionAttempt, 'qa'),
+      )
+        .where('qa.userId = :userId', { userId })
+        .andWhere(`qa.${quizIdColumn} = :quizId`, { quizId })
+        .andWhere('qa.resultId IS NULL')
+        .getRawMany();
+    }
 
     // 3. Build questions array with options
     const uniqueQuestionRows = new Map<number, any>();

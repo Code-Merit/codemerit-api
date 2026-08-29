@@ -494,7 +494,7 @@ export class PaymentService {
         await this.activityService.createActivity(
           order.userId,
           'Payment Successful',
-          `payment successful — "${order.tier}" plan enrollment confirmed.`,
+          `payment successful — enrolled in "${enrollment.subjectTitle}" (${order.tier} tier) for ${order.currency} ${order.amount}.`,
           { dataId: String(enrollment.id), dataType: 'skill_enrollment' },
         );
       } catch (activityError) {

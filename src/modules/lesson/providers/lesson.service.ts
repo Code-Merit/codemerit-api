@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { UserLessonTrackerStatusEnum } from 'src/common/enum/user-lesson-tracker-status.enum';
@@ -19,6 +19,7 @@ import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/s
 import { BASIC_PREMIUM_SUBJECT_CONTENT_CEILING } from 'src/modules/skill-enrollment/constants/skill-enrollment.constants';
 import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
 import { EnrollmentTierEnum, isTierAtLeast } from 'src/common/enum/enrollment-tier.enum';
+import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 
 interface LessonAccessResult {
   locked: boolean;
@@ -38,6 +39,8 @@ interface FreeLessonContext {
 
 @Injectable()
 export class LessonService {
+  private readonly logger = new Logger(LessonService.name);
+
   constructor(
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
@@ -47,6 +50,7 @@ export class LessonService {
     private readonly freeLessonViewRepo: Repository<FreeLessonView>,
     private readonly dataSource: DataSource,
     private readonly skillEnrollmentService: SkillEnrollmentService,
+    private readonly activityService: ActivityService,
   ) { }
 
   /** Comic-format lessons are always free regardless of subject. Non-premium
@@ -458,9 +462,27 @@ export class LessonService {
     await this.assertLessonUnlocked(userId, lesson);
     const tracker = await this.getOrCreateTracker(userId, lesson.id);
     const changes = this.deriveProgressUpdate(tracker, dto);
+    const isNewlyCompleted =
+      changes.status === UserLessonTrackerStatusEnum.Completed &&
+      tracker.status !== UserLessonTrackerStatusEnum.Completed;
 
     await this.userLessonTrackerRepo.update(tracker.id, changes);
     const updated = await this.userLessonTrackerRepo.findOneBy({ id: tracker.id });
+
+    if (isNewlyCompleted) {
+      try {
+        await this.activityService.createActivity(
+          userId,
+          'Lesson Completed',
+          `completed the "${lesson.title}" lesson${lesson.subject?.title ? ` in "${lesson.subject.title}"` : ''}.`,
+          { dataId: String(lesson.id), dataType: 'lesson' },
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed to log lesson-completed activity for userId=${userId}, lessonId=${lesson.id}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
 
     return this.toTrackerDto(updated, lesson.id);
   }

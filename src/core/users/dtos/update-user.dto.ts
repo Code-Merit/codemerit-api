@@ -12,6 +12,10 @@ import { AccountStatusEnum } from '../enums/account-status.enum';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateUserDto {
+  // Identifies which user to update, read from the request body (not a ?userId= query param)
+  // so the target id never lands in URLs, server logs, or browser history. Optional on the DTO
+  // itself because internal service callers pass userId as a separate argument instead
+  // (see UsersController#updateUser, the only caller required to supply it) — enforced there.
   @ApiPropertyOptional()
   @IsOptional()
   @IsInt()

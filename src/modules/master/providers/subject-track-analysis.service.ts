@@ -280,8 +280,9 @@ export class SubjectTrackAnalysisService {
 
   /**
    * CertificationTrack IDs that include at least one SubjectTrack under any of these subjects.
-   * A cert only counts if it's published for at least one job role — publish status now lives
-   * per-role on certification_track_job_role, not on certification_track itself.
+   * A track qualifies either through an isPublished job-role link (the original bundle
+   * model) or, for a subject-native track (ct.subjectId set), through its own top-level
+   * isPublished flag — a subject-native track has no job-role link to gate visibility with.
    */
   async getCertificationTrackIdsForSubjects(subjectIds: number[]): Promise<number[]> {
     if (!subjectIds.length) return [];
@@ -291,7 +292,8 @@ export class SubjectTrackAnalysisService {
       .from('certification_track', 'ct')
       .innerJoin('certification_track_subject_track', 'ctst', 'ctst.certificationTrackId = ct.id')
       .innerJoin('subject_track', 'st', 'st.id = ctst.subjectTrackId AND st.subjectId IN (:...subjectIds)', { subjectIds })
-      .innerJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id AND ctjr.isPublished = 1')
+      .leftJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id AND ctjr.isPublished = 1')
+      .where('(ctjr.certificationTrackId IS NOT NULL) OR (ct.subjectId IS NOT NULL AND ct.isPublished = 1)')
       .getRawMany();
     return rows.map((r) => +r.ctId);
   }

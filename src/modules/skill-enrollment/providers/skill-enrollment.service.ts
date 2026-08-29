@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, In, Repository } from 'typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
@@ -14,6 +14,7 @@ import { EnrollmentSourceEnum } from 'src/common/enum/enrollment-source.enum';
 import { EnrollmentBatchStatusEnum } from 'src/common/enum/enrollment-batch-status.enum';
 import { EnrollmentTierEnum, TIER_RANK } from 'src/common/enum/enrollment-tier.enum';
 import { SubjectTagEnum } from 'src/common/enum/subject-tag.enum';
+import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { GrantEnrollmentDto } from '../dtos/grant-enrollment.dto';
 import { UpsertTierOfferingDto } from '../dtos/upsert-tier-offering.dto';
 import { BatchUpsertTierOfferingsDto } from '../dtos/batch-upsert-tier-offerings.dto';
@@ -73,6 +74,8 @@ export interface JobRoleSubjectsBreakdown {
 
 @Injectable()
 export class SkillEnrollmentService {
+  private readonly logger = new Logger(SkillEnrollmentService.name);
+
   constructor(
     @InjectRepository(SkillEnrollment)
     private readonly enrollmentRepo: Repository<SkillEnrollment>,
@@ -88,6 +91,7 @@ export class SkillEnrollmentService {
     private readonly jobRoleSubjectRepo: Repository<JobRoleSubject>,
     @InjectRepository(EnrollmentBatch)
     private readonly batchRepo: Repository<EnrollmentBatch>,
+    private readonly activityService: ActivityService,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -246,7 +250,7 @@ export class SkillEnrollmentService {
     currency: string;
     reference: string;
     batchId?: number | null;
-  }): Promise<SkillEnrollment> {
+  }): Promise<SkillEnrollment & { subjectTitle: string }> {
     return this.createEnrollment({
       userId: params.userId,
       subjectId: params.subjectId,
@@ -317,7 +321,7 @@ export class SkillEnrollmentService {
     grantedBy: number | null;
     note: string | null;
     batchId?: number | null;
-  }): Promise<SkillEnrollment> {
+  }): Promise<SkillEnrollment & { subjectTitle: string }> {
     const lockKey = `skill_enrollment:${params.userId}:${params.subjectId}`;
     const queryRunner = this.enrollmentRepo.manager.connection.createQueryRunner();
     await queryRunner.connect();
@@ -345,10 +349,10 @@ export class SkillEnrollmentService {
       batchId?: number | null;
     },
     manager: EntityManager,
-  ): Promise<SkillEnrollment> {
+  ): Promise<SkillEnrollment & { subjectTitle: string }> {
     const isBasic = params.tier === EnrollmentTierEnum.Basic;
 
-    await this.assertSubjectExists(params.subjectId, manager);
+    const subject = await this.assertSubjectExists(params.subjectId, manager);
     // Basic needs no SkillTierOffering — every subject is Basic-eligible unconditionally.
     const offering = isBasic
       ? null
@@ -389,17 +393,50 @@ export class SkillEnrollmentService {
       batchId: params.batchId ?? null,
     });
 
-    return manager.save(SkillEnrollment, enrollment);
+    const saved = await manager.save(SkillEnrollment, enrollment);
+
+    // Purchase is deliberately not logged here — PaymentService.fulfillOrder() already
+    // records a "Payment Successful" activity for that outcome once fulfillPurchase()
+    // returns, and a second row for the same checkout would just be noise. AdminGrant and
+    // Promo (free self-enroll) have no other trigger point, so they're logged here, the one
+    // choke point every enrollment path (grantEnrollment/enrollBasicBatch/fulfillPurchase)
+    // funnels through.
+    if (params.source !== EnrollmentSourceEnum.Purchase) {
+      try {
+        const isAdminGrant = params.source === EnrollmentSourceEnum.AdminGrant;
+        await this.activityService.createActivity(
+          params.userId,
+          'Subject Enrolled',
+          isAdminGrant
+            ? `was enrolled in "${subject.title}" (${params.tier} tier).`
+            : `enrolled in "${subject.title}" (${params.tier} tier).`,
+          {
+            dataId: String(saved.id),
+            dataType: 'skill_enrollment',
+            actorId: isAdminGrant && params.grantedBy && params.grantedBy !== params.userId
+              ? params.grantedBy
+              : undefined,
+          },
+        );
+      } catch (err) {
+        this.logger.error(
+          `Failed to log enrollment activity for userId=${params.userId}, subjectId=${params.subjectId}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
+
+    return Object.assign(saved, { subjectTitle: subject.title });
   }
 
   async assertSubjectExists(
     subjectId: number,
     manager: EntityManager = this.subjectRepo.manager,
-  ): Promise<void> {
+  ): Promise<Subject> {
     const subject = await manager.findOne(Subject, { where: { id: subjectId } });
     if (!subject) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, `Subject ${subjectId} not found.`);
     }
+    return subject;
   }
 
   /** Throws if the subject hasn't declared this tier as offered (or it's been

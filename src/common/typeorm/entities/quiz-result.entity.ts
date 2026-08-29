@@ -4,12 +4,14 @@ import {
     Entity,
     JoinColumn,
     ManyToOne,
+    OneToMany,
 } from 'typeorm';
 import { IQuizResult } from '../interface/quiz-result.interface';
 import { AbstractEntity } from './abstract.entity';
 import { Quiz } from './quiz.entity';
 import { UserQuiz } from './user-quiz.entity';
 import { User } from './user.entity';
+import { QuestionAttempt } from './question-attempt.entity';
 import { QuizStatusEnum } from 'src/common/enum/quiz-status.enum';
 import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 
@@ -161,4 +163,7 @@ export class QuizResult extends AbstractEntity implements IQuizResult {
   @ManyToOne(() => User, (user) => user.quizResults, { eager: true })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
+
+  @OneToMany(() => QuestionAttempt, (qa) => qa.result)
+  questionAttempts: QuestionAttempt[];
 }

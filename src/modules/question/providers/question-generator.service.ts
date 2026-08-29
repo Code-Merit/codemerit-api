@@ -267,28 +267,35 @@ export class QuestionGeneratorService {
 
   /**
    * QuestionIds the user got wrong or skipped in their single most-recently-completed
-   * quiz (QuizResult is written exactly once per submission, so its latest createdAt is
-   * an unambiguous "last quiz" marker). Used as a one-shot cooldown exclusion so a
-   * question doesn't immediately resurface in the very next quiz — only the immediately
-   * preceding quiz is cooled down, not a window, so this can't compound with small
-   * topic pools and exclude an entire pool for several quizzes in a row.
+   * quiz. Used as a one-shot cooldown exclusion so a question doesn't immediately
+   * resurface in the very next quiz — only the immediately preceding quiz is cooled
+   * down, not a window, so this can't compound with small topic pools and exclude an
+   * entire pool for several quizzes in a row.
+   *
+   * Scoped by resultId (the specific submission), not quizId/userQuizId (the quiz
+   * itself) — the latter would pull wrong/skipped questions from every past attempt
+   * on that quiz if the user had retaken it, not just the last one. Also checks both
+   * quizId and userQuizId on lastResult — a UserQuiz result has quizId=null (post
+   * Standard/UserQuiz split), so checking quizId alone silently no-ops this for the
+   * common case (retaking a UserQuiz-generated practice quiz).
    */
   private async getCooldownQuestionIds(userId: number): Promise<number[]> {
     const lastResult = await this.dataSource.getRepository(QuizResult).findOne({
       where: { userId },
       order: { createdAt: 'DESC' },
-      // createdAt must stay in `select` even though only quizId is read below — TypeORM
-      // wraps this in a DISTINCT subquery to support the `order`, and drops any column
-      // that isn't selected from that subquery, which breaks the ORDER BY at runtime if
-      // createdAt isn't included (confirmed against the real dev DB: ER_BAD_FIELD_ERROR).
-      select: ['id', 'quizId', 'createdAt'],
+      // createdAt must stay in `select` even though only quizId/userQuizId are read
+      // below — TypeORM wraps this in a DISTINCT subquery to support the `order`, and
+      // drops any column that isn't selected from that subquery, which breaks the
+      // ORDER BY at runtime if createdAt isn't included (confirmed against the real
+      // dev DB: ER_BAD_FIELD_ERROR).
+      select: ['id', 'quizId', 'userQuizId', 'createdAt'],
     });
-    if (!lastResult?.quizId) return [];
+    if (!lastResult?.quizId && !lastResult?.userQuizId) return [];
 
     const rows = await this.dataSource.getRepository(QuestionAttempt).find({
       where: [
-        { userId, quizId: lastResult.quizId, isCorrect: false },
-        { userId, quizId: lastResult.quizId, isSkipped: true },
+        { resultId: lastResult.id, isCorrect: false },
+        { resultId: lastResult.id, isSkipped: true },
       ],
       select: ['questionId'],
     });

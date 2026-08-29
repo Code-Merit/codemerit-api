@@ -7,6 +7,7 @@ import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
 import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
+import { ActivityModule } from 'src/modules/activity/activity.module';
 import { SkillEnrollmentController } from './skill-enrollment.controller';
 import { SkillEnrollmentService } from './providers/skill-enrollment.service';
 
@@ -21,6 +22,7 @@ import { SkillEnrollmentService } from './providers/skill-enrollment.service';
       JobRoleSubject,
       EnrollmentBatch,
     ]),
+    ActivityModule,
   ],
   providers: [SkillEnrollmentService],
   controllers: [SkillEnrollmentController],

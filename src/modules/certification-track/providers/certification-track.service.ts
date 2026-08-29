@@ -5,8 +5,9 @@ import { CertificationTrack } from 'src/common/typeorm/entities/certification-tr
 import { CertificationTrackJobRole } from 'src/common/typeorm/entities/certification-track-job-role.entity';
 import { CertificationTrackSubjectTrack } from 'src/common/typeorm/entities/certification-track-subject-track.entity';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
+import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
 import { SubjectTrackTopic } from 'src/common/typeorm/entities/subject-track-topic.entity';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { CertificationTrackResponseDto } from '../dtos/certification-track-response.dto';
 import { CreateCertificationTrackDto } from '../dtos/create-certification-track.dto';
 import { LinkJobRoleDto } from '../dtos/link-job-role.dto';
@@ -27,6 +28,8 @@ export class CertificationTrackService {
     private sttRepo: Repository<SubjectTrackTopic>,
     @InjectRepository(JobRole)
     private jobRoleRepo: Repository<JobRole>,
+    @InjectRepository(SubjectTrack)
+    private subjectTrackRepo: Repository<SubjectTrack>,
   ) {}
 
   async create(dto: CreateCertificationTrackDto): Promise<CertificationTrackResponseDto> {
@@ -64,7 +67,25 @@ export class CertificationTrackService {
   }
 
   async linkSubjectTracks(id: number, dto: LinkSubjectTracksDto): Promise<CertificationTrackResponseDto> {
-    await this.assertExists(id);
+    const track = await this.assertExists(id);
+
+    // A subject-native track (subjectId set) may only compose subject tracks from that
+    // same subject — otherwise "native to this subject" would be a lie the moment an
+    // unrelated subject's subject-track got linked in by mistake.
+    if (track.subjectId != null) {
+      const linking = await this.subjectTrackRepo.find({
+        where: { id: In(dto.subjectTrackIds) },
+      });
+      const mismatched = linking.filter((st) => st.subjectId !== track.subjectId);
+      if (mismatched.length) {
+        throw new AppCustomException(
+          HttpStatus.BAD_REQUEST,
+          `Subject Track ID(s) ${mismatched.map((st) => st.id).join(', ')} do not belong to ` +
+            `this track's subject (subjectId ${track.subjectId}).`,
+        );
+      }
+    }
+
     for (const subjectTrackId of dto.subjectTrackIds) {
       const exists = await this.ctStRepo.findOne({
         where: { certificationTrackId: id, subjectTrackId },
@@ -192,6 +213,9 @@ export class CertificationTrackService {
       id: track.id,
       title: track.title,
       description: track.description,
+      subjectId: track.subjectId,
+      passThreshold: track.passThreshold,
+      isPublished: track.isPublished,
       jobRoles,
       subjectTrackCount: subjectTracks.length,
       subjectTracks,

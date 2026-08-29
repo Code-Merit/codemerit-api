@@ -33,6 +33,7 @@ const PERMISSION_META: Record<UserPermissionEnum, PermissionMeta> = {
   [UserPermissionEnum.CertificationTrackCreate]: { description: 'Create certification tracks',                              group: CERTIFICATION_TRACK_GROUP },
   [UserPermissionEnum.CertificationTrackUpdate]: { description: 'Update certification tracks and manage subject track links', group: CERTIFICATION_TRACK_GROUP },
   [UserPermissionEnum.CertificationTrackDelete]: { description: 'Delete certification tracks',                              group: CERTIFICATION_TRACK_GROUP },
+  [UserPermissionEnum.CertificationTrackGrant]:  { description: 'Manually grant or revoke certificates',                    group: CERTIFICATION_TRACK_GROUP },
   [UserPermissionEnum.BadgeGrant]:               { description: 'Grant badges to learners (e.g. during an interview)',      group: BADGE_GROUP },
   [UserPermissionEnum.Sme]:                      { description: 'Subject Matter Expert access, e.g. taking candidate interviews', group: SME_GROUP },
 

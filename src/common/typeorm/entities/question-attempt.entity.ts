@@ -14,6 +14,7 @@ import { Question } from './question.entity';
 import { User } from './user.entity';
 import { Quiz } from './quiz.entity';
 import { UserQuiz } from './user-quiz.entity';
+import { QuizResult } from './quiz-result.entity';
 import { QuizTypeEnum } from '../../enum/quiz-type.enum';
 
 // Speeds up the "latest attempt per question for a user" queries used throughout
@@ -48,6 +49,15 @@ export class QuestionAttempt extends AbstractEntity implements IQuestionAttempt 
 
   @Column({ type: 'int', nullable: true })
   userQuizId: number | null;
+
+  // Links this attempt back to the specific submission it came from. Nullable —
+  // pre-migration rows may be unbackfilled — so callers that need per-submission
+  // scoping (e.g. QuizResultService.getQuizResultByCode) must fall back to the old
+  // userId+quizId scoping when this is null, rather than assume it's always set.
+  // Without this, retaking the same quiz merges every historical attempt into
+  // every subsequent result's breakdown (confirmed live — see commit history).
+  @Column({ type: 'int', nullable: true })
+  resultId: number | null;
 
   // Nullable purely so `synchronize: true` can add this column to a table that
   // already has rows without a default — see QuizQuestion (quiz-quesion.entity.ts)
@@ -117,4 +127,8 @@ export class QuestionAttempt extends AbstractEntity implements IQuestionAttempt 
   @ManyToOne(() => UserQuiz, (userQuiz) => userQuiz.questionAttempts, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'userQuizId' })
   userQuiz: UserQuiz;
+
+  @ManyToOne(() => QuizResult, (result) => result.questionAttempts, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'resultId' })
+  result: QuizResult;
 }

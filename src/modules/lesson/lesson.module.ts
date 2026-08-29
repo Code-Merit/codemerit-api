@@ -6,6 +6,7 @@ import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-track
 import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
 import { UserPermissionModule } from '../user-permission/user-permission.module';
 import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.module';
+import { ActivityModule } from '../activity/activity.module';
 import { LessonController } from './lesson.controller';
 import { LessonService } from './providers/lesson.service';
 
@@ -14,6 +15,7 @@ import { LessonService } from './providers/lesson.service';
     TypeOrmModule.forFeature([Lesson, LessonSection, UserLessonTracker, FreeLessonView]),
     UserPermissionModule,
     SkillEnrollmentModule,
+    ActivityModule,
   ],
   providers: [LessonService],
   controllers: [LessonController],

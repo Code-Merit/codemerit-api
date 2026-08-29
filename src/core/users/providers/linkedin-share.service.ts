@@ -45,6 +45,19 @@ export class LinkedinShareService {
       linkedinTokenExpiresAt,
     });
 
+    try {
+      await this.activityService.createActivity(
+        userId,
+        'LinkedIn Connected',
+        'connected their LinkedIn account for sharing.',
+        { dataId: String(userId), dataType: 'LINKEDIN_CONNECT' },
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to log LinkedIn connect activity: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
     return { connected: true, expiresAt: linkedinTokenExpiresAt };
   }
 

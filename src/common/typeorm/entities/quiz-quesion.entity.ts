@@ -20,10 +20,11 @@ export class QuizQuestion extends AbstractEntity implements IQuizQuestion {
   })
   questionId: number;
 
-  // Exactly one of quizId/userQuizId is populated per row — quizId for Standard
-  // (FK -> quiz.id), userQuizId for UserQuiz (FK -> user_quiz.id). quizType below
-  // is the denormalized discriminator so reads never need to infer type from
-  // which FK is non-null.
+  // quizId: FK -> quiz.id. Standard-only going forward — UserQuiz's question list
+  // now lives directly on UserQuiz.questionIds instead of rows in this table (see
+  // its entity comment for rationale). userQuizId/quizType below are vestigial:
+  // kept unpopulated for new rows and left in place only so historical rows from
+  // before that split aren't orphaned by a DROP COLUMN; do not write to them.
   @Column({
     type: 'integer',
     nullable: true,

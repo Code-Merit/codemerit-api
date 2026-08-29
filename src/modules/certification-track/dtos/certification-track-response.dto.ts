@@ -19,6 +19,9 @@ export class CertificationTrackResponseDto {
   id: number;
   title: string;
   description: string;
+  subjectId: number | null;
+  passThreshold: number | null;
+  isPublished: boolean;
   jobRoles: CertTrackJobRoleDto[];
   subjectTrackCount: number;
   subjectTracks: CertTrackSubjectTrackDto[];

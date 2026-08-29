@@ -55,11 +55,11 @@ export class SubmitQuizDto {
   @Min(1)
   quizId: number;
 
-  // Optional fast path: quizId alone is now ambiguous (it could be a `quiz.id` or a
-  // `user_quiz.id` in two independent id spaces) since the Standard/UserQuiz split.
-  // The frontend already holds the fetched quiz's quizType at submission time — send
-  // it along to skip the resolve-by-probing-both-tables fallback. Left optional
-  // (not required) so older/uncoordinated clients still work, just marginally slower.
+  // Required in practice: quizId alone is ambiguous (it could be a `quiz.id` or a
+  // `user_quiz.id` in two independent id spaces) since the Standard/UserQuiz split —
+  // resolveQuizAnchor() rejects a submission that omits this. Kept @IsOptional() here
+  // at the DTO/validator level only so a request missing it still reaches the service
+  // and gets that clearer domain-specific error, instead of a generic validator 400.
   @ApiPropertyOptional({ enum: QuizTypeEnum, example: QuizTypeEnum.UserQuiz })
   @IsOptional()
   @IsEnum(QuizTypeEnum)

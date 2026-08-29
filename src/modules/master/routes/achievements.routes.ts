@@ -29,22 +29,21 @@ export const achievementsRoutes = [
     role: ['All'],
     submenu: [],
   },
-  // Certificates showcase — mirrors /badges above (same visitor-visible reasoning), not yet
-  // wired up. Today the only certificate-related frontend route is the admin-facing
-  // certification-tracks manager under /lms (src/app/lms/certification-tracks) — there is no
-  // public showcase page yet. Uncomment once that page ships.
-  // {
-  //   path: '/certificates',
-  //   title: 'Certificates',
-  //   iconType: 'material-icons-outlined',
-  //   icon: 'card_membership',
-  //   class: '',
-  //   groupTitle: false,
-  //   badge: '',
-  //   badgeClass: '',
-  //   role: ['All'],
-  //   submenu: [],
-  // },
+  {
+    // Public certification-track explorer (My Certificates/In Progress/Browse All) —
+    // standalone route (see codemerit's app.routes.ts), backed by the equally-public
+    // apis/certificates/explorer. Not scoped to any job role.
+    path: '/certificates',
+    title: 'Certificates',
+    iconType: 'material-icons-outlined',
+    icon: 'card_membership',
+    class: '',
+    groupTitle: false,
+    badge: '',
+    badgeClass: '',
+    role: ['All'],
+    submenu: [],
+  },
   {
     // Public global XP leaderboard — standalone route (see codemerit's app.routes.ts), not
     // scoped to any job role.

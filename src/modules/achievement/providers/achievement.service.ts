@@ -519,13 +519,21 @@ export class AchievementService {
       userId,
     );
 
+    // Per-track override of the pass bar — NULL (the default for every track today)
+    // falls back to the global CERT_ACHIEVED constant.
+    const tracks = await this.certificationTrackRepo.find({ where: { id: In(unissuedIds) } });
+    const thresholdMap = new Map<number, number>(
+      tracks.map((t) => [t.id, t.passThreshold ?? CERT_ACHIEVED]),
+    );
+
     for (const [certTrackId, subjectTrackIdSet] of subjectTrackIdsByCert) {
       const subjectTrackIds = [...subjectTrackIdSet];
       const total = subjectTrackIds.length;
       if (!total) continue;
       const completed = subjectTrackIds.filter((id) => subjectTrackMap.get(id)?.isCompleted).length;
       const progressPercent = (completed / total) * 100;
-      if (progressPercent < CERT_ACHIEVED) continue;
+      const threshold = thresholdMap.get(certTrackId) ?? CERT_ACHIEVED;
+      if (progressPercent < threshold) continue;
 
       const issued = await this.issueCertificate(userId, certTrackId, progressPercent);
       if (issued) certificatesEarned.push(issued);

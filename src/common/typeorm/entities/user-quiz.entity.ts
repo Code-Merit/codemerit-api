@@ -65,6 +65,14 @@ export class UserQuiz extends AbstractEntity {
   })
   level: DifficultyLevelEnum;
 
+  // Question set for this attempt, stored directly here instead of via the shared
+  // QuizQuestion hanger table — UserQuiz rows are ephemeral/prunable and never need
+  // the relational join QuizQuestion exists for, so a plain column avoids the
+  // dual-nullable-FK ambiguity that table has between Standard and UserQuiz.
+  // 'simple-json' not 'json' — see lesson.entity.ts's `tags` column for why.
+  @Column({ type: 'simple-json', nullable: true })
+  questionIds: number[] | null;
+
   @Column({ name: 'createdBy', default: null, select: false })
   createdBy: number;
 

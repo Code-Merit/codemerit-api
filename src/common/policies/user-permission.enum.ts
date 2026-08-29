@@ -24,6 +24,7 @@ export enum UserPermissionEnum {
   CertificationTrackCreate = 'CertificationTrack:Create',
   CertificationTrackUpdate = 'CertificationTrack:Update',
   CertificationTrackDelete = 'CertificationTrack:Delete',
+  CertificationTrackGrant = 'CertificationTrack:Grant',
   BadgeGrant = 'Badge:Grant',
   Sme = 'SME',
 
@@ -38,5 +39,5 @@ export enum UserPermissionEnum {
   SmeLead = 'Role:SMELead',
   OrganizationOwner = 'Role:OrganizationOwner',
   ProLearner = 'Role:ProLearner',
-  InterviewManager = 'Role:InterviewManager',
+  InterviewManager = 'Role:InterviewManager'
 }

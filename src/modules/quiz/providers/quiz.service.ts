@@ -37,6 +37,7 @@ import { GetQuestionsByIdsDto } from 'src/modules/question/dtos/get-questions-by
 import { QuestionService } from 'src/modules/question/providers/question.service';
 import { QuestionGeneratorService } from 'src/modules/question/providers/question-generator.service';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
+import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { DataSource, In, Repository } from 'typeorm';
 import { CreateQuizDto } from '../dtos/create-quiz.dto';
 import { PublishedQuizFilterDto } from '../dtos/published-quiz.dto';
@@ -76,6 +77,7 @@ export class QuizService {
     private readonly mailService: MailService,
     private readonly achievementService: AchievementService,
     private readonly skillEnrollmentService: SkillEnrollmentService,
+    private readonly activityService: ActivityService,
     private readonly dataSource: DataSource,
   ) { }
 
@@ -90,29 +92,35 @@ export class QuizService {
       .where('quiz.slug = :slug', { slug })
       .getOne();
 
-    if (!quiz) {
-      quiz = await this.userQuizRepository
+    // Step 1: Collect questionIds — Standard reads them off the QuizQuestion hanger
+    // relation already joined above; UserQuiz reads its own `questionIds` column
+    // instead (see UserQuiz.questionIds rationale), so no join is needed for it.
+    let questionIds: number[];
+    if (quiz) {
+      questionIds = quiz.quizQuestions.map((qq) => qq.questionId);
+    } else {
+      const userQuiz = await this.userQuizRepository
         .createQueryBuilder('quiz')
-        .leftJoinAndSelect('quiz.quizQuestions', 'quizQuestion')
         .leftJoinAndSelect('quiz.settings', 'settings')
         .where('quiz.slug = :slug', { slug })
         .getOne();
-      if (quiz) (quiz as any).quizType = QuizTypeEnum.UserQuiz;
+      if (userQuiz) {
+        (userQuiz as any).quizType = QuizTypeEnum.UserQuiz;
+        quiz = userQuiz;
+        questionIds = userQuiz.questionIds ?? [];
+      }
     }
 
     if (!quiz) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz not found.`);
     }
 
-    if (!quiz.quizQuestions || quiz.quizQuestions.length === 0) {
+    if (!questionIds || questionIds.length === 0) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
         'No questions found for this quiz.',
       );
     }
-
-    // Step 1: Collect questionIds
-    const questionIds = quiz.quizQuestions.map((qq) => qq.questionId);
 
     // Step 2: Use QuestionService
     const ids = new GetQuestionsByIdsDto();
@@ -359,18 +367,25 @@ export class QuizService {
           ? { quizId: savedQuizzes.id, userQuizId: null as number | null }
           : { quizId: null as number | null, userQuizId: savedQuizzes.id };
 
-        const quizQuestion: QuizQuestion[] = [];
-        const quizSubject: QuizSubject[] = [];
-        const quizTopic: QuizTopic[] = [];
-        for (const question of questions) {
-          const quizQuestionItem = new QuizQuestion();
-          Object.assign(quizQuestionItem, anchor);
-          quizQuestionItem.quizType = createQuizDto.quizType;
-          quizQuestionItem.questionId = question.id;
-          quizQuestion.push(quizQuestionItem);
+        if (isStandard) {
+          const quizQuestion: QuizQuestion[] = [];
+          for (const question of questions) {
+            const quizQuestionItem = new QuizQuestion();
+            Object.assign(quizQuestionItem, anchor);
+            quizQuestionItem.quizType = createQuizDto.quizType;
+            quizQuestionItem.questionId = question.id;
+            quizQuestion.push(quizQuestionItem);
+          }
+          await manager.save(QuizQuestion, quizQuestion);
+        } else {
+          // UserQuiz: question list lives directly on the row, not the shared
+          // QuizQuestion hanger table — see UserQuiz.questionIds for rationale.
+          (savedQuizzes as UserQuiz).questionIds = questions.map((q) => q.id);
+          await manager.save(UserQuiz, savedQuizzes as UserQuiz);
         }
 
-        await manager.save(QuizQuestion, quizQuestion);
+        const quizSubject: QuizSubject[] = [];
+        const quizTopic: QuizTopic[] = [];
         if (subjectIds && subjectIds.length > 0) {
           for (const id of subjectIds) {
             const quizSubjectItem = new QuizSubject();
@@ -607,10 +622,8 @@ export class QuizService {
     // createQuiz() only fails if it finds zero questions — fewer than the
     // requested 20 (e.g. a job role whose subjects only have 12 available) is
     // allowed and already succeeds. Reflect the ACTUAL count here rather than
-    // hardcoding 20, since that's what really got saved as QuizQuestion rows.
-    const actualQuestionCount = await this.quizQuestionRepo.count({
-      where: { userQuizId: quiz.id },
-    });
+    // hardcoding 20, since that's what really got saved onto questionIds.
+    const actualQuestionCount = quiz.questionIds?.length ?? 0;
 
     const quizSettings = this.quizSettingsRepository.create({
       userQuizId: quiz.id,
@@ -683,20 +696,31 @@ export class QuizService {
    * fast path — the frontend already has it from the quiz it fetched); falls back
    * to probing `quiz` then `user_quiz` for older/uncoordinated callers. Throws if
    * the id exists in neither. */
+  // `quiz` and `user_quiz` have independent auto-increment id sequences post-split,
+  // so a bare numeric quizId is ambiguous between them — quizType is required to
+  // disambiguate. Previously this fell back to probing the Standard `quiz` table
+  // first when quizType was missing, which silently misanchored UserQuiz
+  // submissions to an unrelated Standard quiz whenever their ids coincidentally
+  // collided (confirmed twice against real data). Never guess: require the caller
+  // to say which table, and look up only that one.
   private async resolveQuizAnchor(
     quizId: number,
     quizType?: QuizTypeEnum,
   ): Promise<{ quizType: QuizTypeEnum; title: string }> {
-    if (quizType !== QuizTypeEnum.UserQuiz) {
+    if (!quizType) {
+      throw new AppCustomException(
+        HttpStatus.BAD_REQUEST,
+        'quizType is required to submit a quiz (quizId alone is ambiguous between Standard and UserQuiz).',
+      );
+    }
+    if (quizType === QuizTypeEnum.Standard) {
       const standard = await this.quizRepository.findOne({ where: { id: quizId }, select: ['id', 'title'] });
-      if (standard) return { quizType: QuizTypeEnum.Standard, title: standard.title };
-      if (quizType === QuizTypeEnum.Standard) {
-        throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz with ID ${quizId} not found.`);
-      }
+      if (!standard) throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz with ID ${quizId} not found.`);
+      return { quizType: QuizTypeEnum.Standard, title: standard.title };
     }
     const userQuiz = await this.userQuizRepository.findOne({ where: { id: quizId }, select: ['id', 'title'] });
-    if (userQuiz) return { quizType: QuizTypeEnum.UserQuiz, title: userQuiz.title };
-    throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz with ID ${quizId} not found.`);
+    if (!userQuiz) throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz with ID ${quizId} not found.`);
+    return { quizType: QuizTypeEnum.UserQuiz, title: userQuiz.title };
   }
 
   async submitQuiz(
@@ -793,6 +817,7 @@ export class QuizService {
           const questionAttempt = manager.create(QuestionAttempt, {
             ...anchor,
             quizType,
+            resultId: savedResult.id,
             userId: submitQuizDto?.userId,
             questionId: attempt.questionId,
             selectedOption: attempt?.selectedOption,
@@ -820,6 +845,21 @@ export class QuizService {
         HttpStatus.INTERNAL_SERVER_ERROR,
         'Failed to submit quiz result.',
       );
+    }
+
+    // Base "Quiz Completed" activity, separate from the XP/streak/badge/certificate
+    // side-effects below — this fires unconditionally on every submission (not just
+    // ones that happen to earn something), same as the transaction commit above,
+    // and must never fail the quiz submission itself.
+    try {
+      await this.activityService.createActivity(
+        submitQuizDto?.userId,
+        'Quiz Completed',
+        `completed "${quizTitle ?? 'a quiz'}" — scored ${score}% (${correct}/${total} correct).`,
+        { dataId: String(questionResult.id), dataType: 'quiz_result' },
+      );
+    } catch (error) {
+      console.log('QuizBuilder #6: Failed to log quiz-completed activity', error);
     }
 
     // Achievement evaluation (XP, streak, badges, certificates) runs after the
@@ -908,7 +948,6 @@ export class QuizService {
     const quizzes = await this.userQuizRepository
       .createQueryBuilder('uq')
       .leftJoin(QuizResult, 'qr', 'qr.userQuizId = uq.id')
-      .leftJoin(QuizQuestion, 'qq', 'qq.userQuizId = uq.id')
       .select('uq.id', 'id')
       .addSelect('uq.title', 'title')
       .addSelect('uq.slug', 'slug')
@@ -917,7 +956,7 @@ export class QuizService {
       .addSelect('uq.level', 'level')
       .addSelect('uq.createdAt', 'createdAt')
       .addSelect('COUNT(DISTINCT qr.id)', 'totalAttempts')
-      .addSelect('COUNT(DISTINCT qq.id)', 'totalQuestions')
+      .addSelect('COALESCE(JSON_LENGTH(uq.questionIds), 0)', 'totalQuestions')
       .addSelect(
         `(SELECT qr2.resultCode FROM quiz_result qr2
           WHERE qr2.userQuizId = uq.id

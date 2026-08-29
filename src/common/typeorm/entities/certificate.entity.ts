@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { CertificateStatusEnum } from 'src/common/enum/certificate-status.enum';
+import { CertificateSourceEnum } from 'src/common/enum/certificate-source.enum';
 import { AbstractEntity } from './abstract.entity';
 import { CertificationTrack } from './certification-track.entity';
 import { User } from './user.entity';
@@ -63,6 +64,27 @@ export class Certificate extends AbstractEntity {
   @Column({ type: 'varchar', length: 100, nullable: true, default: null })
   tierDisplayName: string | null;
 
+  /** SYSTEM for auto-issued certificates; MANUAL when a person granted it. Mirrors
+   * UserBadge.source, minus badges' Interview case (not a thing for certificates). */
+  @Column({ type: 'enum', enum: CertificateSourceEnum, default: CertificateSourceEnum.SYSTEM })
+  source: CertificateSourceEnum;
+
+  /** The user who manually granted this certificate — null for SYSTEM issuance. */
+  @Column({ type: 'int', nullable: true, default: null })
+  awardedBy: number | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, default: null })
+  note: string | null;
+
+  @Column({ type: 'datetime', nullable: true, default: null })
+  revokedAt: Date | null;
+
+  @Column({ type: 'int', nullable: true, default: null })
+  revokedBy: number | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, default: null })
+  revokeReason: string | null;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
@@ -76,4 +98,12 @@ export class Certificate extends AbstractEntity {
   @ManyToOne(() => CertificationTrack, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'certificationTrackId' })
   certificationTrack: CertificationTrack;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'awardedBy' })
+  awardedByUser?: User;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'revokedBy' })
+  revokedByUser?: User;
 }
