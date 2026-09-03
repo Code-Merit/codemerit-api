@@ -160,7 +160,7 @@ export class QuizResult extends AbstractEntity implements IQuizResult {
   @JoinColumn({ name: 'userQuizId', referencedColumnName: 'id' })
   userQuiz: UserQuiz;
 
-  @ManyToOne(() => User, (user) => user.quizResults, { eager: true })
+  @ManyToOne(() => User, (user) => user.quizResults, { eager: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
 

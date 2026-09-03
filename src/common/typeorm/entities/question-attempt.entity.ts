@@ -108,15 +108,15 @@ export class QuestionAttempt extends AbstractEntity implements IQuestionAttempt 
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
 
-  @ManyToOne(() => QuestionOption)
+  @ManyToOne(() => QuestionOption, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'selectedOption', referencedColumnName: 'id' })
   selectedOptionDetails: QuestionOption;
 
-  @ManyToOne(() => Question)
+  @ManyToOne(() => Question, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'questionId', referencedColumnName: 'id' })
   question: Question;
 

@@ -136,15 +136,11 @@ export class SubjectTrackAnalysisService {
         // measures "have you touched this," which must never gate completion/certificate
         // issuance on its own (a topic "completed" by guessing wrong isn't completed).
         const isCompleted = correctCoverage >= TOPIC_DONE;
-        const attemptedEasy = +ts.attemptedEasy || 0;
-        const attemptedMedium = +ts.attemptedMedium || 0;
-        const attemptedHard = +ts.attemptedHard || 0;
-        const correctEasy = +ts.correctEasy || 0;
-        const correctMedium = +ts.correctMedium || 0;
-        const correctHard = +ts.correctHard || 0;
-        const wrongEasy = +ts.wrongEasy || 0;
-        const wrongMedium = +ts.wrongMedium || 0;
-        const wrongHard = +ts.wrongHard || 0;
+        // attemptedEasy/correctEasy/etc. are intentionally NOT carried on this response
+        // object anymore — they used to back the topic card's own "By Level" grid
+        // (Score/Coverage/Accuracy per difficulty), which was found inaccurate and
+        // removed from the frontend entirely. The track-level rollup below reads these
+        // straight from topicStatsMap instead of from this object, so it's unaffected.
 
         return {
           id: tid,
@@ -166,15 +162,6 @@ export class SubjectTrackAnalysisService {
           coverage,
           correctCoverage,
           score,
-          attemptedEasy,
-          attemptedMedium,
-          attemptedHard,
-          correctEasy,
-          correctMedium,
-          correctHard,
-          wrongEasy,
-          wrongMedium,
-          wrongHard,
           userLevel: ts.userLevel,
           isStarted: allAttempts > 0,
           isCompleted,
@@ -198,15 +185,20 @@ export class SubjectTrackAnalysisService {
         numTrivia: stNumTrivia, attempted: stAttempted, correct: stCorrect, wrong: stWrong,
         journeyAttempts: stAllAttempts, journeyCorrect: stJourneyCorrect, journeyWrong: stJourneyWrong,
       });
-      const stAttemptedEasy = topics.reduce((s: number, t: any) => s + (t.attemptedEasy || 0), 0);
-      const stAttemptedMedium = topics.reduce((s: number, t: any) => s + (t.attemptedMedium || 0), 0);
-      const stAttemptedHard = topics.reduce((s: number, t: any) => s + (t.attemptedHard || 0), 0);
-      const stCorrectEasy = topics.reduce((s: number, t: any) => s + (t.correctEasy || 0), 0);
-      const stCorrectMedium = topics.reduce((s: number, t: any) => s + (t.correctMedium || 0), 0);
-      const stCorrectHard = topics.reduce((s: number, t: any) => s + (t.correctHard || 0), 0);
-      const stWrongEasy = topics.reduce((s: number, t: any) => s + (t.wrongEasy || 0), 0);
-      const stWrongMedium = topics.reduce((s: number, t: any) => s + (t.wrongMedium || 0), 0);
-      const stWrongHard = topics.reduce((s: number, t: any) => s + (t.wrongHard || 0), 0);
+      // Sourced from topicStatsMap directly (not the `topics` response objects above,
+      // which no longer carry these fields) — the track-level "By difficulty" feature
+      // still needs them even though the topic-level one was removed.
+      const sumTopicField = (field: string) =>
+        topicIds.reduce((s: number, tid: number) => s + (+(topicStatsMap.get(tid)?.[field]) || 0), 0);
+      const stAttemptedEasy = sumTopicField('attemptedEasy');
+      const stAttemptedMedium = sumTopicField('attemptedMedium');
+      const stAttemptedHard = sumTopicField('attemptedHard');
+      const stCorrectEasy = sumTopicField('correctEasy');
+      const stCorrectMedium = sumTopicField('correctMedium');
+      const stCorrectHard = sumTopicField('correctHard');
+      const stWrongEasy = sumTopicField('wrongEasy');
+      const stWrongMedium = sumTopicField('wrongMedium');
+      const stWrongHard = sumTopicField('wrongHard');
       const totalTopics = topics.length;
       const completedTopics = topics.filter((t: any) => t.isCompleted).length;
       const progressPercent = totalTopics > 0 ? +((completedTopics / totalTopics) * 100).toFixed(0) : 0;

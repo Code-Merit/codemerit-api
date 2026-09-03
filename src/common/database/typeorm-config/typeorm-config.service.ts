@@ -25,6 +25,9 @@ import { Notification } from 'src/common/typeorm/entities/notification.entity';
 import { Permission } from 'src/common/typeorm/entities/permission.entity';
 import { PermissionRequest } from 'src/common/typeorm/entities/permission-request.entity';
 import { Profile } from 'src/common/typeorm/entities/profile.entity';
+import { QualityMetric } from 'src/common/typeorm/entities/quality-metric.entity';
+import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity';
+import { QualityReviewTag } from 'src/common/typeorm/entities/quality-review-tag.entity';
 import { QuestionTopic } from 'src/common/typeorm/entities/quesion-topic.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
@@ -118,6 +121,9 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         EnrollmentTierCapConfig,
         FreeLessonView,
         EnrollmentBatch,
+        QualityMetric,
+        QualityReview,
+        QualityReviewTag,
       ],
       // entities: [__dirname + '/../**/*.entity.{ts,js}'],
       // entities: ['src/**/*.entity.ts'],

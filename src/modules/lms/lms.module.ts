@@ -13,6 +13,11 @@ import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { UserPermissionModule } from '../user-permission/user-permission.module';
 import { Lesson } from 'src/common/typeorm/entities/lesson.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
+import { QualityMetric } from 'src/common/typeorm/entities/quality-metric.entity';
+import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity';
+import { QualityReviewTag } from 'src/common/typeorm/entities/quality-review-tag.entity';
+import { QuestionQualityService } from './providers/question-quality.service';
+import { LmsDashboardService } from './providers/lms-dashboard.service';
 
 @Module({
   imports: [
@@ -26,11 +31,14 @@ import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-track
       QuizResult,
       Lesson,
       UserLessonTracker,
+      QualityMetric,
+      QualityReview,
+      QualityReviewTag,
     ]),
     UserPermissionModule,
   ],
-  providers: [LmsService],
+  providers: [LmsService, QuestionQualityService, LmsDashboardService],
   controllers: [LmsController],
-  exports: [LmsService],
+  exports: [LmsService, QuestionQualityService, LmsDashboardService],
 })
 export class LmsModule {}

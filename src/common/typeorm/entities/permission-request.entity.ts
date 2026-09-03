@@ -40,15 +40,15 @@ export class PermissionRequest extends AbstractEntity {
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
 
-  @ManyToOne(() => Permission)
+  @ManyToOne(() => Permission, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'permissionId', referencedColumnName: 'id' })
   permission: Permission;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'reviewedBy', referencedColumnName: 'id' })
   reviewer?: User;
 }

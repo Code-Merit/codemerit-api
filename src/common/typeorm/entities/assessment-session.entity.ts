@@ -144,15 +144,15 @@ export class AssessmentSession
   })
   declineReason?: string;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'candidateId', referencedColumnName: 'id' })
   candidate?: User;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'ratedBy', referencedColumnName: 'id' })
   rater: User;
   //score should be able to calculated from the skill ratings, so we can remove it from here to avoid redundancy and inconsistency
@@ -160,14 +160,15 @@ export class AssessmentSession
   @ManyToOne(
     () => Interview,
     (interview) => interview.assessmentSessions,
+    { nullable: true, onDelete: 'SET NULL' },
   )
-  
+
   @JoinColumn({
     name: 'interviewId',
   })
   interview: Interview;
 
-  @ManyToOne(() => User, { eager: true })
+  @ManyToOne(() => User, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'interviewerId', referencedColumnName: 'id' })
   interviewer?: User;
 }

@@ -76,13 +76,13 @@ export class Activity extends AbstractEntity {
   @CreateDateColumn()
   createdAt: Date;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({
     name: 'userId',
   })
   user: User;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({
     name: 'actorId',
   })

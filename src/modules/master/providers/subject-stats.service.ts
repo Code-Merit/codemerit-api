@@ -7,6 +7,7 @@ import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
 import { UserLessonTrackerStatusEnum } from 'src/common/enum/user-lesson-tracker-status.enum';
 import { AssessmentSession } from 'src/common/typeorm/entities/assessment-session.entity';
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
+import { CertificationTrack } from 'src/common/typeorm/entities/certification-track.entity';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
@@ -70,10 +71,43 @@ export class SubjectStatsService {
       .addSelect('COUNT(DISTINCT CASE WHEN q.status = :active AND q.level = :easy THEN q.id END)', 'numEasyTrivia')
       .addSelect('COUNT(DISTINCT CASE WHEN q.status = :active AND q.level = :medium THEN q.id END)', 'numIntTrivia')
       .addSelect('COUNT(DISTINCT CASE WHEN q.status = :active AND q.level = :hard THEN q.id END)', 'numAdvTrivia')
+      // SME-only breakdown (see getAllSubjects' `isSme` param) — type-and-level scoped, unlike
+      // numEasyTrivia/numIntTrivia/numAdvTrivia above (which count every type at that level, not
+      // just Trivia, despite the name — left as-is since other consumers may already depend on
+      // that shape; these new columns are correctly scoped from the start).
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN q.status = :active AND q.questionType = :general THEN q.id END)',
+        'numGeneral',
+      )
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN q.status = :active AND q.questionType = :questionType AND q.level = :easy THEN q.id END)',
+        'numTriviaEasy',
+      )
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN q.status = :active AND q.questionType = :questionType AND q.level = :medium THEN q.id END)',
+        'numTriviaIntermediate',
+      )
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN q.status = :active AND q.questionType = :questionType AND q.level = :hard THEN q.id END)',
+        'numTriviaAdvanced',
+      )
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN q.status = :active AND q.questionType = :general AND q.level = :easy THEN q.id END)',
+        'numGeneralEasy',
+      )
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN q.status = :active AND q.questionType = :general AND q.level = :medium THEN q.id END)',
+        'numGeneralIntermediate',
+      )
+      .addSelect(
+        'COUNT(DISTINCT CASE WHEN q.status = :active AND q.questionType = :general AND q.level = :hard THEN q.id END)',
+        'numGeneralAdvanced',
+      )
       .from(Subject, 's')
       .where('s.isPublished = :isPublished', { isPublished: 1 })
       .leftJoin('question', 'q', 'q.subjectId = s.id')
       .setParameter('questionType', QuestionTypeEnum.Trivia)
+      .setParameter('general', QuestionTypeEnum.General)
       .setParameter('active', QuestionStatusEnum.Active)
       .setParameter('easy', DifficultyLevelEnum.Easy)
       .setParameter('medium', DifficultyLevelEnum.Intermediate)
@@ -179,24 +213,49 @@ export class SubjectStatsService {
 
   // ─── All Subjects (master list) ───────────────────────────────────────────────
 
-  async getAllSubjects(userId?: number) {
+  /**
+   * `isSme` gates the `questionBreakdown` field on each subject — trivia/general question
+   * counts split by difficulty level. Content-authoring detail that's only meaningful to
+   * someone who writes/reviews questions, so it's kept off the response entirely for
+   * everyone else rather than shipped-but-unused.
+   */
+  async getAllSubjects(userId?: number, isSme = false) {
     const [rows, trackCounts] = await Promise.all([
       this.getSubjectStats(undefined, userId),
       this.getSubjectTrackCounts(),
     ]);
-    return (rows as any[]).map((r) => ({
-      id: +r.subjectId,
-      title: r.title,
-      description: r.description,
-      image: r.image,
-      slug: r.slug,
-      isPublished: r.isPublished,
-      color: r.color,
-      numQuestions: +r.numQuestions || 0,
-      numTrivia: +r.numTrivia || 0,
-      isSubscribed: r.isSubscribed === 1 || r.isSubscribed === '1',
-      subjectTrackCount: trackCounts.get(+r.subjectId) ?? 0,
-    }));
+    return (rows as any[]).map((r) => {
+      const subject: any = {
+        id: +r.subjectId,
+        title: r.title,
+        description: r.description,
+        image: r.image,
+        slug: r.slug,
+        isPublished: r.isPublished,
+        color: r.color,
+        numQuestions: +r.numQuestions || 0,
+        numTrivia: +r.numTrivia || 0,
+        isSubscribed: r.isSubscribed === 1 || r.isSubscribed === '1',
+        subjectTrackCount: trackCounts.get(+r.subjectId) ?? 0,
+      };
+      if (isSme) {
+        subject.questionBreakdown = {
+          trivia: {
+            total: +r.numTrivia || 0,
+            easy: +r.numTriviaEasy || 0,
+            intermediate: +r.numTriviaIntermediate || 0,
+            advanced: +r.numTriviaAdvanced || 0,
+          },
+          general: {
+            total: +r.numGeneral || 0,
+            easy: +r.numGeneralEasy || 0,
+            intermediate: +r.numGeneralIntermediate || 0,
+            advanced: +r.numGeneralAdvanced || 0,
+          },
+        };
+      }
+      return subject;
+    });
   }
 
   // ─── Single Subject Page ──────────────────────────────────────────────────────
@@ -232,7 +291,7 @@ export class SubjectStatsService {
     );
     const subjectTrackMap = new Map<number, any>(subjectTracks.map((st: any) => [st.id, st]));
     const certificationTracks = await this.getCertificationTracksForSubject(
-      [...subjectTrackMap.keys()],
+      subjectId,
       subjectTrackMap,
       userId,
     );
@@ -427,52 +486,46 @@ export class SubjectStatsService {
     return { type: 'caught-up' };
   }
 
-  // ─── Certification Tracks (via SubjectTrack -> CertificationTrackSubjectTrack) ─
+  // ─── Certification Tracks (subject-native only) ────────────────────────────────
 
+  // "Belongs to this subject" is defined exactly the way CertificationTrack.subjectId's own
+  // doc comment intends and the way CertificateService.getExplorer's Subject-group already
+  // works: ct.subjectId = this subject, full stop. Previously this joined through
+  // certification_track_subject_track and pulled in ANY job-role-bundle track that merely
+  // required one of this subject's tracks as an ingredient (e.g. every "Full Stack Developer"
+  // style bundle needing some JavaScript) — that's how JavaScript's Certificate tab ballooned
+  // to 25 tracks when it should show exactly its own 3 (Foundation/Intermediate/Developer).
   private async getCertificationTracksForSubject(
-    subjectTrackIds: number[],
+    subjectId: number,
     subjectTrackMap: Map<number, any>,
     userId?: number,
   ) {
-    if (!subjectTrackIds.length) return [];
+    const nativeTracks = await this.dataSource
+      .getRepository(CertificationTrack)
+      .find({ where: { subjectId, isPublished: true } });
+    if (!nativeTracks.length) return [];
 
-    // Left-joined so a subject-native track (ct.subjectId set, no job-role link) still
-    // surfaces here — the WHERE below is what actually gates visibility in that case,
-    // since there's no job-role isPublished flag to filter on.
-    const rows = await this.dataSource
-      .createQueryBuilder()
-      .select('ct.id', 'ctId')
-      .addSelect('ct.title', 'ctTitle')
-      .addSelect('COALESCE(ctjr.descriptionOverride, ct.description)', 'ctDesc')
-      .addSelect('ctjr.sortOrder', 'ctSortOrder')
-      .addSelect('jr.id', 'jrId')
-      .addSelect('jr.title', 'jrTitle')
-      .addSelect('jr.slug', 'jrSlug')
-      .addSelect('jr.image', 'jrImage')
-      .addSelect('jr.color', 'jrColor')
-      .addSelect('ctst.subjectTrackId', 'stId')
-      .from('certification_track_subject_track', 'ctst')
-      .innerJoin('certification_track', 'ct', 'ct.id = ctst.certificationTrackId')
-      .leftJoin('certification_track_job_role', 'ctjr', 'ctjr.certificationTrackId = ct.id AND ctjr.isPublished = 1')
-      .leftJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId AND jr.isPublished = 1')
-      .where('ctst.subjectTrackId IN (:...subjectTrackIds)', { subjectTrackIds })
-      .andWhere('(ctjr.id IS NOT NULL OR (ct.subjectId IS NOT NULL AND ct.isPublished = 1))')
-      .orderBy('ctjr.sortOrder', 'ASC')
-      .getRawMany();
+    const ctIds = nativeTracks.map((t) => t.id);
 
-    if (!rows.length) return [];
-
-    const ctIds = [...new Set(rows.map((r) => +r.ctId))];
-
-    const [totalRows, myCertificates] = await Promise.all([
+    // Still resolved for display (e.g. "Certified via the React Developer role") even though
+    // job roles no longer decide whether a track shows up here at all.
+    const [stRows, jobRoleRows, myCertificates] = await Promise.all([
       this.dataSource
         .createQueryBuilder()
         .select('ctst.certificationTrackId', 'ctId')
-        .addSelect('COUNT(DISTINCT ctst.subjectTrackId)', 'total')
+        .addSelect('ctst.subjectTrackId', 'stId')
         .from('certification_track_subject_track', 'ctst')
-        .innerJoin('subject_track', 'st', 'st.id = ctst.subjectTrackId AND st.isPublished = 1')
         .where('ctst.certificationTrackId IN (:...ctIds)', { ctIds })
-        .groupBy('ctst.certificationTrackId')
+        .getRawMany(),
+      this.dataSource
+        .createQueryBuilder()
+        .select('ctjr.certificationTrackId', 'ctId')
+        .addSelect('jr.id', 'jrId')
+        .addSelect('jr.title', 'jrTitle')
+        .from('certification_track_job_role', 'ctjr')
+        .innerJoin('job_role', 'jr', 'jr.id = ctjr.jobRoleId AND jr.isPublished = 1')
+        .where('ctjr.certificationTrackId IN (:...ctIds)', { ctIds })
+        .andWhere('ctjr.isPublished = 1')
         .getRawMany(),
       userId
         ? this.dataSource
@@ -481,38 +534,26 @@ export class SubjectStatsService {
         : Promise.resolve([]),
     ]);
 
-    const totalMap = new Map<number, number>(totalRows.map((r) => [+r.ctId, +r.total]));
+    const stIdsByCt = new Map<number, Set<number>>();
+    for (const row of stRows) {
+      const ctId = +row.ctId;
+      const set = stIdsByCt.get(ctId) ?? new Set<number>();
+      set.add(+row.stId);
+      stIdsByCt.set(ctId, set);
+    }
+    const roleTitlesByCt = new Map<number, Map<number, string>>();
+    for (const row of jobRoleRows) {
+      const ctId = +row.ctId;
+      const roles = roleTitlesByCt.get(ctId) ?? new Map<number, string>();
+      roles.set(+row.jrId, row.jrTitle);
+      roleTitlesByCt.set(ctId, roles);
+    }
     const certMap = new Map<number, Certificate>(myCertificates.map((c) => [c.certificationTrackId, c]));
 
-    type CtEntry = { meta: any; stIds: number[] };
-    const ctIndex = new Map<string, CtEntry>();
-    for (const row of rows) {
-      const ctId = +row.ctId;
-      const jrId = row.jrId != null ? +row.jrId : null;
-      // Subject-native tracks with no job-role link (jrId null) still get their own
-      // key per certification track — there's only ever one such "no job role" entry.
-      const key = jrId != null ? `${ctId}-${jrId}` : `${ctId}-none`;
-      if (!ctIndex.has(key)) {
-        ctIndex.set(key, {
-          meta: {
-            id: ctId,
-            title: row.ctTitle,
-            description: row.ctDesc,
-            sortOrder: row.ctSortOrder != null ? +row.ctSortOrder : 0,
-            jobRole: jrId != null
-              ? { id: jrId, title: row.jrTitle, slug: row.jrSlug, image: row.jrImage, color: row.jrColor }
-              : null,
-          },
-          stIds: [],
-        });
-      }
-      ctIndex.get(key)!.stIds.push(+row.stId);
-    }
-
-    return [...ctIndex.values()]
-      .sort((a, b) => a.meta.sortOrder - b.meta.sortOrder)
-      .map(({ meta, stIds }) => {
-        const subjectTracks = stIds
+    return [...nativeTracks]
+      .sort((a, b) => a.id - b.id) // no dedicated sortOrder on subject-native tracks; id order matches authoring order (Foundation -> Intermediate -> Developer)
+      .map((track) => {
+        const subjectTracks = [...(stIdsByCt.get(track.id) ?? [])]
           .map((id) => subjectTrackMap.get(id))
           .filter(Boolean)
           .map((st: any) => ({
@@ -529,14 +570,22 @@ export class SubjectStatsService {
             correct: st.correct ?? 0,
           }));
 
+        const roleTitles = roleTitlesByCt.get(track.id);
         const card: any = {
-          ...meta,
-          totalSubjectTracks: totalMap.get(meta.id) ?? subjectTracks.length,
+          id: track.id,
+          title: track.title,
+          description: track.description,
+          sortOrder: track.id,
+          totalSubjectTracks: subjectTracks.length,
           subjectTracks,
+          // Matches DisplayCertificationTrack's roleTitles contract (certification-tracks
+          // component + Browse Certificates explorer) — undefined, not [], when there's no
+          // published job role at all, so the template's @if stays clean.
+          roleTitles: roleTitles?.size ? [...roleTitles.values()] : undefined,
         };
 
         if (userId) {
-          const cert = certMap.get(meta.id);
+          const cert = certMap.get(track.id);
           card.myCertificate = cert
             ? {
                 certificateNumber: cert.certificateNumber, status: cert.status,

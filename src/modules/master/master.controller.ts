@@ -11,6 +11,7 @@ import { Public } from 'src/core/auth/decorators/public.decorator';
 import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard';
 import { ApiResponse } from 'src/common/utils/api-response';
 import { UserPermissionService } from '../user-permission/providers/user-permission.service';
+import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
 import { MasterService } from './providers/master.service';
 import { TopicAnalysisService } from './providers/topic-analysis.service';
 import { SubjectStatsService } from './providers/subject-stats.service';
@@ -53,7 +54,19 @@ export class MasterController {
   @Get('data')
   async getMasterData(@Request() req: any) {
     const userId = req.user?.id;
-    return this.masterService.getMasterData(userId);
+    const permissions = await this.userPermissionService.findUserPermissionList(userId);
+    const isSme = this.hasSmeAccess(permissions);
+    return this.masterService.getMasterData(userId, isSme);
+  }
+
+  // Ladder-inclusive SME check — mirrors InterviewService's own isSme resolution (Sme OR
+  // AssociateSme OR SmeLead all count), the existing convention for "does this user have
+  // SME-level access" anywhere the exact tier doesn't matter.
+  private hasSmeAccess(permissions: { permissionName: string }[]): boolean {
+    const permissionNames = (permissions ?? []).map((p) => p.permissionName);
+    return [UserPermissionEnum.Sme, UserPermissionEnum.AssociateSme, UserPermissionEnum.SmeLead].some((p) =>
+      permissionNames.includes(p),
+    );
   }
 
   @ApiOperation({

@@ -101,15 +101,15 @@ export class Lesson extends AbstractEntity {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => Subject)
+  @ManyToOne(() => Subject, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'subjectId' })
   subject: Subject;
 
-  @ManyToOne(() => Topic)
+  @ManyToOne(() => Topic, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'topicId' })
   topic: Topic;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'userId' })
   user: User;
 

@@ -31,9 +31,9 @@ export class MasterService {
     return this.routeService.getRoutesConfig(userRole, userPermissions);
   }
 
-  async getMasterData(userId?: number) {
+  async getMasterData(userId?: number, isSme = false) {
     const [subjects, jobRoles, popularTopics, subjectTracks, certificationTracks, topics] = await Promise.all([
-      this.subjectStats.getAllSubjects(userId),
+      this.subjectStats.getAllSubjects(userId, isSme),
       this.programService.getJobRolesWithSubjects(userId),
       this.meritService.getGlobalPopularTopics(),
       this.getMasterSubjectTracks(),

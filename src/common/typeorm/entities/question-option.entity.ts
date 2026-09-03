@@ -42,7 +42,7 @@ export class QuestionOption extends AbstractEntity implements IQuestionOption {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => Question)
+  @ManyToOne(() => Question, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'questionId', referencedColumnName: 'id' })
   question: Question;
 }

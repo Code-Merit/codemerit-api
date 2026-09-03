@@ -1,12 +1,20 @@
 import { BadRequestException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { validate } from 'class-validator';
+import { QualityReviewOutcomeEnum } from 'src/common/enum/quality-review-outcome.enum';
+import { QualityResourceTypeEnum } from 'src/common/enum/quality-resource-type.enum';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
+import { QualityMetric } from 'src/common/typeorm/entities/quality-metric.entity';
+import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity';
+import { QualityReviewTag } from 'src/common/typeorm/entities/quality-review-tag.entity';
+import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionTopic } from 'src/common/typeorm/entities/quesion-topic.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
 import { Question } from 'src/common/typeorm/entities/question.entity';
+import { Subject } from 'src/common/typeorm/entities/subject.entity';
+import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { shuffleArray } from 'src/common/utils/common-functions';
 import {
   generateSlug,
@@ -22,6 +30,39 @@ import { GetQuestionsByIdsDto } from '../dtos/get-questions-by-ids.dto';
 import { QuestionListResponseDto } from '../dtos/question-list-response.dto';
 import { UpdateQuestionDto } from '../dtos/update-question.dto';
 import { QuestionOptionService } from './question-option.service';
+
+export interface QuestionListFilters {
+  fullData?: boolean;
+  subjectId?: number;
+  subjectSlug?: string;
+  topicId?: number;
+  topicSlug?: string;
+  level?: number;
+  status?: QuestionStatusEnum;
+  isWhitelisted?: boolean;
+  authorId?: number;
+  // Reads the denormalized rollup columns on Question (updated only when a
+  // QualityReview is submitted) — no join to quality_review needed, same
+  // reasoning as QuestionQualityService.getReviewQueue's unreviewed/flagged split.
+  qualityFilter?: 'unreviewed' | 'needsAttention' | 'approved';
+  // Resolves to a quality_metric row via its stable `code` (never a raw numeric id
+  // on the wire) — matches questions whose LATEST SUBMITTED review has that specific
+  // issue/positive tag attached, same "latest review per question" technique as
+  // QuestionQualityService.getFlaggedForRevision/getTopIssueTags.
+  tagCode?: string;
+  // Questions with zero rows in question_attempt — same definition as
+  // QuestionQualityService.getNeverAttempted, expressed as a correlated NOT EXISTS
+  // so it composes with the other WHERE-only filters here without a GROUP BY.
+  neverAttempted?: boolean;
+  fetchAll?: boolean;
+  limit?: number;
+  user?: GetUserRequestDto;
+  // Admin OR LmsManager-permission holder — both get full, unscoped visibility.
+  // Computed once by the controller (it already has to check this for the 403
+  // gate) rather than re-derived here from `user.role` alone.
+  hasFullAccess?: boolean;
+}
+
 @Injectable()
 export class QuestionService {
   constructor(
@@ -95,11 +136,15 @@ export class QuestionService {
     return questionWithTopics;
   }
 
-  async remove(id: number, user: GetUserRequestDto) {
+  async remove(id: number, user: GetUserRequestDto, hasFullAccess = false) {
     const question = await this.findOneWithAuidt(id);
     if (question) {
-      // Check if question is whitelisted and user is not admin
-      if (question['isWhitelisted'] && user.role !== UserRoleEnum.ADMIN) {
+      // Whitelisted questions: Admin or LmsManager only — equivalent access.
+      if (
+        question['isWhitelisted'] &&
+        user.role !== UserRoleEnum.ADMIN &&
+        !hasFullAccess
+      ) {
         throw new AppCustomException(
           HttpStatus.FORBIDDEN,
           'This question is whitelisted and can only be deleted by administrators.',
@@ -108,6 +153,7 @@ export class QuestionService {
 
       if (
         user.role == UserRoleEnum.ADMIN ||
+        hasFullAccess ||
         (user.role == UserRoleEnum.MODERATOR && user.id == question?.createdBy)
       ) {
         await this.dataSource.transaction(async (manager) => {
@@ -132,6 +178,7 @@ export class QuestionService {
     id: number,
     dto: UpdateQuestionDto,
     user: GetUserRequestDto,
+    hasFullAccess = false,
   ): Promise<Question> {
     if (!dto.questionType) {
       throw new AppCustomException(
@@ -154,8 +201,12 @@ export class QuestionService {
 
     const questionAdut = await this.findOneWithAuidt(id);
 
-    // Check if question is whitelisted and user is not admin
-    if (questionAdut['isWhitelisted'] && user.role !== UserRoleEnum.ADMIN) {
+    // Whitelisted questions: Admin or LmsManager only — equivalent access.
+    if (
+      questionAdut['isWhitelisted'] &&
+      user.role !== UserRoleEnum.ADMIN &&
+      !hasFullAccess
+    ) {
       throw new AppCustomException(
         HttpStatus.FORBIDDEN,
         'This question is whitelisted and can only be modified by administrators.',
@@ -351,74 +402,174 @@ export class QuestionService {
   }
 
   async getQuestionListForAdmin(
-    fullData = false,
-    subjectId?: number,
-    topicId?: number,
-    level?: number,
-    authorId?: number,
-    fetchAll = false,
-    limit = 100,
-    user?: GetUserRequestDto,
+    filters: QuestionListFilters,
   ): Promise<AdminQuestionResponseDto[]> {
-    const questionList = await this.fetchAllLatestQuestions(
-      fullData,
-      subjectId,
-      topicId,
-      level,
-      authorId,
-      fetchAll,
-      limit,
-      user,
-    );
-
-    if (!questionList || questionList.length === 0) {
-      throw new AppCustomException(
-        HttpStatus.NOT_FOUND,
-        'No Question found for the given filters.',
-      );
-    }
-
-    return questionList;
+    // An empty result is not an error — a valid filter combination that legitimately
+    // matches nothing (e.g. a non-Admin caller's own authored count for that subject
+    // is zero) is a normal 200 with `data: []`, not a 404. The 404 this used to throw
+    // here conflated "found nothing" with "the resource doesn't exist" and made the
+    // controller's own graceful empty-list handling permanently unreachable. Slug
+    // lookups that can't resolve at all (see fetchAllLatestQuestions below) still
+    // throw a specific, real 404 — that IS a "the thing you referenced doesn't exist"
+    // case, unlike an empty-but-valid query.
+    return (await this.fetchAllLatestQuestions(filters)) ?? [];
   }
 
   async fetchAllLatestQuestions(
-    fullData = false,
-    subjectId?: number,
-    topicId?: number,
-    level?: number,
-    authorId?: number,
-    fetchAll = false,
-    limit = 100,
-    user?: GetUserRequestDto,
+    filters: QuestionListFilters,
   ): Promise<any[] | undefined> {
+    const {
+      fullData = false,
+      subjectId,
+      subjectSlug,
+      topicId,
+      topicSlug,
+      level,
+      status,
+      isWhitelisted,
+      authorId,
+      qualityFilter,
+      tagCode,
+      neverAttempted,
+      fetchAll = false,
+      limit = 100,
+      user,
+      hasFullAccess = false,
+    } = filters;
+
+    // Slugs are resolved here (not passed straight through as ids) so the URL never
+    // has to carry a raw subject/topic id — mirrors SubjectStatsService.getSubjectPage's
+    // slug->id lookup. Unlike an empty-but-valid result set, a slug that doesn't
+    // resolve to anything IS a genuine "the thing you referenced doesn't exist" —
+    // a real 404 with a specific message (e.g. a typo'd slug), not a silent empty list.
+    let resolvedSubjectId = subjectId;
+    if (!resolvedSubjectId && subjectSlug) {
+      const subject = await this.dataSource
+        .getRepository(Subject)
+        .findOne({ where: { slug: subjectSlug }, select: ['id'] });
+      if (!subject) {
+        throw new AppCustomException(
+          HttpStatus.NOT_FOUND,
+          `No subject found for slug "${subjectSlug}".`,
+        );
+      }
+      resolvedSubjectId = subject.id;
+    }
+
+    let resolvedTopicId = topicId;
+    if (!resolvedTopicId && topicSlug) {
+      const topic = await this.dataSource
+        .getRepository(Topic)
+        .findOne({ where: { slug: topicSlug }, select: ['id'] });
+      if (!topic) {
+        throw new AppCustomException(
+          HttpStatus.NOT_FOUND,
+          `No topic found for slug "${topicSlug}".`,
+        );
+      }
+      resolvedTopicId = topic.id;
+    }
+
+    let resolvedTagId: number | undefined;
+    if (tagCode) {
+      const tag = await this.dataSource
+        .getRepository(QualityMetric)
+        .findOne({ where: { code: tagCode }, select: ['id'] });
+      if (!tag) {
+        throw new AppCustomException(
+          HttpStatus.NOT_FOUND,
+          `No quality tag found for code "${tagCode}".`,
+        );
+      }
+      resolvedTagId = tag.id;
+    }
+
     // Step 1: fetch limited question IDs
     const idQb = this.questionRepo
       .createQueryBuilder('q')
       .select('q.id', 'id')
       .orderBy('q.id', 'DESC');
 
-    if (!user || user.role !== UserRoleEnum.ADMIN) {
+    if (!hasFullAccess && (!user || user.role !== UserRoleEnum.ADMIN)) {
       idQb.andWhere('q.createdBy = :createdBy', {
         createdBy: user?.id ?? 0,
       });
     }
 
-    if (subjectId) {
-      idQb.andWhere('q.subjectId = :subjectId', { subjectId });
+    if (resolvedSubjectId) {
+      idQb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
     }
 
-    if (topicId) {
+    if (resolvedTopicId) {
       idQb
         .innerJoin('q.questionTopics', 'qt')
-        .andWhere('qt.topicId = :topicId', { topicId });
+        .andWhere('qt.topicId = :topicId', { topicId: resolvedTopicId });
     }
 
     if (level) {
       idQb.andWhere('q.level = :level', { level });
     }
 
+    if (status) {
+      idQb.andWhere('q.status = :status', { status });
+    }
+
+    if (isWhitelisted !== undefined) {
+      idQb.andWhere('q.isWhitelisted = :isWhitelisted', { isWhitelisted });
+    }
+
     if (authorId > 0) {
       idQb.andWhere('q.createdBy = :authorId', { authorId });
+    }
+
+    if (qualityFilter === 'unreviewed') {
+      idQb.andWhere('q.reviewCount = 0');
+    } else if (qualityFilter === 'needsAttention') {
+      idQb.andWhere('q.lastReviewOutcome IN (:...needsAttentionOutcomes)', {
+        needsAttentionOutcomes: [
+          QualityReviewOutcomeEnum.NeedsRevision,
+          QualityReviewOutcomeEnum.Rejected,
+        ],
+      });
+    } else if (qualityFilter === 'approved') {
+      idQb.andWhere('q.lastReviewOutcome = :approvedOutcome', {
+        approvedOutcome: QualityReviewOutcomeEnum.Approved,
+      });
+    }
+
+    if (resolvedTagId) {
+      // "Latest review per question" — same MAX(id)-grouped-by-resourceId technique
+      // as getFlaggedForRevision/getTopIssueTags, so a tag from a since-superseded
+      // review pass doesn't keep matching after a later pass replaced it. No status
+      // filter needed — every quality_review row is already a final decision.
+      const latestReviewSub = this.dataSource
+        .createQueryBuilder()
+        .subQuery()
+        .select('r2.resourceId', 'resourceId')
+        .addSelect('MAX(r2.id)', 'maxId')
+        .from(QualityReview, 'r2')
+        .where('r2.resourceType = :tagResourceType', {
+          tagResourceType: QualityResourceTypeEnum.Question,
+        })
+        .groupBy('r2.resourceId')
+        .getQuery();
+
+      idQb
+        .innerJoin(`(${latestReviewSub})`, 'latestReview', 'latestReview.resourceId = q.id')
+        .innerJoin(QualityReviewTag, 'qrt', 'qrt.qualityReviewId = latestReview.maxId')
+        .andWhere('qrt.qualityMetricId = :tagId', { tagId: resolvedTagId })
+        .setParameter('tagResourceType', QualityResourceTypeEnum.Question);
+    }
+
+    if (neverAttempted) {
+      const attemptSub = this.dataSource
+        .createQueryBuilder()
+        .subQuery()
+        .select('1')
+        .from(QuestionAttempt, 'qa')
+        .where('qa.questionId = q.id')
+        .getQuery();
+      idQb.andWhere(`NOT EXISTS ${attemptSub}`);
     }
 
     if (!fetchAll) {
@@ -450,6 +601,9 @@ export class QuestionService {
       .addSelect('question.answer', 'answer')
       .addSelect('question.isWhitelisted', 'isWhitelisted')
       .addSelect('question.createdAt', 'question_createdAt')
+      .addSelect('question.reviewCount', 'reviewCount')
+      .addSelect('question.latestGrade', 'latestGrade')
+      .addSelect('question.lastReviewOutcome', 'lastReviewOutcome')
       // subject
       .leftJoin('question.subject', 'subject')
       .addSelect('subject.id', 'subject_id')
@@ -499,6 +653,9 @@ export class QuestionService {
           hint: row['hint'] ?? null,
           answer: row['answer'] ?? null,
           isWhitelisted: row['isWhitelisted'] ?? false,
+          reviewCount: row['reviewCount'] ?? 0,
+          latestGrade: row['latestGrade'] ?? null,
+          lastReviewOutcome: row['lastReviewOutcome'] ?? null,
           //map other fields
           createdAt: row['question_createdAt'] ?? null,
           subject: row['subject_id']

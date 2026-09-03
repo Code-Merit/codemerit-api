@@ -85,7 +85,7 @@ export class UserQuiz extends AbstractEntity {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'createdBy', referencedColumnName: 'id' })
   userCreatedBy: User;
 

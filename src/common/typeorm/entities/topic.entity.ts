@@ -122,11 +122,11 @@ export class Topic extends AbstractEntity implements ITopic {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => Subject)
+  @ManyToOne(() => Subject, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'subjectId' })
   subject: Subject;
 
-  @ManyToOne(() => Topic, (topic) => topic.subTopics, { nullable: true })
+  @ManyToOne(() => Topic, (topic) => topic.subTopics, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'parent' })
   parentTopic?: Topic;
 

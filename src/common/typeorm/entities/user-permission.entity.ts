@@ -33,11 +33,11 @@ export class UserPermission implements IUserPermission {
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
-  @ManyToOne(() => User, user => user.permissions)
+  @ManyToOne(() => User, user => user.permissions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
 
-  @ManyToOne(() => Permission)
+  @ManyToOne(() => Permission, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'permissionId', referencedColumnName: 'id' })
   permission: Permission;
 }

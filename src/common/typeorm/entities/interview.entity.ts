@@ -84,19 +84,19 @@ export class Interview extends AbstractEntity {
    * Relations
    */
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({
     name: 'userId',
   })
   user: User;
 
-  @ManyToOne(() => JobRole)
+  @ManyToOne(() => JobRole, { onDelete: 'RESTRICT' })
   @JoinColumn({
     name: 'jobRoleId',
   })
   jobRole: JobRole;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({
     name: 'externalId',
   })

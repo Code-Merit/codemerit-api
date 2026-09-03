@@ -6,6 +6,7 @@ import { seedPrograms } from './seeders/03-programs.seeder';
 import { seedQuestions } from './seeders/04-question.seeder';
 import { seedLessons } from './seeders/05-lesson.seeder';
 import { seedBadges } from './seeders/06-badges.seeder';
+import { seedQualityMetrics } from './seeders/07-quality-metrics.seeder';
 
 // Idempotent — every seeder matches by slug (or unique natural key) and skips
 // records that already exist, so this is safe to re-run against a seeded DB.
@@ -35,6 +36,9 @@ async function main() {
 
     console.log('\nSeeding badges...');
     await seedBadges(AppDataSource);
+
+    console.log('\nSeeding quality metrics...');
+    await seedQualityMetrics(AppDataSource);
 
     console.log('\nDone.');
   } catch (err) {

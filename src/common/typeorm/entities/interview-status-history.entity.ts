@@ -57,19 +57,20 @@ export class InterviewStatusHistory extends AbstractEntity {
   @ManyToOne(
     () => Interview,
     (interview) => interview.statusHistory,
+    { onDelete: 'CASCADE' },
   )
   @JoinColumn({
     name: 'interviewId',
   })
   interview: Interview;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({
     name: 'changedBy',
   })
   changedByUser: User;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({
     name: 'assignedToUserId',
   })

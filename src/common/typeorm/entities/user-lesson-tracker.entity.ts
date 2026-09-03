@@ -81,11 +81,11 @@ export class UserLessonTracker extends AbstractEntity {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => User, (user) => user.lessonTrackers)
+  @ManyToOne(() => User, (user) => user.lessonTrackers, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @ManyToOne(() => Lesson, (lesson) => lesson.userTrackers)
+  @ManyToOne(() => Lesson, (lesson) => lesson.userTrackers, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'lessonId' })
   lesson: Lesson;
 }

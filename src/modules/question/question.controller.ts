@@ -21,13 +21,12 @@ import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from 'src/common/policies/permissions.guard';
 import { RequirePermission } from 'src/common/policies/require-permission.decorator';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
+import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import {
   UserPermissionEnum,
   UserPermissionTitleEnum,
 } from 'src/common/policies/user-permission.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
-import { RolesGuard } from 'src/core/auth/guards/roles.guard';
-import { Roles } from 'src/core/auth/decorators/roles.decorator';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { UserPermissionService } from '../user-permission/providers/user-permission.service';
 import {
@@ -76,21 +75,26 @@ export class QuestionController {
   }
 
   @ApiOperation({
-    summary: 'Admin/author search over questions (Admin or LMS Manager only)',
+    summary: 'Admin/LMS Manager search over ALL questions, any author (Admin or LMS Manager only)',
     description:
-      'Callers who are not Admin must hold the LmsManager permission (permissionId 4) or get a 403. ' +
-      'Holding LmsManager does not widen visibility, though: any caller whose role is not Admin is ' +
-      'always scoped to questions they authored themselves (`createdBy` = caller id), regardless of ' +
-      'the `authorId` filter — only an Admin can actually browse other authors\' questions via ' +
-      '`authorId`. `fetchAll=true` ignores `limit` entirely and returns every matching row; otherwise ' +
-      'results are capped at `limit` (default 100), newest first. Throws 404 "No Question found for ' +
-      'the given filters" when nothing matches rather than returning an empty array.',
+      'Callers who are not Admin must hold the LmsManager permission (permissionId 4) or get a 403 — ' +
+      'and holding either grants the SAME full, unscoped visibility across every author\'s questions ' +
+      '(LmsManager is not a narrower "see your own" tier; it is equivalent to Admin for this endpoint). ' +
+      'Subject/topic are filtered by slug, not id, so the caller never has to know or expose another ' +
+      'table\'s numeric id; an unresolvable slug throws a specific 404 rather than silently ignoring ' +
+      'the filter. `fetchAll=true` ignores `limit` entirely and returns every matching row; otherwise ' +
+      'results are capped at `limit` (default 100), newest first. A filter combination matching zero ' +
+      'rows returns 200 with `data: []`, not an error.',
   })
   @ApiQuery({ name: 'fullData', required: false, type: String, description: 'Pass "true" or "1" to include each question\'s options in the response; otherwise options are omitted.' })
-  @ApiQuery({ name: 'subjectId', required: false, type: String, description: 'Filter to a single subject id.' })
-  @ApiQuery({ name: 'topicId', required: false, type: String, description: 'Filter to a single topic id (inner-joins questionTopics).' })
+  @ApiQuery({ name: 'subjectSlug', required: false, type: String, description: 'Filter to a single subject by slug.' })
+  @ApiQuery({ name: 'topicSlug', required: false, type: String, description: 'Filter to a single topic by slug (inner-joins questionTopics).' })
   @ApiQuery({ name: 'level', required: false, type: String, description: 'One of "Easy", "Intermediate", "Advanced" (mapped to DifficultyLevelEnum); omitted or unrecognized values apply no level filter.' })
-  @ApiQuery({ name: 'authorId', required: false, type: String, description: 'Filter to a specific author id. Only effective for Admin callers — non-Admin callers are already scoped to their own authored questions.' })
+  @ApiQuery({ name: 'status', required: false, enum: QuestionStatusEnum, description: 'Filter by moderation status.' })
+  @ApiQuery({ name: 'isWhitelisted', required: false, type: String, description: 'Pass "true" or "false" to filter by whitelist status.' })
+  @ApiQuery({ name: 'qualityFilter', required: false, enum: ['unreviewed', 'needsAttention', 'approved'], description: 'Filter by SME quality-review rollup state: unreviewed (reviewCount=0), needsAttention (lastReviewOutcome is NeedsRevision or Rejected), approved (lastReviewOutcome=Approved). Omitted applies no quality filter.' })
+  @ApiQuery({ name: 'tagCode', required: false, type: String, description: 'Filter to questions whose latest submitted SME review has this quality_metric tag attached (by its stable code, e.g. "question_malformed") — positive or negative tags both work.' })
+  @ApiQuery({ name: 'neverAttempted', required: false, type: String, description: 'Pass "true" to filter to questions with zero rows in question_attempt.' })
   @ApiQuery({ name: 'fetchAll', required: false, type: String, description: 'Pass "true" or "1" to return every matching question, ignoring `limit`. Default false (limited list).' })
   @ApiQuery({ name: 'limit', required: false, type: String, description: 'Max rows to return when `fetchAll` is not set. Default 100.' })
   @ApiResponseDoc({ status: 403, description: 'Caller is not Admin and does not hold the LmsManager permission.' })
@@ -100,35 +104,34 @@ export class QuestionController {
   @Get()
   async findQuestionList(
     @Query('fullData') fullData?: string,
-    @Query('subjectId') subjectId?: string,
-    @Query('topicId') topicId?: string,
+    @Query('subjectSlug') subjectSlug?: string,
+    @Query('topicSlug') topicSlug?: string,
     @Query('level') level?: string,
-    @Query('authorId') authorId?: string,
+    @Query('status') status?: string,
+    @Query('isWhitelisted') isWhitelisted?: string,
+    @Query('qualityFilter') qualityFilter?: string,
+    @Query('tagCode') tagCode?: string,
+    @Query('neverAttempted') neverAttempted?: string,
     @Query('fetchAll') fetchAll?: string,
     @Query('limit') limit?: string,
     @Request() req?: any,
   ): Promise<ApiResponse<any>> {
-    if (req?.user?.role !== UserRoleEnum.ADMIN) {
-      const permissions =
-        await this.userPermissionService.findUserPermissionList(req?.user?.id);
-
-      const isLmsManager = permissions.some(
-        (p: any) =>
-          Number(p.permissionId) === 4 ||
-          p.permissionName === UserPermissionEnum.LmsManager,
+    // Admin OR LmsManager — both get full, unscoped visibility below. Passing this
+    // gate at all guarantees one of the two, so `hasFullAccess` is only computed
+    // here (rather than re-derived from `req.user.role` downstream) for clarity.
+    const isAdmin = req?.user?.role === UserRoleEnum.ADMIN;
+    const hasLmsManagerPermission = isAdmin
+      ? false
+      : await this.isLmsManagerUser(req?.user?.id);
+    if (!isAdmin && !hasLmsManagerPermission) {
+      throw new AppCustomException(
+        HttpStatus.FORBIDDEN,
+        'You are not authorized to make this request.',
       );
-
-      if (!isLmsManager) {
-        throw new AppCustomException(
-          HttpStatus.FORBIDDEN,
-          'You are not authorized to make this request.',
-        );
-      }
     }
+    const hasFullAccess = isAdmin || hasLmsManagerPermission;
 
     const isFullData = fullData === 'true' || fullData === '1';
-    const subjectIdNum = subjectId ? parseInt(subjectId, 10) : undefined;
-    const topicIdNum = topicId ? parseInt(topicId, 10) : undefined;
     const levelMap: Record<string, number> = {
       Easy: DifficultyLevelEnum.Easy,
       Intermediate: DifficultyLevelEnum.Intermediate,
@@ -139,40 +142,67 @@ export class QuestionController {
       normalizedLevel && normalizedLevel !== ''
         ? levelMap[normalizedLevel]
         : undefined;
-    const authorIdNum = authorId ? parseInt(authorId, 10) : undefined;
+    const statusMap: Record<string, QuestionStatusEnum> = {
+      Pending: QuestionStatusEnum.Pending,
+      Active: QuestionStatusEnum.Active,
+      Inactive: QuestionStatusEnum.Inactive,
+    };
+    const normalizedStatus = status?.trim();
+    const statusEnum = normalizedStatus ? statusMap[normalizedStatus] : undefined;
+    const isWhitelistedBool =
+      isWhitelisted === 'true' ? true : isWhitelisted === 'false' ? false : undefined;
+    const validQualityFilters = ['unreviewed', 'needsAttention', 'approved'];
+    const qualityFilterValue = validQualityFilters.includes(qualityFilter)
+      ? (qualityFilter as 'unreviewed' | 'needsAttention' | 'approved')
+      : undefined;
     const fetchAllFlag = fetchAll === 'true' || fetchAll === '1';
     const limitNum = limit ? parseInt(limit, 10) : 100; // default 100
 
-    const result = await this.service.getQuestionListForAdmin(
-      isFullData,
-      subjectIdNum,
-      topicIdNum,
-      levelNum,
-      authorIdNum,
-      fetchAllFlag,
-      limitNum,
-      req.user,
-    );
-    //?subjectId=5&fetchAll=true - Fetch all questions for a subject
+    const result = await this.service.getQuestionListForAdmin({
+      fullData: isFullData,
+      subjectSlug,
+      topicSlug,
+      level: levelNum,
+      status: statusEnum,
+      isWhitelisted: isWhitelistedBool,
+      qualityFilter: qualityFilterValue,
+      tagCode: tagCode?.trim() || undefined,
+      neverAttempted: neverAttempted === 'true',
+      fetchAll: fetchAllFlag,
+      limit: limitNum,
+      user: req.user,
+      hasFullAccess,
+    });
+    //?subjectSlug=java&fetchAll=true - Fetch all questions for a subject
     //?fullData=true&limit=5 - Fetch first 5 questions with full options and topics
-    //?fullData=true&topicId=11
+    //?fullData=true&topicSlug=core-java
+    //?status=Pending&isWhitelisted=false - moderation queue view
     if (!result || result.length === 0) {
-      return new ApiResponse('You have not created a question yet.', null);
+      // 200, not 404/500 — a valid filter combination matching zero rows is not an
+      // error. `data: []` (never `null`) since the frontend does `data.length` on
+      // this unconditionally; `null.length` would throw client-side. hasFullAccess
+      // is always true here (the gate above requires Admin or LmsManager) so a zero
+      // result at this point means the filters genuinely matched nothing platform-wide.
+      return new ApiResponse('No questions matched these filters.', []);
     }
     return new ApiResponse(`${result.length} Question(s) fetched.`, result);
   }
 
-  private async ensureLmsAccess(userId: number) {
+  // Non-throwing check — callers that need to special-case Admin (full bypass,
+  // no permission lookup needed) use this directly; ensureLmsAccess below is for
+  // routes where LmsManager is the only path in (no separate Admin shortcut).
+  private async isLmsManagerUser(userId: number): Promise<boolean> {
     const permissions =
       await this.userPermissionService.findUserPermissionList(userId);
-
-    const isLmsManager = permissions.some(
+    return permissions.some(
       (permission: any) =>
         Number(permission.permissionId) === 4 ||
         permission.permissionName === UserPermissionEnum.LmsManager,
     );
+  }
 
-    if (!isLmsManager) {
+  private async ensureLmsAccess(userId: number) {
+    if (!(await this.isLmsManagerUser(userId))) {
       throw new AppCustomException(
         HttpStatus.FORBIDDEN,
         'You are not authorized to make this request.',
@@ -249,16 +279,18 @@ export class QuestionController {
     description:
       'Requires the QuestionAuthorUpdate permission — the PermissionsGuard rejects anyone without it. ' +
       '`questionType` and `subjectId` are mandatory on every update (400 if missing). Whitelisted ' +
-      'questions can only be modified by an Admin (403 for everyone else). A Moderator may only ' +
-      'update a question they authored themselves (404 "no permission" otherwise). `topicIds`, if ' +
-      'provided, is diffed against the existing set — topics no longer listed are removed, new ones ' +
-      'inserted. For any `questionType` other than General, at least 2 `options` are required with at ' +
-      'least one marked `correct` (400 otherwise, same as create); switching a question to General ' +
-      'deletes all of its existing options. Runs as one transaction, rolled back on any of the above ' +
-      'validation failures. Same 100-character DB column cap on option text as question creation.',
+      'questions can only be modified by an Admin or an LmsManager-permission holder (403 for everyone ' +
+      'else — the two are equivalent here). A Moderator may only update a question they authored ' +
+      'themselves (404 "no permission" otherwise); this does not affect Admin/LmsManager callers, who ' +
+      'are never role-Moderator. `topicIds`, if provided, is diffed against the existing set — topics ' +
+      'no longer listed are removed, new ones inserted. For any `questionType` other than General, at ' +
+      'least 2 `options` are required with at least one marked `correct` (400 otherwise, same as ' +
+      'create); switching a question to General deletes all of its existing options. Runs as one ' +
+      'transaction, rolled back on any of the above validation failures. Same 100-character DB column ' +
+      'cap on option text as question creation.',
   })
   @ApiQuery({ name: 'id', required: true, type: Number, description: 'Id of the question to update.' })
-  @ApiResponseDoc({ status: 403, description: 'Question is whitelisted and the caller is not an Admin.' })
+  @ApiResponseDoc({ status: 403, description: 'Question is whitelisted and the caller is neither Admin nor LmsManager.' })
   @ApiResponseDoc({ status: 404, description: 'Caller is a Moderator who does not own this question.' })
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
@@ -272,7 +304,10 @@ export class QuestionController {
     @Body() dto: UpdateQuestionDto,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.service.updateQuestion(id, dto, req.user);
+    const hasFullAccess =
+      req.user?.role === UserRoleEnum.ADMIN ||
+      (await this.isLmsManagerUser(req.user?.id));
+    const result = await this.service.updateQuestion(id, dto, req.user, hasFullAccess);
     return new ApiResponse('Question updated successfully.', result);
   }
 
@@ -307,21 +342,25 @@ export class QuestionController {
   }
 
   @ApiOperation({
-    summary: 'Whitelist or un-whitelist a question (Admin only)',
+    summary: 'Whitelist or un-whitelist a question (Admin or LMS Manager only)',
     description:
-      'Only an Admin may call this (RolesGuard + Roles(ADMIN) — 403 for anyone else). Whitelisting a ' +
-      'question locks it: whitelisted questions can then only be edited or deleted by an Admin, even ' +
-      'the original author loses write access. 404 if the question id does not exist.',
+      'Admin or an LmsManager-permission holder may call this — 403 for anyone else, both treated ' +
+      'equivalently. Whitelisting a question locks it: whitelisted questions can then only be edited ' +
+      'or deleted by an Admin/LmsManager, even the original author loses write access. 404 if the ' +
+      'question id does not exist.',
   })
+  @ApiResponseDoc({ status: 403, description: 'Caller is neither Admin nor an LmsManager-permission holder.' })
   @ApiResponseDoc({ status: 404, description: 'Question with the given id was not found.' })
   @ApiBearerAuth('access-token')
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.ADMIN)
+  @UseGuards(AuthGuard('jwt'))
   @Put('approval')
   async whitelistQuestion(
     @Body() dto: WhitelistQuestionDto,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
+    if (req.user?.role !== UserRoleEnum.ADMIN) {
+      await this.ensureLmsAccess(req.user?.id);
+    }
     const result = await this.service.whitelistQuestion(
       dto.questionId,
       dto.isWhitelisted,
@@ -337,15 +376,16 @@ export class QuestionController {
     summary: 'Delete a question (QuestionAuthorDelete permission required)',
     description:
       'Requires the QuestionAuthorDelete permission — the PermissionsGuard rejects anyone without it. ' +
-      'Whitelisted questions can only be deleted by an Admin (403 for everyone else). Otherwise an ' +
-      'Admin can delete any question, and a Moderator can only delete a question they authored ' +
+      'Whitelisted questions can only be deleted by an Admin or an LmsManager-permission holder (403 ' +
+      'for everyone else — the two are equivalent here). Otherwise an Admin or LmsManager can delete ' +
+      'ANY question regardless of author, and a Moderator can only delete a question they authored ' +
       'themselves (404 "User dont have permission to delete" for anyone else, including a Moderator ' +
       'trying to delete someone else\'s question). Cascades within one transaction: deletes the ' +
       'question\'s options and topic links before deleting the question row itself. 404 if the id ' +
       'does not exist at all.',
   })
   @ApiQuery({ name: 'id', required: true, type: Number, description: 'Id of the question to delete.' })
-  @ApiResponseDoc({ status: 403, description: 'Question is whitelisted and the caller is not an Admin.' })
+  @ApiResponseDoc({ status: 403, description: 'Question is whitelisted and the caller is neither Admin nor LmsManager.' })
   @ApiResponseDoc({ status: 404, description: 'Question not found, or caller lacks permission to delete it.' })
   @ApiBearerAuth('access-token')
   @UseGuards(AuthGuard('jwt'), PermissionsGuard)
@@ -358,7 +398,10 @@ export class QuestionController {
     @Query('id') id: number,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.service.remove(id, req.user);
+    const hasFullAccess =
+      req.user?.role === UserRoleEnum.ADMIN ||
+      (await this.isLmsManagerUser(req.user?.id));
+    await this.service.remove(id, req.user, hasFullAccess);
 
     return new ApiResponse('Question deleted successfully.', null);
   }

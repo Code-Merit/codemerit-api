@@ -1,5 +1,6 @@
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
+import { QualityReviewOutcomeEnum } from 'src/common/enum/quality-review-outcome.enum';
 import {
   Column,
   CreateDateColumn,
@@ -89,6 +90,28 @@ export class Question extends AbstractEntity implements IQuestion {
   })
   orderId: number;
 
+  // SME quality-review rollups — denormalized from QualityReview so the LMS dashboard's
+  // Quality Pipeline tab doesn't re-aggregate quality_review on every load. Updated
+  // transactionally whenever a QualityReview transitions to Submitted (see
+  // QuestionQualityService.upsertReview). reviewCount === 0 is the "never seen/reviewed
+  // by an SME" signal, independent of `status`/`isWhitelisted` above.
+  @Column({ type: 'int', default: 0 })
+  reviewCount: number;
+
+  @Column({ type: 'datetime', nullable: true, default: null })
+  lastReviewedAt: Date | null;
+
+  @Column({ type: 'int', nullable: true, default: null })
+  latestGrade: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: QualityReviewOutcomeEnum,
+    nullable: true,
+    default: null,
+  })
+  lastReviewOutcome: QualityReviewOutcomeEnum | null;
+
   @Column({ name: 'createdBy', default: null, select: false })
   createdBy: number;
 
@@ -101,14 +124,14 @@ export class Question extends AbstractEntity implements IQuestion {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => Subject)
+  @ManyToOne(() => Subject, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'subjectId', referencedColumnName: 'id' })
   subject: Subject;
 
   @OneToMany(() => QuestionTopic, (questionTopic) => questionTopic.question, {})
   questionTopics: QuestionTopic[];
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'createdBy', referencedColumnName: 'id' })
   userCreatedBy: User;
 

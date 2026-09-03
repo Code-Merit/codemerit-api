@@ -81,7 +81,7 @@ export class PaymentOrder extends AbstractEntity {
   @Column({ type: 'datetime', nullable: true, default: null })
   paidAt: Date | null;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
 }

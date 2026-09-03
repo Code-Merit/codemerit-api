@@ -165,6 +165,37 @@ export const getAggregateUserLevel = (
   return 'Novice';
 };
 
+export interface SubjectHealthScoreInput {
+  approvalRate: number;   // % of (approved+pending) questions that are approved
+  whitelistRate: number;  // % of approved questions that are whitelisted
+  completionRate: number; // % of lesson views that ended in a completed tracker row
+  reviewedRate: number;   // % of active questions that have been SME-reviewed at least once
+}
+
+export interface SubjectHealthScore {
+  score: number; // 0-100 composite
+  breakdown: SubjectHealthScoreInput;
+}
+
+// The one place a subject's "how healthy is this content" number is computed — mirrors
+// computeAttemptMetrics()'s role as a single source of truth, so the LMS Command Center's
+// Subjects/Overview tabs never drift out of sync by reimplementing this weighting twice.
+const HEALTH_WEIGHT_APPROVAL = 0.35;
+const HEALTH_WEIGHT_WHITELIST = 0.25;
+const HEALTH_WEIGHT_COMPLETION = 0.2;
+const HEALTH_WEIGHT_REVIEWED = 0.2;
+
+export function computeSubjectHealthScore(input: SubjectHealthScoreInput): SubjectHealthScore {
+  const { approvalRate, whitelistRate, completionRate, reviewedRate } = input;
+  const raw =
+    approvalRate * HEALTH_WEIGHT_APPROVAL +
+    whitelistRate * HEALTH_WEIGHT_WHITELIST +
+    completionRate * HEALTH_WEIGHT_COMPLETION +
+    reviewedRate * HEALTH_WEIGHT_REVIEWED;
+  const score = Math.max(0, Math.min(100, Math.round(raw)));
+  return { score, breakdown: input };
+}
+
 export function shuffleArray(array) {
   // Used for randomzing Don't mutate the original array
   const shuffled = [...array];

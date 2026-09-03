@@ -127,7 +127,7 @@ export class Quiz extends AbstractEntity implements IQuiz {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'createdBy', referencedColumnName: 'id' })
   userCreatedBy: User;
 

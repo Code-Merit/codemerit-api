@@ -96,7 +96,7 @@ export class SkillEnrollment extends AbstractEntity {
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
 }
