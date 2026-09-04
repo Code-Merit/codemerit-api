@@ -393,7 +393,8 @@ export class ProgramService {
       .select([
         'jobRole.id', 'jobRole.title', 'jobRole.slug', 'jobRole.description',
         'jobRole.image', 'jobRole.isPublished', 'jobRole.color',
-        'jrs.id', 'subject.id', 'subject.title', 'subject.slug', 'subject.image',
+        'jrs.id', 'jrs.tag', 'subject.id', 'subject.title', 'subject.slug',
+        'subject.image', 'subject.isPublished',
       ])
       .where('jobRole.isPublished = :isPublished', { isPublished: 1 })
       .orderBy('jobRole.orderId', 'ASC');
@@ -405,7 +406,7 @@ export class ProgramService {
       qb.addSelect('FALSE', 'isSubscribed');
     }
 
-    const [certCounts, stCounts, { raw: rawRows, entities }] = await Promise.all([
+    const [certCounts, stCounts, triviaCounts, badgeCounts, { raw: rawRows, entities }] = await Promise.all([
       this.dataSource
         .createQueryBuilder()
         .select('ctjr.jobRoleId', 'jobRoleId')
@@ -421,6 +422,8 @@ export class ProgramService {
         .groupBy('st.subjectId')
         .getRawMany()
         .then((rows) => new Map(rows.map((r) => [+r.subjectId, +r.count]))),
+      this.fetchTriviaCountsByJobRole(),
+      this.fetchBadgeCountsByJobRole(),
       qb.getRawAndEntities(),
     ]);
 
@@ -439,14 +442,78 @@ export class ProgramService {
       isPublished: jr.isPublished,
       isSubscribed: Boolean(Number(rawById.get(jr.id)?.isSubscribed)),
       certificationTrackCount: certCounts.get(jr.id) ?? 0,
-      subjects: jr.jobRoleSubjects.map((jrs) => ({
-        id: jrs.subject.id,
-        title: jrs.subject.title,
-        slug: jrs.subject.slug,
-        image: jrs.subject.image,
-        subjectTrackCount: stCounts.get(jrs.subject.id) ?? 0,
-      })),
+      // Card-level stats — see fetchTriviaCountsByJobRole/fetchBadgeCountsByJobRole. Interview
+      // question counts are deliberately not surfaced here (product call: not shown on the
+      // job-role catalog card).
+      numTrivia: triviaCounts.get(jr.id) ?? 0,
+      numBadges: badgeCounts.get(jr.id) ?? 0,
+      // Unpublished subjects (admin drafts, retired tech) never reach the catalog card.
+      subjects: jr.jobRoleSubjects
+        .filter((jrs) => jrs.subject?.isPublished)
+        .map((jrs) => ({
+          id: jrs.subject.id,
+          title: jrs.subject.title,
+          slug: jrs.subject.slug,
+          image: jrs.subject.image,
+          tag: jrs.tag,
+          subjectTrackCount: stCounts.get(jrs.subject.id) ?? 0,
+        })),
     }));
+  }
+
+  /** Total published Trivia questions across every subject mapped to each job role (every tag,
+   * not just MANDATORY) — backs the "N Trivia" stat on the job-role catalog card. One grouped
+   * query via job_role_subject, not one per role — same shape as fetchTimeInvestedByJobRole. */
+  private async fetchTriviaCountsByJobRole(): Promise<Map<number, number>> {
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('jrs.jobRoleId', 'jobRoleId')
+      .addSelect('COUNT(q.id)', 'count')
+      .from('job_role_subject', 'jrs')
+      .innerJoin(
+        'question', 'q',
+        'q.subjectId = jrs.subjectId AND q.status = :active AND q.questionType = :trivia',
+        { active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
+      )
+      .groupBy('jrs.jobRoleId')
+      .getRawMany();
+    return new Map(rows.map((r) => [+r.jobRoleId, +r.count]));
+  }
+
+  /** Published badges earnable toward each job role: badges scoped directly to the JobRole
+   * (BadgeScopeEnum.JOBROLE) plus every SUBJECT-scoped badge belonging to one of that role's
+   * subjects, summed — backs the "N Badges" stat on the job-role catalog card. Two grouped
+   * queries, not one per role. */
+  private async fetchBadgeCountsByJobRole(): Promise<Map<number, number>> {
+    const [roleScoped, subjectScoped] = await Promise.all([
+      this.dataSource
+        .createQueryBuilder()
+        .select('b.scopeId', 'jobRoleId')
+        .addSelect('COUNT(b.id)', 'count')
+        .from('badge', 'b')
+        .where('b.scopeType = :scopeType AND b.isPublished = :pub', {
+          scopeType: BadgeScopeEnum.JOBROLE,
+          pub: 1,
+        })
+        .groupBy('b.scopeId')
+        .getRawMany(),
+      this.dataSource
+        .createQueryBuilder()
+        .select('jrs.jobRoleId', 'jobRoleId')
+        .addSelect('COUNT(b.id)', 'count')
+        .from('job_role_subject', 'jrs')
+        .innerJoin(
+          'badge', 'b',
+          'b.scopeId = jrs.subjectId AND b.scopeType = :scopeType AND b.isPublished = :pub',
+          { scopeType: BadgeScopeEnum.SUBJECT, pub: 1 },
+        )
+        .groupBy('jrs.jobRoleId')
+        .getRawMany(),
+    ]);
+    const map = new Map<number, number>();
+    for (const r of roleScoped) map.set(+r.jobRoleId, (map.get(+r.jobRoleId) ?? 0) + +r.count);
+    for (const r of subjectScoped) map.set(+r.jobRoleId, (map.get(+r.jobRoleId) ?? 0) + +r.count);
+    return map;
   }
 
   // ─── Career Dashboard (authenticated) ────────────────────────────────────────

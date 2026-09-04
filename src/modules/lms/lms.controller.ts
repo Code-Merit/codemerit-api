@@ -16,9 +16,6 @@ import { AppCustomException } from 'src/common/exceptions/app-custom-exception.f
 import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
 import { QualityResourceTypeEnum } from 'src/common/enum/quality-resource-type.enum';
-import { Roles } from 'src/core/auth/decorators/roles.decorator';
-import { RolesGuard } from 'src/core/auth/guards/roles.guard';
-import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { LmsService } from './providers/lms.service';
 import { QuestionQualityService } from './providers/question-quality.service';
 import { LmsDashboardService } from './providers/lms-dashboard.service';
@@ -43,7 +40,6 @@ export class LmsController {
 
     const isLmsManager = permissions.some(
       (permission: any) =>
-        Number(permission.permissionId) === 4 ||
         permission.permissionName === UserPermissionEnum.LmsManager,
     );
 
@@ -63,8 +59,7 @@ export class LmsController {
       'activity. Question stats are scoped to the caller; quiz, lesson, and time-series stats ' +
       'return zeroed placeholders if the caller id is missing.',
   })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('dashboard')
   async getAdminDash(@Request() req: any): Promise<ApiResponse<any>> {
     const result = await this.lmsService.getDashboardSummary(req.user?.id);
@@ -86,8 +81,7 @@ export class LmsController {
     status: 403,
     description: 'Caller does not hold the LmsManager permission.',
   })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('user-standard-quiz/:userId')
   async getUserStandardQuizzes(
     @Param('userId', ParseIntPipe) userId: number,
@@ -116,8 +110,7 @@ export class LmsController {
   @ApiQuery({ name: 'limit', required: false, type: String, description: 'Default 100.' })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
   @ApiResponseDoc({ status: 404, description: 'No subject found for the given slug.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('questions')
   async getReviewQueue(
     @Request() req: any,
@@ -144,8 +137,7 @@ export class LmsController {
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('questions/:id/review-detail')
   async getQuestionReviewDetail(
     @Param('id', ParseIntPipe) id: number,
@@ -168,8 +160,7 @@ export class LmsController {
       'null questionTypeScope apply to both.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('quality-metrics')
   async getQualityMetrics(
     @Request() req: any,
@@ -189,8 +180,7 @@ export class LmsController {
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('questions/:id/quality-reviews')
   async getQuestionQualityReviews(
     @Param('id', ParseIntPipe) id: number,
@@ -213,8 +203,7 @@ export class LmsController {
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Post('questions/:id/quality-reviews')
   async submitQuestionQualityReview(
     @Param('id', ParseIntPipe) id: number,
@@ -241,8 +230,7 @@ export class LmsController {
       'one subject.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('dashboard/quality-pipeline')
   async getQualityPipeline(
     @Request() req: any,
@@ -266,8 +254,7 @@ export class LmsController {
       'top-movers client-side from this same array.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('dashboard/subjects')
   async getSubjectsDashboard(@Request() req: any): Promise<ApiResponse<any>> {
     await this.ensureLmsAccess(req.user?.id);
@@ -286,8 +273,7 @@ export class LmsController {
       'scopes every series via its natural join path.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles(UserRoleEnum.USER)
+  @UseGuards(AuthGuard('jwt'))
   @Get('dashboard/trends')
   async getTrends(
     @Request() req: any,
