@@ -314,8 +314,18 @@ export class QuestionQualityService {
       .addSelect('q.lastReviewOutcome', 'lastReviewOutcome')
       .addSelect('q.lastReviewedAt', 'lastReviewedAt')
       .from(Question, 'q')
-      .leftJoin(Subject, 's', 's.id = q.subjectId')
-      .where('q.status = :active', { active: QuestionStatusEnum.Active });
+      .leftJoin(Subject, 's', 's.id = q.subjectId');
+    if (status === 'all') {
+      qb.where(
+        '(q.status = :pending OR q.status = :active)',
+        {
+          pending: QuestionStatusEnum.Pending,
+          active: QuestionStatusEnum.Active,
+        },
+      );
+    } else {
+      qb.where('q.status = :pending', { pending: QuestionStatusEnum.Pending });
+    }
 
     if (resolvedSubjectId) qb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
     if (filters.questionType) qb.andWhere('q.questionType = :questionType', { questionType: filters.questionType });
