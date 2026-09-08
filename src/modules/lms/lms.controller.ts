@@ -133,7 +133,10 @@ export class LmsController {
     summary: 'Get one question for SME quality review, any author (LMS Manager only)',
     description:
       'Full question detail (options, hint, answer, topics) for the review dialog — ' +
-      'deliberately not author-scoped, same reasoning as the queue above.',
+      'deliberately not author-scoped, same reasoning as the queue above. Also embeds ' +
+      'reviewHistory (this question\'s full past review audit trail, newest first) so the ' +
+      'review dialog only needs one request instead of a separate call to ' +
+      'questions/:id/quality-reviews.',
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
@@ -194,12 +197,16 @@ export class LmsController {
   @ApiOperation({
     summary: "Submit the caller's SME quality review for a question (LMS Manager only)",
     description:
-      'Always creates a new, final review pass — there is no draft/in-progress state, so ' +
-      'every call here is a permanent addition to the audit trail. Computes an advisory ' +
-      'grade-cap from the worst attached issue tag\'s severity (never enforced, returned once ' +
-      'in the response, not stored), and rolls the result up onto the question ' +
-      '(reviewCount/lastReviewedAt/latestGrade/lastReviewOutcome), including nudging its ' +
-      'moderation status (Approve: Pending -> Active; Reject: Active -> Pending).',
+      'Upserts by (resourceType, resourceId, reviewerId) — if this reviewer has already ' +
+      'reviewed this question, their existing row is updated in place rather than a new one ' +
+      'being inserted; grade/outcome/tags always reflect the latest submission, while ' +
+      '`comment` accumulates as a dated, append-only changelog of what changed on each ' +
+      'submission (never overwritten). Computes an advisory grade-cap from the worst ' +
+      'attached issue tag\'s severity (never enforced, returned once in the response, not ' +
+      'stored), and rolls the result up onto the question (lastReviewedAt/latestGrade/' +
+      'lastReviewOutcome unconditionally, reviewCount only on a genuine first-time pass by ' +
+      'this reviewer), including nudging its moderation status ' +
+      '(Approve: Pending -> Active; Reject: Active -> Pending).',
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })

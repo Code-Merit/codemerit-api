@@ -280,6 +280,12 @@ export class LmsDashboardService {
       }
       return qb;
     };
+    // Bucketed by createdAt, which is fixed at first-submission time and never moves — a
+    // reviewer later editing their own review (same row, updated in place) won't create a
+    // new bucket entry here. Known, accepted undercount of edit *activity*, not a
+    // correctness bug: a reviewed-then-edited question still counts once in this trend,
+    // just not twice. Left as-is on purpose; switching to updatedAt would fix the
+    // undercount but was out of scope for the update-in-place change that introduced it.
     const reviewsQb = () => {
       const qb = this.dataSource
         .createQueryBuilder()

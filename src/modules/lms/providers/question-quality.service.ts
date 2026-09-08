@@ -87,41 +87,81 @@ export class QuestionQualityService {
     return { totalReviewed };
   }
 
-  // Always inserts a new, final review row — there is no draft/in-progress state, so
-  // every call here is a genuine SME decision (Approve or Reject) becoming a permanent
-  // part of the audit trail. Computes the advisory grade-cap/mismatch transiently (never
-  // persisted — nothing reads it back after this response) and, for Question reviews,
-  // rolls the result up onto Question (reviewCount/lastReviewedAt/latestGrade/
-  // lastReviewOutcome) plus the Approve/Reject moderation-status nudge, in one transaction.
+  // (resourceType, resourceId, reviewerId) is a unique triple — the SAME reviewer reviewing
+  // the SAME resource again updates that one row in place instead of inserting a second one.
+  // `comment` is the audit trail: every submit appends a dated, human-readable summary of what
+  // changed (or a snapshot, on the very first submission) — see buildChangelogEntry — and
+  // never erases what was there before. `grade`/`outcome`/tags always reflect only the latest
+  // submission. Computes the advisory grade-cap/mismatch transiently (never persisted) and,
+  // for Question reviews, rolls the result up onto Question (lastReviewedAt/latestGrade/
+  // lastReviewOutcome unconditionally, reviewCount only on a genuine first-time pass by this
+  // reviewer) plus the Approve/Reject moderation-status nudge, in one transaction.
   async submitReview(
     resourceType: QualityResourceTypeEnum,
     resourceId: number,
     reviewerId: number,
     input: SubmitQualityReviewInput,
-  ): Promise<{ review: QualityReview; suggestedGradeCap: number | null; mismatch: boolean }> {
+  ): Promise<{
+    review: QualityReview;
+    suggestedGradeCap: number | null;
+    mismatch: boolean;
+    reviewCount: number | undefined;
+  }> {
     return this.dataSource.transaction(async (manager) => {
       const reviewRepo = manager.getRepository(QualityReview);
       const tagRepo = manager.getRepository(QualityReviewTag);
       const metricRepo = manager.getRepository(QualityMetric);
 
-      let review = reviewRepo.create({
-        resourceType,
-        resourceId,
-        reviewerId,
-        grade: input.grade ?? null,
-        outcome: input.outcome,
-        comment: input.comment ?? null,
+      const existing = await reviewRepo.findOne({
+        where: { resourceType, resourceId, reviewerId },
+        relations: { tags: { qualityMetric: true } },
       });
-      review = await reviewRepo.save(review);
 
       const tagIds = input.tagIds ?? [];
-      const metrics = tagIds.length ? await metricRepo.findBy({ id: In(tagIds) }) : [];
-      if (metrics.length) {
-        await tagRepo.save(
-          metrics.map((m) => tagRepo.create({ qualityReviewId: review.id, qualityMetricId: m.id })),
+      const newMetrics = tagIds.length ? await metricRepo.findBy({ id: In(tagIds) }) : [];
+
+      // Built from `existing` before it's mutated below — needs the old grade/outcome/tags
+      // to diff against.
+      const logEntry = this.buildChangelogEntry(existing, {
+        outcome: input.outcome,
+        grade: input.grade ?? null,
+        tagLabels: newMetrics.map((m) => m.label),
+        note: input.comment?.trim() || null,
+      });
+
+      let review: QualityReview;
+      const isNewReview = !existing;
+
+      if (existing) {
+        existing.grade = input.grade ?? null;
+        existing.outcome = input.outcome;
+        // Append-only — a null comment only happens on data from before this changelog
+        // model existed; every row created under this logic always has a non-null comment.
+        existing.comment = existing.comment ? `${existing.comment}\n\n${logEntry}` : logEntry;
+        review = await reviewRepo.save(existing);
+        // Tags always reflect only the latest submission — delete before insert so a
+        // tag re-selected unchanged doesn't collide with the (qualityReviewId,
+        // qualityMetricId) unique index.
+        await tagRepo.delete({ qualityReviewId: review.id });
+      } else {
+        review = await reviewRepo.save(
+          reviewRepo.create({
+            resourceType,
+            resourceId,
+            reviewerId,
+            grade: input.grade ?? null,
+            outcome: input.outcome,
+            comment: logEntry,
+          }),
         );
       }
-      const worst = metrics.reduce<QualityMetricSeverityEnum | null>((acc, m) => {
+
+      if (newMetrics.length) {
+        await tagRepo.save(
+          newMetrics.map((m) => tagRepo.create({ qualityReviewId: review.id, qualityMetricId: m.id })),
+        );
+      }
+      const worst = newMetrics.reduce<QualityMetricSeverityEnum | null>((acc, m) => {
         if (!m.severity) return acc;
         if (!acc || SEVERITY_RANK[m.severity] > SEVERITY_RANK[acc]) return m.severity;
         return acc;
@@ -131,13 +171,21 @@ export class QuestionQualityService {
 
       // Rollup + moderation-status nudge only apply to Question today — Lesson has no
       // equivalent rollup columns yet (same resourceType gate listQualityMetrics uses).
+      let reviewCount: number | undefined;
       if (resourceType === QualityResourceTypeEnum.Question) {
         const updateSet: Record<string, unknown> = {
-          reviewCount: () => '`reviewCount` + 1',
-          lastReviewedAt: review.createdAt,
+          // This submission's time, not the row's original createdAt — matters once the
+          // same row can be updated on a later date.
+          lastReviewedAt: review.updatedAt,
           latestGrade: review.grade,
           lastReviewOutcome: review.outcome,
         };
+        // Only a genuine first-time pass by this reviewer grows the count — it tracks how
+        // many distinct reviewers have weighed in, not how many times this question has
+        // been reviewed in total (an SME editing their own review isn't a new pass).
+        if (isNewReview) {
+          updateSet.reviewCount = () => '`reviewCount` + 1';
+        }
 
         // SME approval/rejection nudges moderation status — an Approve promotes a
         // question waiting for its first review into rotation, a Reject pulls a live
@@ -160,10 +208,65 @@ export class QuestionQualityService {
           .set(updateSet)
           .where('id = :resourceId', { resourceId })
           .execute();
+
+        // createQueryBuilder().update() doesn't return the mutated row (unlike .save()),
+        // so the post-increment count needs one cheap single-row PK lookup — this lets the
+        // queue patch its cached row in place instead of refetching the whole list, without
+        // the client having to (possibly incorrectly, under concurrent SME reviews) infer
+        // the new count by incrementing its own last-known value.
+        const updatedQuestion = await manager
+          .getRepository(Question)
+          .findOne({ where: { id: resourceId }, select: ['reviewCount'] });
+        reviewCount = updatedQuestion?.reviewCount;
       }
 
-      return { review, suggestedGradeCap, mismatch };
+      return { review, suggestedGradeCap, mismatch, reviewCount };
     });
+  }
+
+  // Every submit appends one dated entry to `comment` — never edits or removes what's there.
+  // First submission (no `existing` row yet) gets a snapshot; a later submission by the same
+  // reviewer for the same resource gets a diff against the row's previous grade/outcome/tags,
+  // omitting any clause that didn't change. If nothing changed at all, still logs a
+  // "resubmitted, no change" entry — the SME re-confirming later is real audit signal, and
+  // silently doing nothing would leave a bumped updatedAt unexplained.
+  private buildChangelogEntry(
+    existing: QualityReview | null,
+    next: { outcome: QualityReviewOutcomeEnum; grade: number | null; tagLabels: string[]; note: string | null },
+  ): string {
+    const dateStr = new Date().toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+    const newTags = [...new Set(next.tagLabels)].sort();
+
+    if (!existing) {
+      const tagsPart = newTags.length ? newTags.join(', ') : 'none';
+      const gradePart = next.grade != null ? `${next.grade}/10` : '(none)';
+      const header = `[${dateStr}] Review submitted — ${next.outcome}, grade ${gradePart}, tags: ${tagsPart}.`;
+      return next.note ? `${header}\nSME note: ${next.note}` : header;
+    }
+
+    const oldTags = [
+      ...new Set((existing.tags ?? []).map((t) => t.qualityMetric?.label).filter((l): l is string => !!l)),
+    ].sort();
+    const added = newTags.filter((t) => !oldTags.includes(t));
+    const removed = oldTags.filter((t) => !newTags.includes(t));
+
+    const clauses: string[] = [];
+    if (existing.outcome !== next.outcome) {
+      clauses.push(`Outcome: ${existing.outcome} → ${next.outcome}`);
+    }
+    if (existing.grade !== next.grade) {
+      const oldGradePart = existing.grade != null ? String(existing.grade) : '(none)';
+      const newGradePart = next.grade != null ? String(next.grade) : '(none)';
+      clauses.push(`Grade: ${oldGradePart} → ${newGradePart}`);
+    }
+    if (added.length || removed.length) {
+      clauses.push(`Tags: ${[...removed.map((t) => `−${t}`), ...added.map((t) => `+${t}`)].join(', ')}`);
+    }
+
+    const header = clauses.length
+      ? `[${dateStr}] Review updated — ${clauses.join('; ')}.`
+      : `[${dateStr}] Review resubmitted — no change to outcome/grade/tags.`;
+    return next.note ? `${header}\nSME note: ${next.note}` : header;
   }
 
   async getQualityPipelineSummary(subjectId?: number) {
@@ -295,7 +398,9 @@ export class QuestionQualityService {
     }[]
   > {
     const status = filters.status ?? 'all';
-    const limit = filters.limit ?? 100;
+    // This page's job is to hand an SME a working batch, not dump the whole question
+    // bank — 20 keeps each fetch small and fast regardless of which tab is active.
+    const limit = filters.limit ?? 20;
 
     let resolvedSubjectId: number | undefined;
     if (filters.subjectSlug) {
@@ -325,7 +430,19 @@ export class QuestionQualityService {
       .addSelect('q.lastReviewedAt', 'lastReviewedAt')
       .from(Question, 'q')
       .leftJoin(Subject, 's', 's.id = q.subjectId');
-    if (status === 'all') {
+    if (status === 'flagged') {
+      // A Reject always nudges the question's status to Pending (see submitReview's CASE
+      // update), so a genuinely flagged question is Pending by construction — this scope
+      // is intentionally narrower than 'all'/'unreviewed' below.
+      qb.where('q.status = :pending', { pending: QuestionStatusEnum.Pending });
+    } else {
+      // 'all' and 'unreviewed' share this same broad scope ('unreviewed' narrows further
+      // with reviewCount=0 below). Restricting "unreviewed" to status=Pending was a real
+      // bug: most never-reviewed content in this app was seeded directly as Active, not
+      // Pending, which made "To Review" show zero results despite thousands of questions
+      // that have genuinely never had an SME pass — Active-but-never-reviewed content
+      // needs a review just as much as Pending content, arguably more since it's already
+      // being served to real users.
       qb.where(
         '(q.status = :pending OR q.status = :active)',
         {
@@ -333,8 +450,6 @@ export class QuestionQualityService {
           active: QuestionStatusEnum.Active,
         },
       );
-    } else {
-      qb.where('q.status = :pending', { pending: QuestionStatusEnum.Pending });
     }
 
     if (resolvedSubjectId) qb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
@@ -363,6 +478,9 @@ export class QuestionQualityService {
     }));
   }
 
+  // Embeds reviewHistory (this question's full past review audit trail, newest first) so
+  // the SME review dialog only needs one request instead of two — review-detail and history
+  // are always requested together, for the same question, every single time.
   async getQuestionReviewDetail(questionId: number): Promise<{
     id: number;
     question: string;
@@ -379,12 +497,15 @@ export class QuestionQualityService {
     latestGrade: number | null;
     lastReviewOutcome: QualityReviewOutcomeEnum | null;
     lastReviewedAt: Date | null;
+    reviewHistory: QualityReview[];
   } | null> {
     const question = await this.dataSource.getRepository(Question).findOne({
       where: { id: questionId },
       relations: { options: true, subject: true, questionTopics: { topic: true } },
     });
     if (!question) return null;
+
+    const reviewHistory = await this.getReviewHistory(QualityResourceTypeEnum.Question, questionId);
 
     return {
       id: question.id,
@@ -407,6 +528,7 @@ export class QuestionQualityService {
       latestGrade: question.latestGrade,
       lastReviewOutcome: question.lastReviewOutcome,
       lastReviewedAt: question.lastReviewedAt,
+      reviewHistory,
     };
   }
 
@@ -479,11 +601,15 @@ export class QuestionQualityService {
   // for "latest attempt per question" (MAX(id) grouped by the FK, then re-joined). No
   // status filter needed any more — every quality_review row is already a final decision.
   private async getFlaggedForRevision(subjectId?: number, limit = 20) {
+    // "Latest review per question" — MAX(updatedAt), not MAX(id): a review row can now be
+    // updated in place (same reviewer editing their own pass), so an older-id row can become
+    // the most recently touched one while a newer-id row from a different reviewer sits
+    // unchanged. MAX(id) would silently pick the wrong row once that happens.
     const latestReviewSub = this.dataSource
       .createQueryBuilder()
       .subQuery()
       .select('r2.resourceId', 'resourceId')
-      .addSelect('MAX(r2.id)', 'maxId')
+      .addSelect('MAX(r2.updatedAt)', 'maxUpdatedAt')
       .from(QualityReview, 'r2')
       .where('r2.resourceType = :resourceType', { resourceType: QualityResourceTypeEnum.Question })
       .groupBy('r2.resourceId')
@@ -496,15 +622,15 @@ export class QuestionQualityService {
       .addSelect('q.subjectId', 'subjectId')
       .addSelect('r.outcome', 'outcome')
       .addSelect('r.grade', 'grade')
-      .addSelect('r.createdAt', 'submittedAt')
+      .addSelect('r.updatedAt', 'submittedAt')
       .from(Question, 'q')
       .innerJoin(`(${latestReviewSub})`, 'la', 'la.resourceId = q.id')
-      .innerJoin(QualityReview, 'r', 'r.id = la.maxId')
+      .innerJoin(QualityReview, 'r', 'r.resourceId = la.resourceId AND r.updatedAt = la.maxUpdatedAt')
       .where('r.outcome IN (:...outcomes)', {
         outcomes: [QualityReviewOutcomeEnum.NeedsRevision, QualityReviewOutcomeEnum.Rejected],
       })
       .setParameter('resourceType', QualityResourceTypeEnum.Question)
-      .orderBy('r.createdAt', 'DESC')
+      .orderBy('r.updatedAt', 'DESC')
       .limit(limit);
     if (subjectId) qb.andWhere('q.subjectId = :subjectId', { subjectId });
 

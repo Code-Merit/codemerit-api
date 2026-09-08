@@ -538,15 +538,17 @@ export class QuestionService {
     }
 
     if (resolvedTagId) {
-      // "Latest review per question" — same MAX(id)-grouped-by-resourceId technique
-      // as getFlaggedForRevision/getTopIssueTags, so a tag from a since-superseded
-      // review pass doesn't keep matching after a later pass replaced it. No status
-      // filter needed — every quality_review row is already a final decision.
+      // "Latest review per question" — MAX(updatedAt), not MAX(id): a review row can now be
+      // updated in place (same reviewer editing their own pass), so an older-id row can
+      // become the most recently touched one. MAX(id) would silently pick the wrong row
+      // once that happens. QualityReviewTag doesn't carry resourceId directly, so join
+      // QualityReview on (resourceId, updatedAt) first, then join the tag through its id.
+      // No status filter needed — every quality_review row is already a final decision.
       const latestReviewSub = this.dataSource
         .createQueryBuilder()
         .subQuery()
         .select('r2.resourceId', 'resourceId')
-        .addSelect('MAX(r2.id)', 'maxId')
+        .addSelect('MAX(r2.updatedAt)', 'maxUpdatedAt')
         .from(QualityReview, 'r2')
         .where('r2.resourceType = :tagResourceType', {
           tagResourceType: QualityResourceTypeEnum.Question,
@@ -556,7 +558,12 @@ export class QuestionService {
 
       idQb
         .innerJoin(`(${latestReviewSub})`, 'latestReview', 'latestReview.resourceId = q.id')
-        .innerJoin(QualityReviewTag, 'qrt', 'qrt.qualityReviewId = latestReview.maxId')
+        .innerJoin(
+          QualityReview,
+          'lr',
+          'lr.resourceId = latestReview.resourceId AND lr.updatedAt = latestReview.maxUpdatedAt',
+        )
+        .innerJoin(QualityReviewTag, 'qrt', 'qrt.qualityReviewId = lr.id')
         .andWhere('qrt.qualityMetricId = :tagId', { tagId: resolvedTagId })
         .setParameter('tagResourceType', QualityResourceTypeEnum.Question);
     }
