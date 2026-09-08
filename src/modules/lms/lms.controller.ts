@@ -221,6 +221,21 @@ export class LmsController {
   }
 
   @ApiOperation({
+    summary: "Get the caller's own SME quality-review stats (LMS Manager only)",
+    description:
+      'Total count of review passes the calling SME has ever submitted (any resource type). ' +
+      'Powers the Quality Review Queue header\'s "Total Reviewed" widget.',
+  })
+  @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
+  @UseGuards(AuthGuard('jwt'))
+  @Get('quality-reviews/my-stats')
+  async getMyQualityReviewStats(@Request() req: any): Promise<ApiResponse<any>> {
+    await this.ensureLmsAccess(req.user?.id);
+    const result = await this.questionQualityService.getMyReviewStats(req.user?.id);
+    return new ApiResponse('Review stats fetched successfully.', result);
+  }
+
+  @ApiOperation({
     summary: 'Get the Quality Pipeline dashboard summary (LMS Manager only)',
     description:
       'Combines existing moderation counts (Question.status/isWhitelisted), attempt-derived ' +

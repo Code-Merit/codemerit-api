@@ -77,6 +77,16 @@ export class QuestionQualityService {
     });
   }
 
+  // Powers the Quality Review Queue header's "Total Reviewed" widget — every
+  // review row this SME has ever submitted (any resource type). "This session"
+  // is a separate, purely client-side counter (resets on reload by design).
+  async getMyReviewStats(reviewerId: number): Promise<{ totalReviewed: number }> {
+    const totalReviewed = await this.dataSource
+      .getRepository(QualityReview)
+      .count({ where: { reviewerId } });
+    return { totalReviewed };
+  }
+
   // Always inserts a new, final review row — there is no draft/in-progress state, so
   // every call here is a genuine SME decision (Approve or Reject) becoming a permanent
   // part of the audit trail. Computes the advisory grade-cap/mismatch transiently (never

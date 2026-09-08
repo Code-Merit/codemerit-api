@@ -9,6 +9,7 @@ import { QuizSubject } from 'src/common/typeorm/entities/quiz-subject.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
+import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 import { QualityResourceTypeEnum } from 'src/common/enum/quality-resource-type.enum';
 import { UserLessonTrackerStatusEnum } from 'src/common/enum/user-lesson-tracker-status.enum';
@@ -44,7 +45,7 @@ export class LmsDashboardService {
       ]);
 
     return subjects.map((s) => {
-      const volume = volumeMap.get(s.id) ?? { trivia: 0, general: 0 };
+      const volume = volumeMap.get(s.id) ?? { trivia: 0, general: 0, triviaActive: 0, generalActive: 0 };
       const moderation = moderationMap.get(s.id) ?? { total: 0, pending: 0, active: 0, whitelisted: 0 };
       const coverage = coverageMap.get(s.id) ?? { activeTotal: 0, unreviewed: 0, unreviewedPercent: 0 };
       const avgGrade = avgGradeMap.get(s.id) ?? null;
@@ -83,11 +84,14 @@ export class LmsDashboardService {
         id: s.id,
         title: s.title,
         slug: s.slug,
+        image: s.image,
         isPublished: s.isPublished,
         isPremium: s.isPremium,
         questions: {
           trivia: volume.trivia,
           general: volume.general,
+          triviaActive: volume.triviaActive,
+          generalActive: volume.generalActive,
           approved: moderation.active,
           pending: moderation.pending,
           whitelisted: moderation.whitelisted,
@@ -111,19 +115,35 @@ export class LmsDashboardService {
     });
   }
 
-  private async getQuestionVolumeBySubject(): Promise<Map<number, { trivia: number; general: number }>> {
+  private async getQuestionVolumeBySubject(): Promise<
+    Map<number, { trivia: number; general: number; triviaActive: number; generalActive: number }>
+  > {
     const rows = await this.dataSource
       .createQueryBuilder()
       .select('q.subjectId', 'subjectId')
       .addSelect('SUM(CASE WHEN q.questionType = :trivia THEN 1 ELSE 0 END)', 'trivia')
       .addSelect('SUM(CASE WHEN q.questionType = :general THEN 1 ELSE 0 END)', 'general')
+      .addSelect('SUM(CASE WHEN q.questionType = :trivia AND q.status = :active THEN 1 ELSE 0 END)', 'triviaActive')
+      .addSelect('SUM(CASE WHEN q.questionType = :general AND q.status = :active THEN 1 ELSE 0 END)', 'generalActive')
       .from(Question, 'q')
-      .setParameters({ trivia: QuestionTypeEnum.Trivia, general: QuestionTypeEnum.General })
+      .setParameters({
+        trivia: QuestionTypeEnum.Trivia,
+        general: QuestionTypeEnum.General,
+        active: QuestionStatusEnum.Active,
+      })
       .groupBy('q.subjectId')
       .getRawMany();
 
     return new Map(
-      rows.map((r) => [Number(r.subjectId), { trivia: Number(r.trivia) || 0, general: Number(r.general) || 0 }]),
+      rows.map((r) => [
+        Number(r.subjectId),
+        {
+          trivia: Number(r.trivia) || 0,
+          general: Number(r.general) || 0,
+          triviaActive: Number(r.triviaActive) || 0,
+          generalActive: Number(r.generalActive) || 0,
+        },
+      ]),
     );
   }
 

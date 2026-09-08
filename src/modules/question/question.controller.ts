@@ -5,6 +5,7 @@ import {
   Get,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -18,6 +19,8 @@ import { UpdateQuestionDto } from './dtos/update-question.dto';
 import { WhitelistQuestionDto } from './dtos/whitelist-question.dto';
 import { QuestionService } from './providers/question.service';
 import { AuthGuard } from '@nestjs/passport';
+import { Public } from 'src/core/auth/decorators/public.decorator';
+import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard';
 import { PermissionsGuard } from 'src/common/policies/permissions.guard';
 import { RequirePermission } from 'src/common/policies/require-permission.decorator';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
@@ -324,6 +327,39 @@ export class QuestionController {
   async findQuestionAuthors(): Promise<ApiResponse<any>> {
     const result = await this.service.getQuestionAuthors();
     return new ApiResponse('Question authors fetched successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: 'Fetch one sample Trivia question for the public landing page demo (public)',
+    description:
+      'No auth required. Powers the anonymous-visitor "try it" widget on the marketing landing ' +
+      'page — always returns exactly one question. `numQuestions` is hardcoded to 1 server-side ' +
+      '(never read from the request) so this route cannot be used to scrape the Trivia bank at ' +
+      'scale the way the authenticated quiz-builder path could. Delegates to the same ' +
+      'getQuestionsByIds() query already used elsewhere (Trivia + Active only), just narrowed to a ' +
+      'single subject and a single result — no new query logic, no coupling to QuizService/quiz ' +
+      'creation, so no UserQuiz/QuizResult/QuestionAttempt row and no daily-cap interaction of any ' +
+      'kind. Placed before the :slug route below so Nest does not shadow "sample" as a slug value.',
+  })
+  @ApiQuery({ name: 'subjectId', required: true, type: Number, description: 'Subject to draw the sample question from.' })
+  @ApiResponseDoc({ status: 400, description: 'No Trivia questions available for this subject right now.' })
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('sample')
+  async getSampleQuestion(
+    @Query('subjectId', ParseIntPipe) subjectId: number,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.service.getQuestionsByIds({
+      subjectIds: [subjectId],
+      numQuestions: 1,
+    } as GetQuestionsByIdsDto);
+    if (!result || result.length === 0) {
+      throw new AppCustomException(
+        HttpStatus.BAD_REQUEST,
+        'No sample question available for this subject right now.',
+      );
+    }
+    return new ApiResponse('Sample question fetched successfully.', result[0]);
   }
 
   @ApiOperation({
