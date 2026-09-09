@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -12,8 +11,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse as ApiResponseDoc } from '@nestjs/swagger';
 import { ApiResponse } from 'src/common/utils/api-response';
-import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
-import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
 import { QualityResourceTypeEnum } from 'src/common/enum/quality-resource-type.enum';
 import { LmsService } from './providers/lms.service';
@@ -21,7 +18,7 @@ import { QuestionQualityService } from './providers/question-quality.service';
 import { LmsDashboardService } from './providers/lms-dashboard.service';
 import { SubmitQualityReviewDto } from './dtos/submit-quality-review.dto';
 import { AuthGuard } from '@nestjs/passport';
-import { UserPermissionService } from '../user-permission/providers/user-permission.service';
+import { LmsManagerGuard } from './guards/lms-manager.guard';
 
 @ApiTags('LMS')
 @ApiBearerAuth('access-token')
@@ -31,25 +28,7 @@ export class LmsController {
     private readonly lmsService: LmsService,
     private readonly questionQualityService: QuestionQualityService,
     private readonly lmsDashboardService: LmsDashboardService,
-    private readonly userPermissionService: UserPermissionService,
   ) {}
-
-  private async ensureLmsAccess(userId: number) {
-    const permissions =
-      await this.userPermissionService.findUserPermissionList(userId);
-
-    const isLmsManager = permissions.some(
-      (permission: any) =>
-        permission.permissionName === UserPermissionEnum.LmsManager,
-    );
-
-    if (!isLmsManager) {
-      throw new AppCustomException(
-        HttpStatus.FORBIDDEN,
-        'You are not authorized to make this request.',
-      );
-    }
-  }
 
   @ApiOperation({
     summary: "Get the caller's LMS content-authoring dashboard",
@@ -81,14 +60,11 @@ export class LmsController {
     status: 403,
     description: 'Caller does not hold the LmsManager permission.',
   })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('user-standard-quiz/:userId')
   async getUserStandardQuizzes(
     @Param('userId', ParseIntPipe) userId: number,
-    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
-
     const result = await this.lmsService.getUserStandardQuizzes(userId);
     return new ApiResponse(
       'User standard quizzes fetched successfully.',
@@ -110,16 +86,14 @@ export class LmsController {
   @ApiQuery({ name: 'limit', required: false, type: String, description: 'Default 100.' })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
   @ApiResponseDoc({ status: 404, description: 'No subject found for the given slug.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('questions')
   async getReviewQueue(
-    @Request() req: any,
     @Query('subjectSlug') subjectSlug?: string,
     @Query('status') status?: 'unreviewed' | 'flagged' | 'all',
     @Query('questionType') questionType?: QuestionTypeEnum,
     @Query('limit') limit?: string,
   ): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
     const result = await this.questionQualityService.getReviewQueue({
       subjectSlug,
       status,
@@ -140,13 +114,11 @@ export class LmsController {
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('questions/:id/review-detail')
   async getQuestionReviewDetail(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
     const result = await this.questionQualityService.getQuestionReviewDetail(id);
     if (!result) {
       return new ApiResponse('Question not found.', null);
@@ -163,13 +135,11 @@ export class LmsController {
       'null questionTypeScope apply to both.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('quality-metrics')
   async getQualityMetrics(
-    @Request() req: any,
     @Query('questionType') questionType?: QuestionTypeEnum,
   ): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
     const result = await this.questionQualityService.listQualityMetrics(questionType);
     return new ApiResponse('Quality metrics fetched successfully.', result);
   }
@@ -183,13 +153,11 @@ export class LmsController {
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('questions/:id/quality-reviews')
   async getQuestionQualityReviews(
     @Param('id', ParseIntPipe) id: number,
-    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
     const result = await this.questionQualityService.getReviewHistory(QualityResourceTypeEnum.Question, id);
     return new ApiResponse('Quality review history fetched successfully.', result);
   }
@@ -210,14 +178,13 @@ export class LmsController {
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Post('questions/:id/quality-reviews')
   async submitQuestionQualityReview(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: SubmitQualityReviewDto,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
     const result = await this.questionQualityService.submitReview(
       QualityResourceTypeEnum.Question,
       id,
@@ -234,10 +201,9 @@ export class LmsController {
       'Powers the Quality Review Queue header\'s "Total Reviewed" widget.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('quality-reviews/my-stats')
   async getMyQualityReviewStats(@Request() req: any): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
     const result = await this.questionQualityService.getMyReviewStats(req.user?.id);
     return new ApiResponse('Review stats fetched successfully.', result);
   }
@@ -252,13 +218,11 @@ export class LmsController {
       'one subject.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('dashboard/quality-pipeline')
   async getQualityPipeline(
-    @Request() req: any,
     @Query('subjectId') subjectId?: string,
   ): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
     const result = await this.questionQualityService.getQualityPipelineSummary(
       subjectId ? Number(subjectId) : undefined,
     );
@@ -276,10 +240,9 @@ export class LmsController {
       'top-movers client-side from this same array.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('dashboard/subjects')
-  async getSubjectsDashboard(@Request() req: any): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
+  async getSubjectsDashboard(): Promise<ApiResponse<any>> {
     const result = await this.lmsDashboardService.getSubjectsDashboard();
     return new ApiResponse('Subjects dashboard fetched successfully.', result);
   }
@@ -295,14 +258,12 @@ export class LmsController {
       'scopes every series via its natural join path.',
   })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
   @Get('dashboard/trends')
   async getTrends(
-    @Request() req: any,
     @Query('range') range?: '7d' | '30d' | '90d',
     @Query('subjectId') subjectId?: string,
   ): Promise<ApiResponse<any>> {
-    await this.ensureLmsAccess(req.user?.id);
     const result = await this.lmsDashboardService.getTrends(
       range ?? '7d',
       subjectId ? Number(subjectId) : undefined,

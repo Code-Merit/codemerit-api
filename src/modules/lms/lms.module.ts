@@ -18,6 +18,7 @@ import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity
 import { QualityReviewTag } from 'src/common/typeorm/entities/quality-review-tag.entity';
 import { QuestionQualityService } from './providers/question-quality.service';
 import { LmsDashboardService } from './providers/lms-dashboard.service';
+import { LmsManagerGuard } from './guards/lms-manager.guard';
 
 @Module({
   imports: [
@@ -37,7 +38,7 @@ import { LmsDashboardService } from './providers/lms-dashboard.service';
     ]),
     UserPermissionModule,
   ],
-  providers: [LmsService, QuestionQualityService, LmsDashboardService],
+  providers: [LmsService, QuestionQualityService, LmsDashboardService, LmsManagerGuard],
   controllers: [LmsController],
   exports: [LmsService, QuestionQualityService, LmsDashboardService],
 })

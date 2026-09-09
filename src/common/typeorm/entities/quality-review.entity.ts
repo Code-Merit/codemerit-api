@@ -8,22 +8,29 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  UpdateDateColumn,
 } from 'typeorm';
 import { AbstractEntity } from './abstract.entity';
 import { QualityReviewTag } from './quality-review-tag.entity';
 import { User } from './user.entity';
 
-// One row per SME review PASS — a resource (currently only Question; Lesson is reserved,
-// see QualityResourceTypeEnum) can accrue many of these over its life, a full audit trail,
-// never a single mutable "current rating" field. Every row here is a FINAL decision: there
-// is no draft/in-progress state, so the row is immutable from the moment it's created —
-// changing your mind means submitting a new review, not editing this one. Polymorphic
-// resourceType/resourceId (rather than one nullable FK column per resource type) follows
-// the same pattern already used by UserPermission.resourceType/resourceId; there's no DB-level
-// FK on resourceId as a result (can't point at two different tables), so referential
-// integrity here is enforced by the service layer, same as UserPermission accepts.
+// One row per (resource, reviewer) pair — a resource (currently only Question; Lesson is
+// reserved, see QualityResourceTypeEnum) can be reviewed by many SMEs, but the SAME reviewer
+// reviewing the SAME resource again updates this row in place rather than creating a second
+// one (enforced by the unique index below). The audit trail lives inside `comment`, which is
+// an append-only, dated changelog: every submit appends a summary of what changed (or a
+// snapshot, on first submission) without ever erasing what was there before — see
+// QuestionQualityService.submitReview/buildChangelogEntry. `grade`/`outcome`/tags always
+// reflect only the latest submission. Polymorphic resourceType/resourceId (rather than one
+// nullable FK column per resource type) follows the same pattern already used by
+// UserPermission.resourceType/resourceId; there's no DB-level FK on resourceId as a result
+// (can't point at two different tables), so referential integrity here is enforced by the
+// service layer, same as UserPermission accepts.
 @Index(['resourceType', 'resourceId'])
 @Index(['reviewerId'])
+@Index('IDX_quality_review_resourceType_resourceId_reviewerId', ['resourceType', 'resourceId', 'reviewerId'], {
+  unique: true,
+})
 @Entity()
 export class QualityReview extends AbstractEntity {
   @Column({ type: 'enum', enum: QualityResourceTypeEnum })
@@ -48,6 +55,14 @@ export class QualityReview extends AbstractEntity {
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
+
+  // Set to the same instant as createdAt on insert (MySQL's ON UPDATE CURRENT_TIMESTAMP also
+  // fires on the initial INSERT), then bumped on every subsequent edit — this is the ordering
+  // key "latest review for this resource" queries use now that a row can be updated, not just
+  // inserted (a bare MAX(id) would pick the wrong row once an older row can become the most
+  // recently touched one).
+  @UpdateDateColumn({ name: 'updatedAt' })
+  updatedAt: Date;
 
   @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'reviewerId' })
