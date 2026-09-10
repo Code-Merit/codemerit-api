@@ -195,17 +195,31 @@ export class LmsController {
   }
 
   @ApiOperation({
-    summary: "Get the caller's own SME quality-review stats (LMS Manager only)",
+    summary: 'Get review stats for a subject/questionType combo (LMS Manager only)',
     description:
-      'Total count of review passes the calling SME has ever submitted (any resource type). ' +
-      'Powers the Quality Review Queue header\'s "Total Reviewed" widget.',
+      'Rollup over the same Pending-or-Active universe as the review queue\'s "All" tab: ' +
+      'total, reviewed, unreviewed, outcome breakdown (approved/needsRevision/rejected), and ' +
+      'how many the calling SME has personally reviewed. Omitting subjectSlug aggregates ' +
+      'across every subject. Powers the Quality Review Queue header\'s stat rail, refetched ' +
+      'whenever the subject or questionType filter changes.',
   })
+  @ApiQuery({ name: 'subjectSlug', required: false })
+  @ApiQuery({ name: 'questionType', required: false, enum: QuestionTypeEnum })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
+  @ApiResponseDoc({ status: 404, description: 'No subject found for the given slug.' })
   @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
-  @Get('quality-reviews/my-stats')
-  async getMyQualityReviewStats(@Request() req: any): Promise<ApiResponse<any>> {
-    const result = await this.questionQualityService.getMyReviewStats(req.user?.id);
-    return new ApiResponse('Review stats fetched successfully.', result);
+  @Get('quality-reviews/subject-stats')
+  async getSubjectQualityReviewStats(
+    @Request() req: any,
+    @Query('subjectSlug') subjectSlug?: string,
+    @Query('questionType') questionType?: QuestionTypeEnum,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.questionQualityService.getSubjectReviewStats({
+      subjectSlug,
+      questionType,
+      reviewerId: req.user?.id,
+    });
+    return new ApiResponse('Subject review stats fetched successfully.', result);
   }
 
   @ApiOperation({

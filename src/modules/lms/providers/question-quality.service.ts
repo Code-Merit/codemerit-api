@@ -77,16 +77,6 @@ export class QuestionQualityService {
     });
   }
 
-  // Powers the Quality Review Queue header's "Total Reviewed" widget — every
-  // review row this SME has ever submitted (any resource type). "This session"
-  // is a separate, purely client-side counter (resets on reload by design).
-  async getMyReviewStats(reviewerId: number): Promise<{ totalReviewed: number }> {
-    const totalReviewed = await this.dataSource
-      .getRepository(QualityReview)
-      .count({ where: { reviewerId } });
-    return { totalReviewed };
-  }
-
   // (resourceType, resourceId, reviewerId) is a unique triple — the SAME reviewer reviewing
   // the SAME resource again updates that one row in place instead of inserting a second one.
   // `comment` is the audit trail: every submit appends a dated, human-readable summary of what
@@ -430,19 +420,19 @@ export class QuestionQualityService {
       .addSelect('q.lastReviewedAt', 'lastReviewedAt')
       .from(Question, 'q')
       .leftJoin(Subject, 's', 's.id = q.subjectId');
-    if (status === 'flagged') {
+    if (status === 'unreviewed') {
+      // "To Review" is specifically the never-reviewed intake queue: content still sitting
+      // in Pending (whether freshly authored or pulled back by a Reject) that no SME has
+      // passed judgment on yet. reviewCount=0 alone isn't enough to scope this — Active
+      // content can also be reviewCount=0 (e.g. seeded straight to Active), but that's
+      // already-serving content, not intake, so it belongs under 'all' rather than here.
+      qb.where('q.status = :pending', { pending: QuestionStatusEnum.Pending });
+    } else if (status === 'flagged') {
       // A Reject always nudges the question's status to Pending (see submitReview's CASE
       // update), so a genuinely flagged question is Pending by construction — this scope
-      // is intentionally narrower than 'all'/'unreviewed' below.
+      // is intentionally narrower than 'all' below.
       qb.where('q.status = :pending', { pending: QuestionStatusEnum.Pending });
     } else {
-      // 'all' and 'unreviewed' share this same broad scope ('unreviewed' narrows further
-      // with reviewCount=0 below). Restricting "unreviewed" to status=Pending was a real
-      // bug: most never-reviewed content in this app was seeded directly as Active, not
-      // Pending, which made "To Review" show zero results despite thousands of questions
-      // that have genuinely never had an SME pass — Active-but-never-reviewed content
-      // needs a review just as much as Pending content, arguably more since it's already
-      // being served to real users.
       qb.where(
         '(q.status = :pending OR q.status = :active)',
         {
@@ -476,6 +466,87 @@ export class QuestionQualityService {
       lastReviewOutcome: r.lastReviewOutcome,
       lastReviewedAt: r.lastReviewedAt,
     }));
+  }
+
+  // Powers the queue header's stat rail — outcome breakdown for whichever subject/questionType
+  // combo the SME currently has selected, plus how many of those this specific reviewer has
+  // personally passed judgment on. Same reviewable universe as the queue's 'all' tab (Pending
+  // OR Active). reviewedByMe counts distinct questions, not review rows — a reviewer editing
+  // their own earlier pass doesn't inflate it (see submitReview's isNewReview gate, which is
+  // the same distinction reviewCount itself already respects).
+  async getSubjectReviewStats(filters: {
+    subjectSlug?: string;
+    questionType?: QuestionTypeEnum;
+    reviewerId: number;
+  }): Promise<{
+    total: number;
+    reviewed: number;
+    unreviewed: number;
+    approved: number;
+    needsRevision: number;
+    rejected: number;
+    reviewedByMe: number;
+  }> {
+    let resolvedSubjectId: number | undefined;
+    if (filters.subjectSlug) {
+      const subject = await this.dataSource
+        .getRepository(Subject)
+        .findOne({ where: { slug: filters.subjectSlug }, select: ['id'] });
+      if (!subject) {
+        throw new AppCustomException(
+          HttpStatus.NOT_FOUND,
+          `No subject found for slug "${filters.subjectSlug}".`,
+        );
+      }
+      resolvedSubjectId = subject.id;
+    }
+
+    const qb = this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'total')
+      .addSelect('SUM(CASE WHEN q.reviewCount > 0 THEN 1 ELSE 0 END)', 'reviewed')
+      .addSelect('SUM(CASE WHEN q.lastReviewOutcome = :approved THEN 1 ELSE 0 END)', 'approved')
+      .addSelect('SUM(CASE WHEN q.lastReviewOutcome = :needsRevision THEN 1 ELSE 0 END)', 'needsRevision')
+      .addSelect('SUM(CASE WHEN q.lastReviewOutcome = :rejected THEN 1 ELSE 0 END)', 'rejected')
+      .from(Question, 'q')
+      .where('(q.status = :pending OR q.status = :active)', {
+        pending: QuestionStatusEnum.Pending,
+        active: QuestionStatusEnum.Active,
+      })
+      .setParameters({
+        approved: QualityReviewOutcomeEnum.Approved,
+        needsRevision: QualityReviewOutcomeEnum.NeedsRevision,
+        rejected: QualityReviewOutcomeEnum.Rejected,
+      });
+    if (resolvedSubjectId) qb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
+    if (filters.questionType) qb.andWhere('q.questionType = :questionType', { questionType: filters.questionType });
+
+    const meQb = this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(DISTINCT r.resourceId)', 'count')
+      .from(QualityReview, 'r')
+      .innerJoin(Question, 'q', 'q.id = r.resourceId')
+      .where('r.resourceType = :resourceType', { resourceType: QualityResourceTypeEnum.Question })
+      .andWhere('r.reviewerId = :reviewerId', { reviewerId: filters.reviewerId })
+      .andWhere('(q.status = :pending OR q.status = :active)', {
+        pending: QuestionStatusEnum.Pending,
+        active: QuestionStatusEnum.Active,
+      });
+    if (resolvedSubjectId) meQb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
+    if (filters.questionType) meQb.andWhere('q.questionType = :questionType', { questionType: filters.questionType });
+
+    const [r, meRow] = await Promise.all([qb.getRawOne(), meQb.getRawOne()]);
+    const total = Number(r?.total) || 0;
+    const reviewed = Number(r?.reviewed) || 0;
+    return {
+      total,
+      reviewed,
+      unreviewed: total - reviewed,
+      approved: Number(r?.approved) || 0,
+      needsRevision: Number(r?.needsRevision) || 0,
+      rejected: Number(r?.rejected) || 0,
+      reviewedByMe: Number(meRow?.count) || 0,
+    };
   }
 
   // Embeds reviewHistory (this question's full past review audit trail, newest first) so
