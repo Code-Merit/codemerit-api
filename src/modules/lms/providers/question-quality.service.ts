@@ -177,17 +177,22 @@ export class QuestionQualityService {
           updateSet.reviewCount = () => '`reviewCount` + 1';
         }
 
-        // SME approval/rejection nudges moderation status — an Approve promotes a
-        // question waiting for its first review into rotation, a Reject pulls a live
-        // one back out. Anything already Inactive (or Active-and-approved,
-        // Pending-and-rejected) is left alone — this only ever moves status one way
-        // per outcome, never the reverse or through Inactive. A CASE on the row's
-        // *current* status keeps this one atomic update instead of a separate
+        // SME approval nudges moderation status — an Approve promotes a question waiting
+        // for its first review into rotation. NeedsRevision/Rejected both pull a live one
+        // back out (flagged content shouldn't keep serving while it's under revision — same
+        // reasoning getFlaggedForRevision already assumes when it treats both outcomes as
+        // "genuinely flagged, therefore Pending"). Anything already Inactive (or
+        // Active-and-approved, Pending-and-flagged) is left alone — this only ever moves
+        // status one way per outcome, never the reverse or through Inactive. A CASE on the
+        // row's *current* status keeps this one atomic update instead of a separate
         // read-then-write with a race window.
         if (review.outcome === QualityReviewOutcomeEnum.Approved) {
           updateSet.status = () =>
             `CASE WHEN \`status\` = '${QuestionStatusEnum.Pending}' THEN '${QuestionStatusEnum.Active}' ELSE \`status\` END`;
-        } else if (review.outcome === QualityReviewOutcomeEnum.Rejected) {
+        } else if (
+          review.outcome === QualityReviewOutcomeEnum.Rejected ||
+          review.outcome === QualityReviewOutcomeEnum.NeedsRevision
+        ) {
           updateSet.status = () =>
             `CASE WHEN \`status\` = '${QuestionStatusEnum.Active}' THEN '${QuestionStatusEnum.Pending}' ELSE \`status\` END`;
         }
@@ -322,26 +327,34 @@ export class QuestionQualityService {
     );
   }
 
+  // Reviewable universe is Pending OR Active — same fix as the review queue's 'all'/'unreviewed'
+  // scope (see getReviewQueue). This used to be Active-only, which meant a subject's coverage%
+  // only ever counted its handful of already-promoted questions and silently ignored the bulk
+  // of never-reviewed Pending content — making a subject with 1,141 unreviewed Pending
+  // questions and 8 reviewed Active ones read as "100% reviewed".
   async getReviewCoverageBySubject(): Promise<
-    Map<number, { activeTotal: number; unreviewed: number; unreviewedPercent: number }>
+    Map<number, { reviewableTotal: number; unreviewed: number; unreviewedPercent: number }>
   > {
     const rows = await this.dataSource
       .createQueryBuilder()
       .select('q.subjectId', 'subjectId')
-      .addSelect('COUNT(q.id)', 'activeTotal')
+      .addSelect('COUNT(q.id)', 'reviewableTotal')
       .addSelect('SUM(CASE WHEN q.reviewCount = 0 THEN 1 ELSE 0 END)', 'unreviewed')
       .from(Question, 'q')
-      .where('q.status = :active', { active: QuestionStatusEnum.Active })
+      .where('(q.status = :pending OR q.status = :active)', {
+        pending: QuestionStatusEnum.Pending,
+        active: QuestionStatusEnum.Active,
+      })
       .groupBy('q.subjectId')
       .getRawMany();
 
     return new Map(
       rows.map((r) => {
-        const activeTotal = Number(r.activeTotal) || 0;
+        const reviewableTotal = Number(r.reviewableTotal) || 0;
         const unreviewed = Number(r.unreviewed) || 0;
         return [
           Number(r.subjectId),
-          { activeTotal, unreviewed, unreviewedPercent: activeTotal ? Math.round((unreviewed / activeTotal) * 100) : 0 },
+          { reviewableTotal, unreviewed, unreviewedPercent: reviewableTotal ? Math.round((unreviewed / reviewableTotal) * 100) : 0 },
         ];
       }),
     );
@@ -389,8 +402,10 @@ export class QuestionQualityService {
   > {
     const status = filters.status ?? 'all';
     // This page's job is to hand an SME a working batch, not dump the whole question
-    // bank — 20 keeps each fetch small and fast regardless of which tab is active.
-    const limit = filters.limit ?? 20;
+    // bank — 20 keeps each fetch small and fast regardless of which tab is active. Capped
+    // at 100 regardless of what a caller asks for, so a stray ?limit= can't force an
+    // unbounded scan/response.
+    const limit = Math.min(filters.limit ?? 20, 100);
 
     let resolvedSubjectId: number | undefined;
     if (filters.subjectSlug) {
@@ -451,7 +466,16 @@ export class QuestionQualityService {
       });
     }
 
-    qb.orderBy('q.reviewCount', 'ASC').addOrderBy('q.createdAt', 'ASC').limit(limit);
+    if (status === 'flagged') {
+      // Most-recently-flagged first, matching getFlaggedForRevision's own ordering — a
+      // reviewCount/createdAt sort is meaningless here (every flagged row already has
+      // reviewCount >= 1) and was surfacing the oldest-created flagged questions instead
+      // of the ones that most recently need attention.
+      qb.orderBy('q.lastReviewedAt', 'DESC');
+    } else {
+      qb.orderBy('q.reviewCount', 'ASC').addOrderBy('q.createdAt', 'ASC');
+    }
+    qb.limit(limit);
 
     const rows = await qb.getRawMany();
     return rows.map((r) => ({
@@ -630,22 +654,27 @@ export class QuestionQualityService {
 
   // -- new SME review-schema widgets ---------------------------------------------------
 
+  // Same Pending-or-Active reviewable-universe fix as getReviewCoverageBySubject — see its
+  // comment for why Active-only silently ignored the bulk of never-reviewed content.
   private async getReviewCoverage(subjectId?: number) {
     const qb = this.dataSource
       .createQueryBuilder()
-      .select('COUNT(q.id)', 'activeTotal')
+      .select('COUNT(q.id)', 'reviewableTotal')
       .addSelect('SUM(CASE WHEN q.reviewCount = 0 THEN 1 ELSE 0 END)', 'unreviewed')
       .from(Question, 'q')
-      .where('q.status = :active', { active: QuestionStatusEnum.Active });
+      .where('(q.status = :pending OR q.status = :active)', {
+        pending: QuestionStatusEnum.Pending,
+        active: QuestionStatusEnum.Active,
+      });
     if (subjectId) qb.andWhere('q.subjectId = :subjectId', { subjectId });
 
     const raw = await qb.getRawOne();
-    const activeTotal = Number(raw?.activeTotal) || 0;
+    const reviewableTotal = Number(raw?.reviewableTotal) || 0;
     const unreviewed = Number(raw?.unreviewed) || 0;
     return {
-      activeTotal,
+      reviewableTotal,
       unreviewed,
-      unreviewedPercent: activeTotal ? Math.round((unreviewed / activeTotal) * 100) : 0,
+      unreviewedPercent: reviewableTotal ? Math.round((unreviewed / reviewableTotal) * 100) : 0,
     };
   }
 

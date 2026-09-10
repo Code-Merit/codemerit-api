@@ -83,7 +83,7 @@ export class LmsController {
   @ApiQuery({ name: 'subjectSlug', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, enum: ['unreviewed', 'flagged', 'all'] })
   @ApiQuery({ name: 'questionType', required: false, enum: QuestionTypeEnum })
-  @ApiQuery({ name: 'limit', required: false, type: String, description: 'Default 100.' })
+  @ApiQuery({ name: 'limit', required: false, type: String, description: 'Default 20, capped at 100.' })
   @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
   @ApiResponseDoc({ status: 404, description: 'No subject found for the given slug.' })
   @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
@@ -142,24 +142,6 @@ export class LmsController {
   ): Promise<ApiResponse<any>> {
     const result = await this.questionQualityService.listQualityMetrics(questionType);
     return new ApiResponse('Quality metrics fetched successfully.', result);
-  }
-
-  @ApiOperation({
-    summary: "Get a question's SME quality-review history (LMS Manager only)",
-    description:
-      'Every review pass ever submitted for this question, newest first, with the reviewer ' +
-      'and attached issue tags — the full iterative audit trail (a question can be reviewed ' +
-      'more than once over its life).',
-  })
-  @ApiParam({ name: 'id', description: 'Question id', type: Number })
-  @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
-  @Get('questions/:id/quality-reviews')
-  async getQuestionQualityReviews(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<ApiResponse<any>> {
-    const result = await this.questionQualityService.getReviewHistory(QualityResourceTypeEnum.Question, id);
-    return new ApiResponse('Quality review history fetched successfully.', result);
   }
 
   @ApiOperation({

@@ -47,7 +47,7 @@ export class LmsDashboardService {
     return subjects.map((s) => {
       const volume = volumeMap.get(s.id) ?? { trivia: 0, general: 0, triviaActive: 0, generalActive: 0 };
       const moderation = moderationMap.get(s.id) ?? { total: 0, pending: 0, active: 0, whitelisted: 0 };
-      const coverage = coverageMap.get(s.id) ?? { activeTotal: 0, unreviewed: 0, unreviewedPercent: 0 };
+      const coverage = coverageMap.get(s.id) ?? { reviewableTotal: 0, unreviewed: 0, unreviewedPercent: 0 };
       const avgGrade = avgGradeMap.get(s.id) ?? null;
       const lesson = lessonMap.get(s.id) ?? { lessonCount: 0, totalViews: 0, completedCount: 0 };
       const quiz =
@@ -97,7 +97,7 @@ export class LmsDashboardService {
           whitelisted: moderation.whitelisted,
         },
         review: {
-          reviewed: coverage.activeTotal - coverage.unreviewed,
+          reviewed: coverage.reviewableTotal - coverage.unreviewed,
           unreviewed: coverage.unreviewed,
           avgGrade,
         },
