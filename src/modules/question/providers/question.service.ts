@@ -586,6 +586,94 @@ export class QuestionService {
     const ids = (await idQb.getRawMany()).map((r) => r.id);
     if (!ids.length) return [];
 
+    // fullData-only: the question viewer shows the SME's latest review pass (comment,
+    // grade, tags) below the question body — the Question.latestGrade/lastReviewOutcome
+    // rollup already covers grade/outcome for the list view, but comment and tags only
+    // live on quality_review/quality_review_tag, so they need their own batched fetch here
+    // rather than an N+1 per question. Same "latest review per resource" pattern as
+    // getFlaggedForRevision (MAX(updatedAt), not MAX(id) — a row can be updated in place by
+    // its original reviewer) — this deliberately picks the single most-recently-touched
+    // review across all reviewers, matching what the Question rollup columns already reflect.
+    const latestReviewByQuestion = new Map<
+      number,
+      {
+        grade: number | null;
+        outcome: string | null;
+        comment: string | null;
+        reviewedAt: Date | null;
+        reviewerName: string | null;
+        tags: { id: number; code: string; label: string; severity: string | null; polarity: string }[];
+      }
+    >();
+
+    if (fullData) {
+      const latestReviewSub = this.dataSource
+        .createQueryBuilder()
+        .subQuery()
+        .select('r2.resourceId', 'resourceId')
+        .addSelect('MAX(r2.updatedAt)', 'maxUpdatedAt')
+        .from(QualityReview, 'r2')
+        .where('r2.resourceType = :lrResourceType', { lrResourceType: QualityResourceTypeEnum.Question })
+        .andWhere('r2.resourceId IN (:...lrIds)', { lrIds: ids })
+        .groupBy('r2.resourceId')
+        .getQuery();
+
+      const reviewRows = await this.dataSource
+        .createQueryBuilder()
+        .select('lr.resourceId', 'questionId')
+        .addSelect('lr.grade', 'grade')
+        .addSelect('lr.outcome', 'outcome')
+        .addSelect('lr.comment', 'comment')
+        .addSelect('lr.updatedAt', 'reviewedAt')
+        .addSelect('reviewer.firstName', 'reviewerFirstName')
+        .addSelect('reviewer.lastName', 'reviewerLastName')
+        .addSelect('m.id', 'tagId')
+        .addSelect('m.code', 'tagCode')
+        .addSelect('m.label', 'tagLabel')
+        .addSelect('m.severity', 'tagSeverity')
+        .addSelect('m.polarity', 'tagPolarity')
+        .from(QualityReview, 'lr')
+        .innerJoin(
+          `(${latestReviewSub})`,
+          'latest',
+          'latest.resourceId = lr.resourceId AND latest.maxUpdatedAt = lr.updatedAt',
+        )
+        .leftJoin('lr.reviewer', 'reviewer')
+        .leftJoin(QualityReviewTag, 'qrt', 'qrt.qualityReviewId = lr.id')
+        .leftJoin(QualityMetric, 'm', 'm.id = qrt.qualityMetricId')
+        .where('lr.resourceType = :lrResourceType2', { lrResourceType2: QualityResourceTypeEnum.Question })
+        .setParameter('lrIds', ids)
+        .getRawMany();
+
+      for (const row of reviewRows) {
+        const qid = Number(row.questionId);
+        if (!latestReviewByQuestion.has(qid)) {
+          const reviewerName =
+            [row.reviewerFirstName, row.reviewerLastName].filter(Boolean).join(' ').trim() || null;
+          latestReviewByQuestion.set(qid, {
+            grade: row.grade !== null ? Number(row.grade) : null,
+            outcome: row.outcome ?? null,
+            comment: row.comment ?? null,
+            reviewedAt: row.reviewedAt ?? null,
+            reviewerName,
+            tags: [],
+          });
+        }
+        if (row.tagId) {
+          const entry = latestReviewByQuestion.get(qid)!;
+          if (!entry.tags.some((t) => t.id === Number(row.tagId))) {
+            entry.tags.push({
+              id: Number(row.tagId),
+              code: row.tagCode,
+              label: row.tagLabel,
+              severity: row.tagSeverity ?? null,
+              polarity: row.tagPolarity,
+            });
+          }
+        }
+      }
+    }
+
     // Step 2: fetch full data
     const qb = this.questionRepo
       .createQueryBuilder('question')
@@ -663,6 +751,7 @@ export class QuestionService {
           reviewCount: row['reviewCount'] ?? 0,
           latestGrade: row['latestGrade'] ?? null,
           lastReviewOutcome: row['lastReviewOutcome'] ?? null,
+          latestReview: fullData ? (latestReviewByQuestion.get(qid) ?? null) : undefined,
           //map other fields
           createdAt: row['question_createdAt'] ?? null,
           subject: row['subject_id']
