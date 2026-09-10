@@ -13,6 +13,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
+import { LessonAccessLevelEnum } from 'src/common/enum/lesson-access-level.enum';
 
 export class LessonSectionDto {
   @ApiProperty({ example: 'The Button That Broke the Dashboard' })
@@ -84,13 +85,23 @@ export class CreateLessonDto {
     enum: ['comic', 'tutorial', 'reference'],
     default: 'tutorial',
     required: false,
-    description:
-      'Content/pricing category. `comic` lessons are always free regardless of subject — see ' +
-      'evaluateLessonAccess() in lesson.service.ts. Defaults to "tutorial" if omitted.',
+    description: 'Content-structure/merchandising category. Defaults to "tutorial" if omitted.',
   })
   @IsOptional()
   @IsIn(['comic', 'tutorial', 'reference'])
   format?: 'comic' | 'tutorial' | 'reference';
+
+  @ApiProperty({
+    enum: LessonAccessLevelEnum,
+    default: LessonAccessLevelEnum.Basic,
+    required: false,
+    description:
+      'Minimum enrollment tier required to view this lesson. `Public` requires no ' +
+      'enrollment and no login at all. Defaults to "Basic" if omitted.',
+  })
+  @IsOptional()
+  @IsEnum(LessonAccessLevelEnum)
+  accessLevel?: LessonAccessLevelEnum;
 
   @ApiProperty({
     type: [LessonSectionDto],

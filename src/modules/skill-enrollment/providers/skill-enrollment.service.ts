@@ -958,21 +958,19 @@ export class SkillEnrollmentService {
 
   async getCapsForTier(
     tier: EnrollmentTierEnum,
-  ): Promise<{ dailyQuizCap: number; dailyLessonCap: number } | null> {
+  ): Promise<{ dailyQuestionCap: number } | null> {
     const row = await this.tierCapConfigRepo.findOne({ where: { tier } });
-    if (row) return { dailyQuizCap: row.dailyQuizCap, dailyLessonCap: row.dailyLessonCap };
+    if (row) return { dailyQuestionCap: row.dailyQuestionCap };
     return DEFAULT_TIER_CAPS[tier] ?? null;
   }
 
   async upsertTierCapConfig(
     tier: EnrollmentTierEnum,
-    dailyQuizCap: number,
-    dailyLessonCap: number,
+    dailyQuestionCap: number,
   ): Promise<EnrollmentTierCapConfig> {
     const existing = await this.tierCapConfigRepo.findOne({ where: { tier } });
     const row = existing ?? this.tierCapConfigRepo.create({ tier });
-    row.dailyQuizCap = dailyQuizCap;
-    row.dailyLessonCap = dailyLessonCap;
+    row.dailyQuestionCap = dailyQuestionCap;
     return this.tierCapConfigRepo.save(row);
   }
 

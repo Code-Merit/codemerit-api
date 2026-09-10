@@ -1,6 +1,6 @@
 export const uiRoutes = [
   {
-    path: '',
+    path: '/app/ui-tests',
     title: 'UI Screens',
     iconType: 'material-icons-outlined',
     icon: 'dvr',

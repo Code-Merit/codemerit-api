@@ -189,6 +189,22 @@ export class QuizController {
   }
 
   @ApiOperation({
+    summary: "Get the caller's practice-question quota for a subject today",
+    description:
+      'Read-only counterpart to the DAILY_QUOTA_EXCEEDED check enforced at quiz creation — ' +
+      'for display (e.g. "X of Y practice questions left today"), not blocking.',
+  })
+  @UseGuards(AuthGuard('jwt'))
+  @Get('quota/subject/:subjectId')
+  async getSubjectQuestionQuota(
+    @Param('subjectId', ParseIntPipe) subjectId: number,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.quizService.getSubjectQuestionQuota(req.user.id, subjectId);
+    return new ApiResponse('Subject question quota fetched successfully', result);
+  }
+
+  @ApiOperation({
     summary: 'Get user created quizzes with attempt count',
   })
   @Get('/:userId')

@@ -16,25 +16,13 @@ import { GetLessonsDto } from '../dtos/get-lessons.dto';
 import { UpdateLessonDto } from '../dtos/update-lesson.dto';
 import { UpdateLessonProgressDto } from '../dtos/update-lesson-progress.dto';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
-import { BASIC_PREMIUM_SUBJECT_CONTENT_CEILING } from 'src/modules/skill-enrollment/constants/skill-enrollment.constants';
-import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
-import { EnrollmentTierEnum, isTierAtLeast } from 'src/common/enum/enrollment-tier.enum';
+import { EnrollmentTierEnum, TIER_RANK } from 'src/common/enum/enrollment-tier.enum';
+import { LessonAccessLevelEnum, LESSON_ACCESS_RANK } from 'src/common/enum/lesson-access-level.enum';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 
 interface LessonAccessResult {
   locked: boolean;
-  isNewFreeGrant: boolean;
   tier: EnrollmentTierEnum | null;
-}
-
-interface FreeLessonContext {
-  viewedLessonIdsEver: Set<number>;
-  viewedCountBySubjectEver: Map<number, number>;
-  // Daily cap is enforced per-subject (each subject enrollment gets its own
-  // independent daily allowance), not pooled across every subject the user
-  // is enrolled in — keyed by subjectId rather than a single running total.
-  todaysViewedCountBySubject: Map<number, number>;
-  lessonCountBySubject: Map<number, number>;
 }
 
 @Injectable()
@@ -46,63 +34,23 @@ export class LessonService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(UserLessonTracker)
     private readonly userLessonTrackerRepo: Repository<UserLessonTracker>,
-    @InjectRepository(FreeLessonView)
-    private readonly freeLessonViewRepo: Repository<FreeLessonView>,
     private readonly dataSource: DataSource,
     private readonly skillEnrollmentService: SkillEnrollmentService,
     private readonly activityService: ActivityService,
   ) { }
 
-  /** Comic-format lessons are always free regardless of subject. Non-premium
-   * (`Subject.isPremium: false`) subjects are unlimited for everyone at any tier,
-   * including no enrollment at all. Otherwise: `tier === null` (no active enrollment
-   * for this subject at all — not even Basic) is locked outright, with no free peek —
-   * enrolling in at least Basic is required first (see enrollBasic()). tier >= Pro is
-   * fully unlocked; Basic and Curious are capped daily (their own configured
-   * dailyLessonCap), and Basic additionally has a cumulative "seen no more than 40% of
-   * this subject's lessons, ever" ceiling — see BASIC_PREMIUM_SUBJECT_CONTENT_CEILING.
-   * A lesson already granted before (any date) always stays free, regardless of
-   * today's/cumulative counts. This is deliberately a *different* concept from the
-   * looser "what has this user engaged with" personalization signal used elsewhere
-   * in this service (see getEnrolledSubjectIds() below) — this method is the strict,
-   * real-access check. */
-  private evaluateLessonAccess(
-    lesson: Lesson,
-    tier: EnrollmentTierEnum | null,
-    caps: { dailyLessonCap: number } | null,
-    ctx: FreeLessonContext,
-  ): { locked: boolean; isNewFreeGrant: boolean } {
-    if (lesson.format === 'comic') return { locked: false, isNewFreeGrant: false };
-    if (!lesson.subject?.isPremium) return { locked: false, isNewFreeGrant: false };
-    if (tier === null) return { locked: true, isNewFreeGrant: false };
-    if (isTierAtLeast(tier, EnrollmentTierEnum.Pro)) return { locked: false, isNewFreeGrant: false };
-
-    if (ctx.viewedLessonIdsEver.has(lesson.id)) return { locked: false, isNewFreeGrant: false };
-
-    if (tier === EnrollmentTierEnum.Basic) {
-      const viewed = ctx.viewedCountBySubjectEver.get(lesson.subjectId) ?? 0;
-      const total = ctx.lessonCountBySubject.get(lesson.subjectId) ?? 0;
-      if (total > 0 && viewed / total >= BASIC_PREMIUM_SUBJECT_CONTENT_CEILING) {
-        return { locked: true, isNewFreeGrant: false };
-      }
-    }
-
-    const dailyCap = caps?.dailyLessonCap ?? Infinity;
-    const todaysViewedCount = ctx.todaysViewedCountBySubject.get(lesson.subjectId) ?? 0;
-    if (todaysViewedCount >= dailyCap) {
-      return { locked: true, isNewFreeGrant: false };
-    }
-
-    return { locked: false, isNewFreeGrant: true };
+  /** Static gate: a lesson unlocks once the user's enrollment tier for that lesson's
+   * subject outranks (by TIER_RANK) the lesson's own `accessLevel` — see
+   * LESSON_ACCESS_RANK. `Public` is the one exception, unlocking even with no
+   * enrollment/login at all (`tier === null`, rank -1 always satisfies it). No daily
+   * cap or cumulative ceiling — access is a fixed per-lesson fact, not a throttle. */
+  private evaluateLessonAccess(lesson: Lesson, tier: EnrollmentTierEnum | null): { locked: boolean } {
+    if (lesson.accessLevel === LessonAccessLevelEnum.Public) return { locked: false };
+    const effectiveRank = tier === null ? -1 : TIER_RANK[tier];
+    return { locked: effectiveRank < LESSON_ACCESS_RANK[lesson.accessLevel] };
   }
 
-  /** Batched access computation for a set of lessons in one pass (no N+1 queries).
-   * `ctx.todaysViewedCountBySubject` is intentionally NOT incremented while iterating — for a
-   * list of several not-yet-seen lessons, each is evaluated independently against the
-   * same starting count, so the list can optimistically show more than one as
-   * unlocked even though opening all of them would eventually hit the cap (list is
-   * optimistic, the detail view — findBySlug, which actually records — is
-   * authoritative). */
+  /** Batched access computation for a set of lessons in one pass. */
   private async computeLessonAccessBatch(
     lessons: Lesson[],
     userId: number | undefined,
@@ -111,67 +59,11 @@ export class LessonService {
       ? await this.skillEnrollmentService.getSubjectTierMap(userId)
       : new Map<number, EnrollmentTierEnum>();
 
-    const relevantSubjectIds = new Set<number>();
-    for (const lesson of lessons) {
-      if (lesson.format === 'comic' || !lesson.subject?.isPremium) continue;
-      const tier = tierMap.get(lesson.subjectId) ?? null;
-      // No enrollment at all locks outright (handled directly in evaluateLessonAccess)
-      // — no need to pull free-view history for it.
-      if (tier && !isTierAtLeast(tier, EnrollmentTierEnum.Pro)) relevantSubjectIds.add(lesson.subjectId);
-    }
-
-    const ctx: FreeLessonContext = {
-      viewedLessonIdsEver: new Set(),
-      viewedCountBySubjectEver: new Map(),
-      todaysViewedCountBySubject: new Map(),
-      lessonCountBySubject: new Map(),
-    };
-
-    if (userId && relevantSubjectIds.size) {
-      const [allViews, counts] = await Promise.all([
-        this.freeLessonViewRepo.find({ where: { userId } }),
-        this.lessonRepository
-          .createQueryBuilder('l')
-          .select('l.subjectId', 'subjectId')
-          .addSelect('COUNT(*)', 'cnt')
-          .where('l.subjectId IN (:...ids)', { ids: Array.from(relevantSubjectIds) })
-          .andWhere("l.format != 'comic'")
-          .groupBy('l.subjectId')
-          .getRawMany(),
-      ]);
-
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      for (const view of allViews) {
-        ctx.viewedLessonIdsEver.add(view.lessonId);
-        ctx.viewedCountBySubjectEver.set(
-          view.subjectId,
-          (ctx.viewedCountBySubjectEver.get(view.subjectId) ?? 0) + 1,
-        );
-        if (view.createdAt >= startOfDay) {
-          ctx.todaysViewedCountBySubject.set(
-            view.subjectId,
-            (ctx.todaysViewedCountBySubject.get(view.subjectId) ?? 0) + 1,
-          );
-        }
-      }
-      counts.forEach((c) => ctx.lessonCountBySubject.set(+c.subjectId, +c.cnt));
-    }
-
-    const capsCache = new Map<EnrollmentTierEnum, { dailyQuizCap: number; dailyLessonCap: number } | null>();
     const result = new Map<number, LessonAccessResult>();
     for (const lesson of lessons) {
       const tier = tierMap.get(lesson.subjectId) ?? null;
-      let caps: { dailyQuizCap: number; dailyLessonCap: number } | null = null;
-      if (tier) {
-        caps = capsCache.get(tier) ?? null;
-        if (!capsCache.has(tier)) {
-          caps = await this.skillEnrollmentService.getCapsForTier(tier);
-          capsCache.set(tier, caps);
-        }
-      }
-      const { locked, isNewFreeGrant } = this.evaluateLessonAccess(lesson, tier, caps, ctx);
-      result.set(lesson.id, { locked, isNewFreeGrant, tier });
+      const { locked } = this.evaluateLessonAccess(lesson, tier);
+      result.set(lesson.id, { locked, tier });
     }
     return result;
   }
@@ -182,19 +74,6 @@ export class LessonService {
   ): Promise<LessonAccessResult> {
     const map = await this.computeLessonAccessBatch([lesson], userId);
     return map.get(lesson.id)!;
-  }
-
-  /** Records the free-tier "spend" for a lesson computeLessonAccessBatch/
-   * evaluateSingleLessonAccess just granted for the first time — the only place a
-   * FreeLessonView row is ever inserted. */
-  private async recordFreeLessonView(userId: number, lesson: Lesson): Promise<void> {
-    await this.freeLessonViewRepo.save(
-      this.freeLessonViewRepo.create({
-        userId,
-        lessonId: lesson.id,
-        subjectId: lesson.subjectId,
-      }),
-    );
   }
 
   /** With no userId, or a userId with no subject enrollment, `fetch=all` falls back to a random
@@ -221,8 +100,6 @@ export class LessonService {
       ? await this.getTrackerMap(userId, lessons.map((lesson) => lesson.id))
       : new Map<number, UserLessonTracker>();
 
-    // List view only — never records a FreeLessonView (see computeLessonAccessBatch's
-    // docstring on why this is deliberately optimistic).
     const accessMap = await this.computeLessonAccessBatch(lessons, userId);
 
     return lessons.map((lesson) =>
@@ -309,6 +186,7 @@ export class LessonService {
         slug,
         level: dto.level,
         format: dto.format ?? 'tutorial',
+        accessLevel: dto.accessLevel ?? LessonAccessLevelEnum.Basic,
         userId,
       });
 
@@ -355,6 +233,7 @@ export class LessonService {
         ...(dto.summary !== undefined && { summary: dto.summary }),
         ...(dto.level !== undefined && { level: dto.level }),
         ...(dto.format !== undefined && { format: dto.format }),
+        ...(dto.accessLevel !== undefined && { accessLevel: dto.accessLevel }),
         ...(subjectId !== undefined && { subjectId }),
         ...(topicId !== undefined && { topicId }),
       });
@@ -391,12 +270,7 @@ export class LessonService {
       ? await this.userLessonTrackerRepo.findOne({ where: { userId, lessonId: lesson.id } })
       : undefined;
 
-    // The one read path that actually "spends" a free view — this is where a
-    // not-yet-seen lesson's FreeLessonView row gets recorded, unlike findLessons.
     const access = await this.evaluateSingleLessonAccess(lesson, userId);
-    if (access.isNewFreeGrant && userId) {
-      await this.recordFreeLessonView(userId, lesson);
-    }
 
     return this.toLessonSummaryDto(lesson, myTracker, access.locked);
   }
@@ -405,19 +279,15 @@ export class LessonService {
    * by the two actions that actually consume a lesson (recording access, updating
    * progress) — unlike findBySlug/findLessons, which return a locked preview instead
    * of erroring, since those are catalog-browsing reads rather than "consume this
-   * content" actions. Also records a fresh free grant if this endpoint is called
-   * standalone (without a prior findBySlug), so it stays usable on its own. */
+   * content" actions. */
   private async assertLessonUnlocked(userId: number, lesson: Lesson): Promise<void> {
     const access = await this.evaluateSingleLessonAccess(lesson, userId);
     if (access.locked) {
       const subjectTitle = lesson.subject?.title ?? 'this subject';
       const message = access.tier
-        ? `This lesson requires a higher plan for "${subjectTitle}" — you're currently on ${access.tier}. Upgrade to continue.`
-        : `You're not enrolled in "${subjectTitle}" yet. Enroll in the free Basic plan (or higher) to access it.`;
+        ? `This lesson requires the ${lesson.accessLevel} plan (or higher) for "${subjectTitle}" — you're currently on ${access.tier}. Upgrade to continue.`
+        : `You're not enrolled in "${subjectTitle}" yet. Enroll in the ${lesson.accessLevel} plan (or higher) to access it.`;
       throw new AppCustomException(HttpStatus.FORBIDDEN, message);
-    }
-    if (access.isNewFreeGrant) {
-      await this.recordFreeLessonView(userId, lesson);
     }
   }
 

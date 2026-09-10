@@ -42,14 +42,15 @@ export class PaymentService {
   /** Public, no auth required — a pricing page needs this before a user has even
    * signed up. Same catalog createCheckout() prices off of, so what's displayed here
    * is always what checkout will actually charge. Also carries each tier's real daily
-   * quiz/lesson caps + access-window duration (from SkillEnrollmentService/
+   * question cap + access-window duration (from SkillEnrollmentService/
    * EnrollmentTierCapConfig, the SAME source quiz.service.ts's enforcement and the
-   * admin tier-caps screen read) — a frontend rendering "10 quizzes/day" from its own
+   * admin tier-caps screen read) — a frontend rendering "50 questions/day" from its own
    * hardcoded copy could silently drift from whatever an admin has actually configured;
-   * this makes the pricing/checkout/upgrade surfaces read the real number instead. */
+   * this makes the pricing/checkout/upgrade surfaces read the real number instead.
+   * Lessons are no longer capped by count at all — see Lesson.accessLevel. */
   async getPricingCatalog(): Promise<
     ReturnType<typeof getFullPricingCatalog> & {
-      caps: Record<EnrollmentTierEnum, { dailyQuizCap: number | null; dailyLessonCap: number | null; durationMonths: number | null }>;
+      caps: Record<EnrollmentTierEnum, { dailyQuestionCap: number | null; durationMonths: number | null }>;
     }
   > {
     const founderPricingEnabled =
@@ -65,15 +66,14 @@ export class PaymentService {
         return [
           tier,
           {
-            dailyQuizCap: tierCaps?.dailyQuizCap ?? null,
-            dailyLessonCap: tierCaps?.dailyLessonCap ?? null,
+            dailyQuestionCap: tierCaps?.dailyQuestionCap ?? null,
             durationMonths: durationMonths ?? null,
           },
         ] as const;
       }),
     );
 
-    return { ...catalog, caps: Object.fromEntries(capsEntries) as Record<EnrollmentTierEnum, { dailyQuizCap: number | null; dailyLessonCap: number | null; durationMonths: number | null }> };
+    return { ...catalog, caps: Object.fromEntries(capsEntries) as Record<EnrollmentTierEnum, { dailyQuestionCap: number | null; durationMonths: number | null }> };
   }
 
   async createCheckout(userId: number, dto: CreateCheckoutDto): Promise<Record<string, any>> {

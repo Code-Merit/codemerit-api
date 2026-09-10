@@ -493,13 +493,17 @@ export class QuizService {
 
   /** Tier-aware: non-premium subjects and Pro+ tiers are unlimited. Otherwise, the
    * MINIMUM effective tier across every target subject (all-or-nothing, same pattern
-   * as before) determines the daily cap for this request. The cap itself is enforced
-   * per-subject (each subject enrollment carries its own independent daily allowance,
-   * not a pool shared across every subject the user is enrolled in) — via a
+   * as before) determines the daily question cap for this request. The cap itself is
+   * enforced per-subject (each subject enrollment carries its own independent daily
+   * allowance, not a pool shared across every subject the user is enrolled in) — via a
    * quiz_subject join, since Quiz has no direct subjectId column. A quiz spanning
    * multiple target subjects is blocked if ANY one of those specific subjects has
    * already exhausted its own cap. This never blocks a quiz on subjects the user
-   * actually has full access to; it only ever throttles the ones they don't. */
+   * actually has full access to; it only ever throttles the ones they don't.
+   *
+   * The cap counts QUESTIONS answered today, not quizzes taken — a quiz's length
+   * (numQuestions) is arbitrary per attempt, so counting quiz attempts wasn't a fair
+   * unit; summing questions is. */
   private async enforceSubjectAccessForUserQuiz(
     userId: number,
     subjectIds: number[],
@@ -528,34 +532,75 @@ export class QuizService {
     if (isTierAtLeast(minTier, EnrollmentTierEnum.Pro)) return;
 
     const caps = await this.skillEnrollmentService.getCapsForTier(minTier);
-    const dailyCap = caps?.dailyQuizCap;
+    const dailyCap = caps?.dailyQuestionCap;
     if (dailyCap === undefined) return;
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    // UserQuiz rows (and their QuizSubject tags) live in user_quiz/userQuizId now —
-    // this function only ever concerns UserQuiz, so join there directly rather than
-    // via the old quizId/Quiz path.
-    const countsBySubject = await this.quizSubjectRepo
-      .createQueryBuilder('qs')
-      .innerJoin(UserQuiz, 'q', 'q.id = qs.userQuizId')
-      .select('qs.subjectId', 'subjectId')
-      .addSelect('COUNT(DISTINCT q.id)', 'cnt')
-      .where('q.createdBy = :userId', { userId })
-      .andWhere('q.createdAt >= :startOfDay', { startOfDay })
-      .andWhere('qs.subjectId IN (:...targetSubjectIds)', { targetSubjectIds })
-      .groupBy('qs.subjectId')
-      .getRawMany<{ subjectId: number; cnt: string }>();
-
-    const exhausted = countsBySubject.find((row) => +row.cnt >= dailyCap);
+    const usedBySubject = await this.sumQuestionsUsedTodayBySubject(userId, targetSubjectIds);
+    const exhausted = targetSubjectIds.some((id) => (usedBySubject.get(id) ?? 0) >= dailyCap);
     if (exhausted) {
       throw new AppCustomException(
         HttpStatus.FORBIDDEN,
-        `You've used today's ${dailyCap} free practice quizzes on this subject's plan (${minTier}). ` +
+        `You've used today's ${dailyCap} free practice questions on this subject's plan (${minTier}). ` +
         `Upgrade for unlimited practice, or come back tomorrow.`,
         'DAILY_QUOTA_EXCEEDED',
       );
     }
+  }
+
+  // UserQuiz rows (and their QuizSubject tags) live in user_quiz/userQuizId now — this
+  // only ever concerns UserQuiz, so join there directly rather than via the old
+  // quizId/Quiz path. QuizSettings.numQuestions gives each quiz's actual question
+  // count. Shared by enforceSubjectAccessForUserQuiz (blocking) and
+  // getSubjectQuestionQuota (display, e.g. "X of Y practice questions left today").
+  private async sumQuestionsUsedTodayBySubject(
+    userId: number,
+    subjectIds: number[],
+  ): Promise<Map<number, number>> {
+    if (!subjectIds.length) return new Map();
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const rows = await this.quizSubjectRepo
+      .createQueryBuilder('qs')
+      .innerJoin(UserQuiz, 'q', 'q.id = qs.userQuizId')
+      .innerJoin(QuizSettings, 'qset', 'qset.userQuizId = q.id')
+      .select('qs.subjectId', 'subjectId')
+      .addSelect('SUM(qset.numQuestions)', 'total')
+      .where('q.createdBy = :userId', { userId })
+      .andWhere('q.createdAt >= :startOfDay', { startOfDay })
+      .andWhere('qs.subjectId IN (:...subjectIds)', { subjectIds })
+      .groupBy('qs.subjectId')
+      .getRawMany<{ subjectId: number; total: string }>();
+
+    return new Map(rows.map((r) => [Number(r.subjectId), Number(r.total) || 0]));
+  }
+
+  /** Read-only counterpart to enforceSubjectAccessForUserQuiz, for display rather than
+   * blocking — e.g. a "X of Y practice questions left today" indicator on the Subject
+   * Dashboard. `tier: null` means not enrolled at all (no quota applies — nothing to
+   * show but an enroll prompt); `dailyQuestionCap: null` means unlimited (Pro and
+   * above, or a non-premium subject). */
+  async getSubjectQuestionQuota(
+    userId: number,
+    subjectId: number,
+  ): Promise<{ tier: EnrollmentTierEnum | null; dailyQuestionCap: number | null; questionsUsedToday: number }> {
+    const tier = await this.skillEnrollmentService.getMinEffectiveTierForSubjects(userId, [subjectId]);
+    if (tier === null) {
+      return { tier: null, dailyQuestionCap: null, questionsUsedToday: 0 };
+    }
+    if (isTierAtLeast(tier, EnrollmentTierEnum.Pro)) {
+      return { tier, dailyQuestionCap: null, questionsUsedToday: 0 };
+    }
+
+    const caps = await this.skillEnrollmentService.getCapsForTier(tier);
+    const dailyCap = caps?.dailyQuestionCap ?? null;
+    if (dailyCap === null) {
+      return { tier, dailyQuestionCap: null, questionsUsedToday: 0 };
+    }
+
+    const usedBySubject = await this.sumQuestionsUsedTodayBySubject(userId, [subjectId]);
+    return { tier, dailyQuestionCap: dailyCap, questionsUsedToday: usedBySubject.get(subjectId) ?? 0 };
   }
 
   /**

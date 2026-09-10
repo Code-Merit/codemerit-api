@@ -14,6 +14,7 @@ import { Subject } from './subject.entity';
 import { Topic } from './topic.entity';
 import { User } from './user.entity';
 import { UserLessonTracker } from './user-lesson-tracker.entity';
+import { LessonAccessLevelEnum } from 'src/common/enum/lesson-access-level.enum';
 
 @Entity()
 export class Lesson extends AbstractEntity {
@@ -54,11 +55,10 @@ export class Lesson extends AbstractEntity {
   })
   summary: string;
 
-  /** Content-structure tag from the old blocks-based system, now repurposed purely as a
-   * monetization/access category — evaluateLessonAccess() in lesson.service.ts treats
-   * `format === 'comic'` as always-free regardless of subject premium status. Every
-   * lesson is now authored as the same rich-text `content` shape (see LessonSection);
-   * `format` no longer implies a different content structure, only this pricing rule. */
+  /** Content-structure tag from the old blocks-based system. Every lesson is now
+   * authored as the same rich-text `content` shape (see LessonSection); `format` is
+   * purely descriptive/merchandising and no longer gates access on its own — see
+   * `accessLevel` below for that. */
   @Column({
     type: 'varchar',
     length: 20,
@@ -66,6 +66,18 @@ export class Lesson extends AbstractEntity {
     default: 'tutorial',
   })
   format: 'comic' | 'tutorial' | 'reference';
+
+  /** Static access gate: the minimum enrollment tier (by TIER_RANK) required to view
+   * this lesson's real content. `Public` requires no enrollment and no login at all —
+   * see LESSON_ACCESS_RANK / evaluateLessonAccess() in lesson.service.ts. Replaces the
+   * old daily-view-cap/ceiling model entirely. */
+  @Column({
+    type: 'enum',
+    enum: LessonAccessLevelEnum,
+    nullable: false,
+    default: LessonAccessLevelEnum.Basic,
+  })
+  accessLevel: LessonAccessLevelEnum;
 
   // 'simple-json' (not 'json') deliberately — MariaDB has no native JSON type (it's a
   // LONGTEXT alias), and TypeORM's schema-diff never recognizes that as a match for a

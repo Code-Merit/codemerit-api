@@ -13,8 +13,19 @@ import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 import { QualityResourceTypeEnum } from 'src/common/enum/quality-resource-type.enum';
 import { UserLessonTrackerStatusEnum } from 'src/common/enum/user-lesson-tracker-status.enum';
+import { LessonAccessLevelEnum } from 'src/common/enum/lesson-access-level.enum';
 import { computeSubjectHealthScore } from 'src/common/utils/common-functions';
 import { QuestionQualityService } from './question-quality.service';
+
+function emptyAccessLevelCounts(): Record<LessonAccessLevelEnum, number> {
+  return {
+    [LessonAccessLevelEnum.Public]: 0,
+    [LessonAccessLevelEnum.Basic]: 0,
+    [LessonAccessLevelEnum.Curious]: 0,
+    [LessonAccessLevelEnum.Pro]: 0,
+    [LessonAccessLevelEnum.Intern]: 0,
+  };
+}
 
 type Range = '7d' | '30d' | '90d';
 const RANGE_DAYS: Record<Range, number> = { '7d': 7, '30d': 30, '90d': 90 };
@@ -33,7 +44,7 @@ export class LmsDashboardService {
   // ============================================================
 
   async getSubjectsDashboard() {
-    const [subjects, volumeMap, moderationMap, coverageMap, avgGradeMap, lessonMap, quizMap] =
+    const [subjects, volumeMap, moderationMap, coverageMap, avgGradeMap, lessonMap, accessLevelMap, quizMap] =
       await Promise.all([
         this.dataSource.createQueryBuilder(Subject, 's').orderBy('s.title', 'ASC').getMany(),
         this.getQuestionVolumeBySubject(),
@@ -41,6 +52,7 @@ export class LmsDashboardService {
         this.questionQualityService.getReviewCoverageBySubject(),
         this.questionQualityService.getAvgGradeBySubject(),
         this.getLessonAggregateBySubject(),
+        this.getLessonAccessLevelBreakdownBySubject(),
         this.getQuizAggregateBySubject(),
       ]);
 
@@ -50,6 +62,7 @@ export class LmsDashboardService {
       const coverage = coverageMap.get(s.id) ?? { reviewableTotal: 0, unreviewed: 0, unreviewedPercent: 0 };
       const avgGrade = avgGradeMap.get(s.id) ?? null;
       const lesson = lessonMap.get(s.id) ?? { lessonCount: 0, totalViews: 0, completedCount: 0 };
+      const accessLevelCounts = accessLevelMap.get(s.id) ?? emptyAccessLevelCounts();
       const quiz =
         quizMap.get(s.id) ?? {
           standardCount: 0,
@@ -101,7 +114,12 @@ export class LmsDashboardService {
           unreviewed: coverage.unreviewed,
           avgGrade,
         },
-        lessons: { count: lesson.lessonCount, views: lesson.totalViews, completed: lesson.completedCount },
+        lessons: {
+          count: lesson.lessonCount,
+          views: lesson.totalViews,
+          completed: lesson.completedCount,
+          byAccessLevel: accessLevelCounts,
+        },
         quizzes: {
           standard: quiz.standardCount,
           userQuiz: quiz.userQuizCount,
@@ -172,6 +190,32 @@ export class LmsDashboardService {
         },
       ]),
     );
+  }
+
+  // Per-subject count of lessons at each accessLevel — lets an admin see at a glance
+  // which subjects still have everything sitting at the migration's safe Basic default
+  // and need real content curation (see Lesson.accessLevel).
+  private async getLessonAccessLevelBreakdownBySubject(): Promise<
+    Map<number, Record<LessonAccessLevelEnum, number>>
+  > {
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('l.subjectId', 'subjectId')
+      .addSelect('l.accessLevel', 'accessLevel')
+      .addSelect('COUNT(*)', 'cnt')
+      .from(Lesson, 'l')
+      .groupBy('l.subjectId')
+      .addGroupBy('l.accessLevel')
+      .getRawMany<{ subjectId: string; accessLevel: LessonAccessLevelEnum; cnt: string }>();
+
+    const map = new Map<number, Record<LessonAccessLevelEnum, number>>();
+    for (const r of rows) {
+      const subjectId = Number(r.subjectId);
+      const bucket = map.get(subjectId) ?? emptyAccessLevelCounts();
+      bucket[r.accessLevel] = Number(r.cnt) || 0;
+      map.set(subjectId, bucket);
+    }
+    return map;
   }
 
   // Also computes the two 7-day windows the frontend uses to derive "Top Movers" growth —

@@ -465,7 +465,7 @@ export class SkillEnrollmentController {
   }
 
   @ApiOperation({
-    summary: 'Set the daily quiz/lesson caps for a tier (Admin only)',
+    summary: 'Set the daily question cap for a tier (Admin only)',
     description: 'Only meaningful for Basic/Curious — Pro/Intern/Serious are always unlimited regardless of any row here.',
   })
   @ApiParam({ name: 'tier', description: 'Tier to configure.', enum: EnrollmentTierEnum })
@@ -479,8 +479,7 @@ export class SkillEnrollmentController {
   ): Promise<ApiResponse<any>> {
     const result = await this.service.upsertTierCapConfig(
       tier,
-      dto.dailyQuizCap,
-      dto.dailyLessonCap,
+      dto.dailyQuestionCap,
     );
     return new ApiResponse('Tier cap config saved successfully.', result);
   }

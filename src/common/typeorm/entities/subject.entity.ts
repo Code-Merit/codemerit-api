@@ -63,6 +63,8 @@ export class Subject extends AbstractEntity implements ISubject {
   // SkillTierOffering/EnrollmentTierEnum). Admin explicitly flips specific subjects to
   // false to make them a fully open showcase — this replaces the old hardcoded
   // FREE_SAMPLER_SUBJECT_SLUGS allowlist with a per-subject business decision instead.
+  // Quiz-only gate as of the lesson-accessLevel rework — lessons no longer consult
+  // this at all; see Lesson.accessLevel instead.
   @Column({
     type: 'boolean',
     default: true,

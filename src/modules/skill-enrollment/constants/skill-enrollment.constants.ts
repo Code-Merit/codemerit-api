@@ -1,19 +1,15 @@
 import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 
-// Fallback daily caps used only when EnrollmentTierCapConfig has no row for a tier
-// (not yet configured by an admin). Pro/Intern/Serious are always
-// unlimited by design — no entry needed.
+// Fallback daily question cap used only when EnrollmentTierCapConfig has no row for a
+// tier (not yet configured by an admin). Pro/Intern/Serious are always unlimited by
+// design — no entry needed. Lessons are never capped by count — see
+// Lesson.accessLevel (lesson-access-level.enum.ts) for that gate instead.
 export const DEFAULT_TIER_CAPS: Partial<
-  Record<EnrollmentTierEnum, { dailyQuizCap: number; dailyLessonCap: number }>
+  Record<EnrollmentTierEnum, { dailyQuestionCap: number }>
 > = {
-  [EnrollmentTierEnum.Basic]: { dailyQuizCap: 5, dailyLessonCap: 2 },
-  [EnrollmentTierEnum.Curious]: { dailyQuizCap: 11, dailyLessonCap: 5 },
+  [EnrollmentTierEnum.Basic]: { dailyQuestionCap: 50 },
+  [EnrollmentTierEnum.Curious]: { dailyQuestionCap: 120 },
 };
-
-// Basic-tier ceiling on premium subjects: once a user has viewed this fraction of a
-// premium subject's lesson catalog (cumulative, all-time — not a daily reset), no
-// further new lessons in that subject unlock until they upgrade past Basic.
-export const BASIC_PREMIUM_SUBJECT_CONTENT_CEILING = 1; //no celing for now
 
 // Fallback access-window length, in months, used when a SkillTierOffering has no
 // durationMonths override for a given tier.

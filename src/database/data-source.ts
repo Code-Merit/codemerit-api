@@ -52,7 +52,6 @@ import { SkillEnrollment } from 'src/common/typeorm/entities/skill-enrollment.en
 import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
 import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offering.entity';
 import { EnrollmentTierCapConfig } from 'src/common/typeorm/entities/enrollment-tier-cap-config.entity';
-import { FreeLessonView } from 'src/common/typeorm/entities/free-lesson-view.entity';
 import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
 
 export const AppDataSource = new DataSource({
@@ -112,7 +111,6 @@ export const AppDataSource = new DataSource({
     PaymentOrder,
     SkillTierOffering,
     EnrollmentTierCapConfig,
-    FreeLessonView,
     EnrollmentBatch,
     QualityMetric,
     QualityReview,
