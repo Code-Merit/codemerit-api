@@ -24,11 +24,10 @@ export class GlobalExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       statusCode = exception.getStatus();
       const res = exception.getResponse();
-      if (
-        exception instanceof UnauthorizedException ||
-        exception instanceof ForbiddenException
-      ) {
-        message = `${exception.message}, Unauthorized access. Invalid token or login required.`;
+      if (exception instanceof UnauthorizedException) {
+        message = 'Please log in to continue.';
+      } else if (exception instanceof ForbiddenException) {
+        message = "You don't have permission to do that.";
       } else {
         message =
           typeof res === 'string'
@@ -37,34 +36,37 @@ export class GlobalExceptionsFilter implements ExceptionFilter {
       }
     }
 
-    // TypeORM Query Error
+    // TypeORM Query Error — never forward the raw driver message (schema/column details,
+    // constraint names) to the client; it's a server-side fault (bad query, missing
+    // migration, etc.), not something the caller did wrong, so it's logged in full below
+    // and reported generically here.
     else if (exception instanceof QueryFailedError) {
-      statusCode = HttpStatus.BAD_REQUEST;
-      message = `${(exception as any).driverError?.detail || exception.message}`;
-      // message = `Database error: ${(exception as any).driverError?.detail || exception.message}`;
+      statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+      message = 'Something went wrong on our end. Please try again in a moment.';
     }
 
     // TypeORM Not Found
     else if (exception instanceof EntityNotFoundError) {
       statusCode = HttpStatus.NOT_FOUND;
-      message = 'Entity not found in database';
+      message = 'The requested item could not be found.';
     }
 
-    // Application-level errors
+    // Application-level errors — message is already written to be shown to the user.
     else if (exception instanceof AppCustomException) {
       statusCode = exception.status;
       message = exception.message;
       code = exception.code;
     }
 
-    // Fallback for other types
+    // Fallback for anything else (unexpected runtime errors) — same reasoning as
+    // QueryFailedError above: the raw message is an implementation detail, not a
+    // user-facing explanation, so it's logged, not returned.
     else if (exception?.message) {
-      message = exception.message;
+      message = 'Something went wrong on our end. Please try again in a moment.';
     }
 
-    // Log for debugging
-    // console.error('Error caught:', exception);
-    console.error('Error message:', message);
+    // Log the real error server-side regardless of what the client sees above.
+    console.error('Error caught:', exception);
 
     response.status(statusCode).json({
       error: true,

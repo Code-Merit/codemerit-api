@@ -10,6 +10,25 @@ import { GetUserRequestDto } from 'src/core/auth/dto/get-user-request.dto';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { DataSource } from 'typeorm';
 
+/**
+ * Single source of truth for "where is this learner in a subject's curriculum":
+ * given an already Topic.order-sorted list of per-topic stats (from
+ * getTopicStatsBySubject/getTopicStatsByIds — isCompleted there is a pure
+ * quiz-mastery signal, correctCoverage >= TOPIC_DONE, with no lesson dependency),
+ * returns this topic and every topic after it, starting at the first one not yet
+ * mastered. Falls back to the whole list when every topic is already mastered, so a
+ * fully-mastered learner still gets a usable review sequence instead of an empty one.
+ * Shared by computeNextAction (dashboard display) and GuidedQuizGeneratorService (quiz
+ * creation) so both agree on exactly the same curriculum position.
+ */
+export function sliceGuidedTopicSequence<T extends { id: number; isCompleted: boolean }>(
+  syllabus: T[],
+): T[] {
+  if (syllabus.length === 0) return [];
+  const startIndex = syllabus.findIndex((t) => !t.isCompleted);
+  return startIndex >= 0 ? syllabus.slice(startIndex) : syllabus;
+}
+
 @Injectable()
 export class TopicAnalysisService {
   constructor(private readonly dataSource: DataSource) {}

@@ -149,7 +149,6 @@ export class QuizService {
   ): Promise<Quiz> {
     console.log('quiz service called');
     console.log('QuizBuilder @createQuiz called:', createQuizDto);
-    let quizCategory = '';
     if (
       !createQuizDto?.subjectIds?.length &&
       !createQuizDto?.topicIds?.length &&
@@ -186,22 +185,23 @@ export class QuizService {
     if (createQuizDto?.subjectIds) {
       subjectIds = parseIdList(createQuizDto.subjectIds);
     }
-    if (subjectIds.length > 0) {
-      quizCategory = 'Subject';
-    }
 
     if (createQuizDto?.subjectTrackIds) {
       subjectTrackIds = parseIdList(createQuizDto.subjectTrackIds);
-    }
-    if (subjectTrackIds.length > 0) {
-      quizCategory = 'SubjectTrack';
     }
 
     if (createQuizDto?.topicIds) {
       topicIds = parseIdList(createQuizDto.topicIds);
     }
-    if (topicIds.length > 0) {
-      quizCategory = 'Topic';
+
+    // Guided "keep going" quizzes: the caller names one seed topic and asks the server to
+    // roll forward through the rest of the subject itself, rather than the frontend having
+    // to precompute and carry that topic list — see resolveForwardTopicSequence's doc
+    // comment. Expanded here, before anything below reads topicIds, so question selection,
+    // the persisted QuizTopic rows, and title/shortDesc generation all see the same full
+    // scope consistently. No-op for any other shape (multi-topic, or no continue flag).
+    if (createQuizDto?.continueThroughSubject && topicIds.length === 1) {
+      topicIds = await this.questionGeneratorService.resolveForwardTopicSequence(topicIds[0]);
     }
 
     // Free-tier gating: only for self-directed practice (UserQuiz), and never for the
@@ -220,8 +220,7 @@ export class QuizService {
     // All three scopes are resolved down to one topic-level pool by
     // QuestionGeneratorService — they combine (union), they don't override each other,
     // so a quiz can legitimately span e.g. one whole subject plus a couple of
-    // specific extra topics. `quizCategory` above only picks a label for the
-    // auto-generated title when multiple scopes are given at once, most-specific wins.
+    // specific extra topics.
     const ids = new GetQuestionsByIdsDto();
     ids.subjectIds = subjectIds;
     ids.topicIds = topicIds;
@@ -249,6 +248,8 @@ export class QuizService {
     console.log('QuizBuilder @Input:', ids);
     let questionObj: any = null;
     let questions: any[] = [];
+    let requestedCount: number | undefined;
+    let actualCount: number | undefined;
 
     if (createQuizDto?.quizType === QuizTypeEnum.Standard) {
       questions = await this.questionService.getQuestionsFromQIds(ids);
@@ -258,15 +259,16 @@ export class QuizService {
         ids,
       );
       questions = questionObj?.questions ?? [];
+      requestedCount = questionObj?.requestedCount ?? ids.numQuestions;
+      actualCount = questionObj?.actualCount ?? questions.length;
     }
 
     // Save quiz in DB if at least 3 questions are available
     if (!questions || questions.length === 0) {
-      const questionCount = questions?.length ?? 0;
-      console.log('QuizBuilder #4: @NotEnoughQuestions', questionCount);
+      console.log('QuizBuilder #4: @NotEnoughQuestions', questions?.length ?? 0);
       throw new AppCustomException(
         HttpStatus.NOT_FOUND,
-        `Not enough questions ${questionCount} found for the given ${quizCategory}`,
+        'No questions found for this quiz — the selected content may be unavailable or unpublished.',
       );
     }
     try {
@@ -274,9 +276,8 @@ export class QuizService {
       let shortDesc = createQuizDto.shortDesc;
       // Frontend sends "" rather than omitting these fields — both are falsy, so this
       // still triggers auto-generation. Reuses the one lookup per scope for both title
-      // and shortDesc instead of querying twice; precedence (last-applied-wins, most
-      // specific scope given overwrites) matches quizCategory's Subject → SubjectTrack →
-      // Topic order above.
+      // and shortDesc instead of querying twice; precedence is last-applied-wins, most
+      // specific scope given overwrites (Subject → SubjectTrack → Topic order below).
       if (!title || !shortDesc) {
         if (subjectIds && subjectIds.length > 0) {
           const subjects =
@@ -298,7 +299,13 @@ export class QuizService {
         }
         if (topicIds && topicIds.length > 0) {
           const topics = await this.masterService.getTopicListByIds(topicIds);
-          const names = topics.map((t) => t.title).join(', ');
+          // Never enumerates every topic's name — a quiz can legitimately be scoped to
+          // dozens of topics (e.g. a guided quiz spanning the rest of a subject), and
+          // joining all of their titles produces an unreadable wall of text. Same bound
+          // as getTitleByTopicIds: name the first topic, note the rest by count.
+          const names = topics.length > 1
+            ? `${topics[0]?.title} and ${topics.length - 1} more topics`
+            : topics[0]?.title ?? '';
           if (!title) title = getTitleByTopicIds(topics) + ' Quiz';
           if (!shortDesc) shortDesc = `Quick quiz on ${names}.`;
         }
@@ -360,6 +367,10 @@ export class QuizService {
         // it to the in-memory/response object so every existing consumer that reads
         // `.quizType` off a created/fetched quiz keeps working unchanged.
         (savedQuizzes as any).quizType = createQuizDto.quizType;
+        if (!isStandard) {
+          (savedQuizzes as any).requestedCount = requestedCount;
+          (savedQuizzes as any).actualCount = actualCount;
+        }
         console.log('QuizBuilder #5: savedQuizzes', savedQuizzes);
         // Every hanger row gets exactly one of quizId/userQuizId set, plus the
         // denormalized quizType — see the entity comments for why both are kept.
@@ -429,12 +440,14 @@ export class QuizService {
         return response;
       });
     } catch (error) {
-      console.log('QuizBuilder #6: ERROR', error);
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      // Logged in full server-side; the client only ever sees a generic message — the
+      // real cause here is always a server-side fault (DB write, constraint, etc.), never
+      // something the caller can act on, so echoing it back would just be noise at best
+      // and an internals leak at worst.
+      console.error('QuizBuilder #6: failed to save quiz', error);
       throw new AppCustomException(
         HttpStatus.INTERNAL_SERVER_ERROR,
-        'Failed to save quiz and questions: ' + errorMessage,
+        "We couldn't create your quiz right now. Please try again in a moment.",
       );
     }
   }

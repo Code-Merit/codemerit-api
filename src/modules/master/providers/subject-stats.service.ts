@@ -447,6 +447,12 @@ export class SubjectStatsService {
       }
 
       // Lessons done (or topic has none) but the quiz isn't — target this exact topic.
+      // The frontend launches this with quiz/create's continueThroughSubject flag, which
+      // resolves "this topic + everything after it in the subject" server-side — see
+      // QuestionGeneratorService.resolveForwardTopicSequence — so nothing here needs to
+      // precompute or carry that topic list itself. subjectTrackId/subjectTrackTitle below
+      // are informational only (which track this topic happens to sit in), not a scoping
+      // limit — guided mode always walks the whole subject, never just one track.
       const track = subjectTracks.find((st) => st.topics?.some((t: any) => t.id === topic.id));
       return {
         type: 'quiz',

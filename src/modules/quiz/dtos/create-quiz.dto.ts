@@ -73,6 +73,19 @@ export class CreateQuizDto {
   @IsNotEmpty({ message: 'At least one of subjectIds, topicIds, or subjectTrackIds is required' })
   subjectTrackIds?: string;
 
+  @ApiPropertyOptional({
+    example: true,
+    description:
+      'Guided "keep going" quizzes only: when true and topicIds names exactly one topic, ' +
+      'expands the scope server-side to that topic plus every published topic after it ' +
+      '(Topic.order) in the same subject, so the quiz can roll forward instead of stopping ' +
+      'once the seed topic runs out of new questions. Ignored for an explicit single-topic ' +
+      'practice request (topicIds omitted or false) or for a multi-topic/subject/subjectTrack scope.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  continueThroughSubject?: boolean;
+
   @ApiProperty({
     enum: QuizTypeEnum,
     example: QuizTypeEnum.UserQuiz,

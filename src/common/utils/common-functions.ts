@@ -10,8 +10,14 @@ export const getTitleBySubjectIds = (subjects: Subject[]): string => {
    return subjects && subjects.length > 0 ? subjects.map((s: Subject) => s.title).join(' ') : '';
 };
 
+// Never enumerates more than one topic's title — a quiz scoped to many topics (e.g. a
+// guided quiz spanning the rest of a subject) would otherwise produce an unbounded,
+// unreadable title. Callers that know their quiz spans many topics on purpose (guided
+// mode, initial assessment) should pass an explicit title instead of relying on this.
 export const getTitleByTopicIds = (topics: Topic[]): string => {
-   return topics && topics.length > 0 ? topics.map((t: Topic) => t.title).join(' ') : '';
+   if (!topics || topics.length === 0) return '';
+   if (topics.length === 1) return topics[0].title;
+   return `${topics[0].title} + ${topics.length - 1} more topics`;
 };
 
 // The single place the negative-marking penalty is defined. Every score calculation in
