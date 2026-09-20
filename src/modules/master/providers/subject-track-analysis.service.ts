@@ -118,6 +118,7 @@ export class SubjectTrackAnalysisService {
       const topics = topicIds.map((tid) => {
         const ts = topicStatsMap.get(tid) ?? {};
         const numTrivia = +ts.numTrivia || 0;
+        const numGeneral = +ts.numGeneral || 0;
         const attempted = +ts.attempted || 0;
         const allAttempts = +ts.journeyAttempts || 0;
         const correct = +ts.correct || 0;
@@ -150,6 +151,7 @@ export class SubjectTrackAnalysisService {
           description: ts.description,
           goal: ts.goal,
           numTrivia,
+          numGeneral,
           attempted,
           journeyAttempts: allAttempts,
           correct,
@@ -169,6 +171,10 @@ export class SubjectTrackAnalysisService {
       });
 
       const stNumTrivia = topics.reduce((s: number, t: any) => s + (t.numTrivia || 0), 0);
+      // Admin/LMS Manager content-audit figure — a distinct QuestionTypeEnum.General
+      // (free-text) count, never shown to a regular learner; see TopicAnalysisService's
+      // numGeneral for where this originates.
+      const stNumGeneral = topics.reduce((s: number, t: any) => s + (t.numGeneral || 0), 0);
       const stAttempted = topics.reduce((s: number, t: any) => s + (t.attempted || 0), 0);
       const stAllAttempts = topicIds.reduce(
         (s: number, tid: number) => s + (+(topicStatsMap.get(tid)?.journeyAttempts) || 0),
@@ -208,6 +214,7 @@ export class SubjectTrackAnalysisService {
         ...meta,
         totalTopics,
         numTrivia: stNumTrivia,
+        numGeneral: stNumGeneral,
         attempted: stAttempted,
         journeyAttempts: stAllAttempts,
         correct: stCorrect,

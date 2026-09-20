@@ -60,6 +60,18 @@ export class TopicAnalysisService {
           questionStatus: QuestionStatusEnum.Active,
         },
       )
+      // General (free-text) questions only — same shape as the qTr join above, mirrors
+      // the identical numGeneral pattern SubjectStatsService.getAllSubjects() already
+      // computes at the subject level.
+      .leftJoin(
+        'question',
+        'qGen',
+        'qGen.id = qt.questionId AND qGen.questionType = :general AND qGen.status = :questionStatus',
+        {
+          general: QuestionTypeEnum.General,
+          questionStatus: QuestionStatusEnum.Active,
+        },
+      )
 
       .select('t.id', 'topicId')
       .addSelect('t.title', 'topicTitle')
@@ -74,6 +86,7 @@ export class TopicAnalysisService {
       // Total question counts
       .addSelect('COUNT(DISTINCT q.id)', 'totalQuestions')
       .addSelect('COUNT(DISTINCT qTr.id)', 'numTrivia')
+      .addSelect('COUNT(DISTINCT qGen.id)', 'numGeneral')
       .addSelect(
         `COUNT(DISTINCT CASE WHEN qTr.level = :easy THEN qTr.id END)`,
         'numBasicTrivia',
@@ -209,6 +222,7 @@ export class TopicAnalysisService {
   private mapTopicRow(raw: any) {
     const numLessons = 0;
     const numTrivia = +raw.numTrivia || 0;
+    const numGeneral = +raw.numGeneral || 0;
     const totalAttempts = +raw.totalAttempts || 0;
     const numMyAttempts = +raw.numMyAttempts || 0;
     const journeyCorrect = +raw.journeyCorrect || 0;
@@ -265,6 +279,7 @@ export class TopicAnalysisService {
       numBasicTrivia: +raw?.numBasicTrivia || 0,
       numIntTrivia: +raw?.numIntTrivia || 0,
       numAdvTrivia: +raw?.numAdvTrivia || 0,
+      numGeneral,
       numLessons,
       totalAttempts,
       // Named to match subject/subjectTrack level exactly (previously myAllAttempts/

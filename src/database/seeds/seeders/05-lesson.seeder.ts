@@ -9,6 +9,7 @@ import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { sanitizeLessonHtml } from 'src/common/utils/lesson-html-sanitizer.util';
+import { LessonAccessLevelEnum } from 'src/common/enum/lesson-access-level.enum';
 
 const DATA_FILE = path.join(__dirname, '../data/05-lessons.seed.json');
 
@@ -20,6 +21,7 @@ interface LessonData {
   level: 1 | 2 | 3;
   summary: string;
   format?: 'comic' | 'tutorial' | 'reference';
+  accessLevel?: LessonAccessLevelEnum;
   tags?: string[];
   sections: Array<{ title: string; content: string }>;
 }
@@ -68,6 +70,7 @@ export async function seedLessons(dataSource: DataSource, subjects: Subject[], t
         topicId: topic.id,
         level: l.level,
         format: l.format ?? 'tutorial',
+        accessLevel: l.accessLevel ?? LessonAccessLevelEnum.Basic,
         tags: l.tags ?? null,
       });
       await sectionRepo.delete({ lessonId: existing.id });
@@ -83,6 +86,7 @@ export async function seedLessons(dataSource: DataSource, subjects: Subject[], t
           slug: l.slug,
           level: l.level,
           format: l.format ?? 'tutorial',
+          accessLevel: l.accessLevel ?? LessonAccessLevelEnum.Basic,
           tags: l.tags ?? null,
           userId: author.id,
         }),

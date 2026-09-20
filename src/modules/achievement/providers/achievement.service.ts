@@ -49,6 +49,7 @@ import {
   XP_QUIZ_COMPLETION_BONUS,
 } from '../constants/gamification.constants';
 import { NewlyEarnedDto } from '../dtos/newly-earned.dto';
+import { MyGamificationStatsDto } from '../dtos/my-gamification-stats.dto';
 
 export interface EvaluateAfterQuizAttempt {
   id: number; // the just-saved QuestionAttempt row id — used to distinguish "this
@@ -189,6 +190,27 @@ export class AchievementService {
       },
       badgesEarned: badgeContext.badgesEarned,
       certificatesEarned,
+    };
+  }
+
+  /**
+   * A persistent "what's my current standing right now" snapshot — unlike
+   * evaluateAfterQuiz()'s NewlyEarnedDto (a one-shot delta only ever returned from a
+   * quiz submit), this is callable any time, e.g. on page load, so a caller can show an
+   * accurate XP/level/streak readout before the learner has attempted anything this
+   * session. Same underlying fields (User.points, computeLevel, UserStreak) — global per
+   * account, not subject-scoped.
+   */
+  async getMyGamificationStats(userId: number): Promise<MyGamificationStatsDto> {
+    const [user, streak] = await Promise.all([
+      this.userRepo.findOne({ where: { id: userId }, select: ['id', 'points'] }),
+      this.userStreakRepo.findOne({ where: { userId } }),
+    ]);
+    const totalPoints = user?.points ?? 0;
+    return {
+      totalPoints,
+      level: computeLevel(totalPoints),
+      streak: streak ? { current: streak.currentStreak, longest: streak.longestStreak } : null,
     };
   }
 

@@ -38,6 +38,8 @@ export interface VerifyCertificateResult {
   tierDisplayName?: string | null;
   issuedAt?: Date;
   holderName?: string;
+  scorePercentage?: number | null;
+  verificationCode?: string | null;
 }
 
 @Injectable()
@@ -86,6 +88,8 @@ export class CertificateService {
       tierDisplayName: cert.tierDisplayName,
       issuedAt: cert.issuedAt,
       holderName: cert.user ? `${cert.user.firstName} ${cert.user.lastName}`.trim() : undefined,
+      scorePercentage: cert.scorePercentage,
+      verificationCode: cert.verificationCode,
     };
   }
 

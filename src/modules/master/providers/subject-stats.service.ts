@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { CERT_ACHIEVED } from 'src/common/constants/completion-thresholds';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
@@ -577,12 +578,30 @@ export class SubjectStatsService {
           }));
 
         const roleTitles = roleTitlesByCt.get(track.id);
+        // Same rollup math certificate.service.ts's explorer already computes for this
+        // identical subjectTracks shape — previously never set here at all, so every
+        // consumer of this producer's CertificationTrack.isAchieved/progressPercent
+        // (including DashboardComponent's earnedCertificateCount/remainingCertificateCount)
+        // was reading undefined, not a real value.
+        const total = subjectTracks.length;
+        const completed = subjectTracks.filter((st: any) => st.isCompleted).length;
+        const progressPercent = total > 0 ? +((completed / total) * 100).toFixed(0) : 0;
+        const totalQuestions = subjectTracks.reduce((sum: number, st: any) => sum + st.totalQuestions, 0);
+        const questionsAttempted = subjectTracks.reduce((sum: number, st: any) => sum + st.attempted, 0);
+        const questionsCorrect = subjectTracks.reduce((sum: number, st: any) => sum + st.correct, 0);
+
         const card: any = {
           id: track.id,
           title: track.title,
           description: track.description,
           sortOrder: track.id,
-          totalSubjectTracks: subjectTracks.length,
+          totalSubjectTracks: total,
+          completedSubjectTracks: completed,
+          progressPercent,
+          achievementThreshold: track.passThreshold ?? CERT_ACHIEVED,
+          totalQuestions,
+          questionsAttempted,
+          questionsCorrect,
           subjectTracks,
           // Matches DisplayCertificationTrack's roleTitles contract (certification-tracks
           // component + Browse Certificates explorer) — undefined, not [], when there's no
@@ -598,6 +617,12 @@ export class SubjectStatsService {
                 issuedAt: cert.issuedAt, pdfUrl: cert.pdfUrl,
               }
             : null;
+          // Authoritative from an actual issued Certificate row — never re-derived from
+          // progressPercent vs. achievementThreshold, same rule certificate.service.ts's
+          // explorer follows (a track can require <100% to pass).
+          card.isAchieved = !!cert;
+        } else {
+          card.isAchieved = false;
         }
 
         return card;
