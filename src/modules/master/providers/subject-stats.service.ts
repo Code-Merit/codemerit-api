@@ -293,6 +293,8 @@ export class SubjectStatsService {
     const subjectTrackMap = new Map<number, any>(subjectTracks.map((st: any) => [st.id, st]));
     const certificationTracks = await this.getCertificationTracksForSubject(
       subjectId,
+      raw.title,
+      raw.slug,
       subjectTrackMap,
       userId,
     );
@@ -504,6 +506,8 @@ export class SubjectStatsService {
   // to 25 tracks when it should show exactly its own 3 (Foundation/Intermediate/Developer).
   private async getCertificationTracksForSubject(
     subjectId: number,
+    subjectTitle: string,
+    subjectSlug: string,
     subjectTrackMap: Map<number, any>,
     userId?: number,
   ) {
@@ -565,6 +569,12 @@ export class SubjectStatsService {
           .filter(Boolean)
           .map((st: any) => ({
             id: st.id, title: st.title, slug: st.slug, totalTopics: st.totalTopics,
+            // Every subjectTrack here is one of THIS subject's own tracks (this method's whole
+            // contract is "subject-native only" — see the class comment above) — frontend's
+            // isEnrolledFor() checks this against the caller's enrolled subject ids, and without
+            // it every track on this page's Certification Tracks widget silently read as
+            // "not enrolled" and showed "Enroll For Free" even to an already-enrolled learner.
+            subject: { id: subjectId, title: subjectTitle, slug: subjectSlug },
             progressPercent: st.progressPercent, score: st.score, isCompleted: st.isCompleted,
             attemptedEasy: st.attemptedEasy, attemptedMedium: st.attemptedMedium, attemptedHard: st.attemptedHard,
             correctEasy: st.correctEasy, correctMedium: st.correctMedium, correctHard: st.correctHard,

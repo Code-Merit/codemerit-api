@@ -47,6 +47,7 @@ import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
 import { UserOtp } from 'src/common/typeorm/entities/user-otp.entity';
 import { UserPermission } from 'src/common/typeorm/entities/user-permission.entity';
+import { UserQuestionTracker } from 'src/common/typeorm/entities/user-question-tracker.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { SkillEnrollment } from 'src/common/typeorm/entities/skill-enrollment.entity';
 import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
@@ -94,6 +95,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         Lesson,
         LessonSection,
         UserLessonTracker,
+        UserQuestionTracker,
         Permission,
         PermissionRequest,
         UserPermission,

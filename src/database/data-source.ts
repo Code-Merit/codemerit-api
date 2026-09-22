@@ -44,6 +44,7 @@ import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
 import { UserOtp } from 'src/common/typeorm/entities/user-otp.entity';
 import { UserPermission } from 'src/common/typeorm/entities/user-permission.entity';
+import { UserQuestionTracker } from 'src/common/typeorm/entities/user-question-tracker.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { UserXpLog } from 'src/common/typeorm/entities/user-xp-log.entity';
@@ -86,6 +87,7 @@ export const AppDataSource = new DataSource({
     Lesson,
     LessonSection,
     UserLessonTracker,
+    UserQuestionTracker,
     Permission,
     PermissionRequest,
     UserPermission,

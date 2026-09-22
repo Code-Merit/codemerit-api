@@ -5,6 +5,8 @@ import { LmsService } from './providers/lms.service';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { Question } from 'src/common/typeorm/entities/question.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
+import { QuestionTopic } from 'src/common/typeorm/entities/quesion-topic.entity';
+import { UserQuestionTracker } from 'src/common/typeorm/entities/user-question-tracker.entity';
 import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
@@ -18,6 +20,7 @@ import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity
 import { QualityReviewTag } from 'src/common/typeorm/entities/quality-review-tag.entity';
 import { QuestionQualityService } from './providers/question-quality.service';
 import { LmsDashboardService } from './providers/lms-dashboard.service';
+import { InterviewQuestionsService } from './providers/interview-questions.service';
 import { LmsManagerGuard } from './guards/lms-manager.guard';
 
 @Module({
@@ -28,6 +31,8 @@ import { LmsManagerGuard } from './guards/lms-manager.guard';
       Topic,
       Question,
       QuestionAttempt,
+      QuestionTopic,
+      UserQuestionTracker,
       Quiz,
       QuizResult,
       Lesson,
@@ -38,8 +43,8 @@ import { LmsManagerGuard } from './guards/lms-manager.guard';
     ]),
     UserPermissionModule,
   ],
-  providers: [LmsService, QuestionQualityService, LmsDashboardService, LmsManagerGuard],
+  providers: [LmsService, QuestionQualityService, LmsDashboardService, InterviewQuestionsService, LmsManagerGuard],
   controllers: [LmsController],
-  exports: [LmsService, QuestionQualityService, LmsDashboardService],
+  exports: [LmsService, QuestionQualityService, LmsDashboardService, InterviewQuestionsService],
 })
 export class LmsModule {}

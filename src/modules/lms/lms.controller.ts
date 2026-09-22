@@ -16,9 +16,12 @@ import { QualityResourceTypeEnum } from 'src/common/enum/quality-resource-type.e
 import { LmsService } from './providers/lms.service';
 import { QuestionQualityService } from './providers/question-quality.service';
 import { LmsDashboardService } from './providers/lms-dashboard.service';
+import { InterviewQuestionsService } from './providers/interview-questions.service';
 import { SubmitQualityReviewDto } from './dtos/submit-quality-review.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { LmsManagerGuard } from './guards/lms-manager.guard';
+import { Public } from 'src/core/auth/decorators/public.decorator';
+import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard';
 
 @ApiTags('LMS')
 @ApiBearerAuth('access-token')
@@ -28,6 +31,7 @@ export class LmsController {
     private readonly lmsService: LmsService,
     private readonly questionQualityService: QuestionQualityService,
     private readonly lmsDashboardService: LmsDashboardService,
+    private readonly interviewQuestionsService: InterviewQuestionsService,
   ) {}
 
   @ApiOperation({
@@ -265,5 +269,58 @@ export class LmsController {
       subjectId ? Number(subjectId) : undefined,
     );
     return new ApiResponse('Trends fetched successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: 'Get General interview questions for a subject (public)',
+    description:
+      'No auth required — OptionalJwtAuthGuard populates req.user when a valid JWT is sent, ' +
+      'so a logged-in caller\'s completedIds come back in this same response instead of a ' +
+      'second request. Returns General+Active questions for the subject, grouped into topics ' +
+      'whose stats (total/easy/intermediate/advanced) are computed from the real rows, never ' +
+      'a separately maintained count — a topic can never be listed with more content than it ' +
+      'actually has. topicSlug/levels narrow server-side, but the intended client pattern is ' +
+      'to call this once per subject (cached client-side for the session) and filter the ' +
+      'cached list by topic/level instead of refetching on every filter change.',
+  })
+  @ApiQuery({ name: 'subjectSlug', required: true, type: String })
+  @ApiQuery({ name: 'topicSlug', required: false, type: String })
+  @ApiQuery({ name: 'levels', required: false, type: String, description: 'Comma-separated levels, e.g. "1,3"' })
+  @ApiResponseDoc({ status: 404, description: 'No subject found for the given slug.' })
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('interview-questions')
+  async getInterviewQuestions(
+    @Request() req: any,
+    @Query('subjectSlug') subjectSlug: string,
+    @Query('topicSlug') topicSlug?: string,
+    @Query('levels') levels?: string,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.interviewQuestionsService.getInterviewQuestions({
+      subjectSlug,
+      topicSlug,
+      levels,
+      userId: req.user?.id,
+    });
+    return new ApiResponse('Interview questions fetched successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: 'Mark a General interview question complete for the caller',
+    description:
+      'One row per (userId, questionId), enforced by a DB unique index — calling this again ' +
+      'for a question the caller already completed is a harmless no-op that returns the ' +
+      'original completedAt (alreadyCompleted: true) rather than erroring or duplicating. No ' +
+      'unmark/toggle endpoint: completion is one-way by design.',
+  })
+  @ApiParam({ name: 'questionId', type: Number })
+  @UseGuards(AuthGuard('jwt'))
+  @Post('interview-questions/:questionId/complete')
+  async markInterviewQuestionComplete(
+    @Param('questionId', ParseIntPipe) questionId: number,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.interviewQuestionsService.markComplete(req.user.id, questionId);
+    return new ApiResponse('Question marked complete.', result);
   }
 }

@@ -59,6 +59,18 @@ export const welcomeRoutes = [
     role: ['All'],
     submenu: [],
   },
+  {
+    path: '/interview-questions',
+    title: 'Interview Questions',
+    iconType: 'material-icons-outlined',
+    icon: 'question_answer',
+    class: '',
+    groupTitle: false,
+    badge: '',
+    badgeClass: '',
+    role: ['All'],
+    submenu: [],
+  },
   // {
   //   path: '/app/my-quizzes',
   //   title: 'My Quizzes',
