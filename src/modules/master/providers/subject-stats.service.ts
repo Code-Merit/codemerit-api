@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CERT_ACHIEVED } from 'src/common/constants/completion-thresholds';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
@@ -23,9 +23,20 @@ import { MeritService } from './merit.service';
 import { TopicAnalysisService } from './topic-analysis.service';
 import { SubjectTrackAnalysisService } from './subject-track-analysis.service';
 import { BadgeQueryService } from '../../achievement/providers/badge-query.service';
+import {
+  SubjectNextAction,
+  SubjectPageAssessmentRating,
+  SubjectPageCertificationTrack,
+  SubjectPageDetailSelfRating,
+  SubjectPageLessons,
+  SubjectPageRelatedJobRole,
+  SubjectPageResponse,
+} from './subject-page.types';
 
 @Injectable()
 export class SubjectStatsService {
+  private readonly logger = new Logger(SubjectStatsService.name);
+
   constructor(
     @InjectRepository(JobRoleSubject)
     private readonly jobRoleSubjectRepo: Repository<JobRoleSubject>,
@@ -261,7 +272,7 @@ export class SubjectStatsService {
 
   // ─── Single Subject Page ──────────────────────────────────────────────────────
 
-  async getSubjectPage(slug: string, userId?: number) {
+  async getSubjectPage(slug: string, userId?: number): Promise<SubjectPageResponse | null> {
     const subject = await this.dataSource
       .getRepository(Subject)
       .findOne({ where: { slug }, select: ['id'] });
@@ -269,15 +280,41 @@ export class SubjectStatsService {
 
     const subjectId = subject.id;
 
+    // Only `getSubjectStats` (raw) and the topic-stats fetch below (syllabus) are allowed to
+    // fail the whole request — without either of those there's no subject/topic structure left
+    // to build anything else from. Every other call here backs one supporting widget; a hiccup
+    // in any one of them (merit service down, badge query timeout, ...) now degrades that one
+    // widget to its empty state instead of 500ing the entire dashboard.
     const [raw, syllabus, subjectMerits, popularTopicsMap, ratings, lessons, relatedJobRoles, badges] = await Promise.all([
       this.getSubjectStats(subjectId, userId),
       this.topicAnalyzer.getTopicStatsBySubject(subjectId, userId),
-      this.meritService.getSubjectMasteryLeaderboards([subjectId], userId),
-      this.meritService.getPopularTopicsBySubject([subjectId]),
-      userId ? this.getSubjectRatings(subjectId, userId) : Promise.resolve([]),
-      this.getSubjectLessons(subjectId, userId),
-      this.getRelatedJobRoles(subjectId),
-      this.badgeQueryService.getUserBadgesForScope(BadgeScopeEnum.SUBJECT, subjectId, userId),
+      this.meritService.getSubjectMasteryLeaderboards([subjectId], userId).catch((err) => {
+        this.logger.warn(`getSubjectMasteryLeaderboards failed for subjectId=${subjectId}: ${err}`);
+        return { meritLists: new Map<number, any[]>(), userRanks: new Map<number, number | null>() };
+      }),
+      this.meritService.getPopularTopicsBySubject([subjectId]).catch((err) => {
+        this.logger.warn(`getPopularTopicsBySubject failed for subjectId=${subjectId}: ${err}`);
+        return new Map<number, any[]>();
+      }),
+      (userId ? this.getSubjectRatings(subjectId, userId) : Promise.resolve([] as SubjectPageAssessmentRating[])).catch((err) => {
+        this.logger.warn(`getSubjectRatings failed for subjectId=${subjectId}, userId=${userId}: ${err}`);
+        return [] as SubjectPageAssessmentRating[];
+      }),
+      this.getSubjectLessons(subjectId, userId).catch((err) => {
+        this.logger.warn(`getSubjectLessons failed for subjectId=${subjectId}: ${err}`);
+        return {
+          total: 0, completed: 0, inProgress: 0, totalViews: 0,
+          lastActivityAt: null, learningCompleteness: 0, list: [],
+        } as SubjectPageLessons;
+      }),
+      this.getRelatedJobRoles(subjectId).catch((err) => {
+        this.logger.warn(`getRelatedJobRoles failed for subjectId=${subjectId}: ${err}`);
+        return [] as SubjectPageRelatedJobRole[];
+      }),
+      this.badgeQueryService.getUserBadgesForScope(BadgeScopeEnum.SUBJECT, subjectId, userId).catch((err) => {
+        this.logger.warn(`getUserBadgesForScope failed for subjectId=${subjectId}: ${err}`);
+        return [];
+      }),
     ]);
 
     if (!raw) return null;
@@ -291,19 +328,36 @@ export class SubjectStatsService {
       userId,
     );
     const subjectTrackMap = new Map<number, any>(subjectTracks.map((st: any) => [st.id, st]));
-    const certificationTracks = await this.getCertificationTracksForSubject(
-      subjectId,
-      raw.title,
-      raw.slug,
-      subjectTrackMap,
-      userId,
-    );
+
+    // Certification tracks and self-rating are both genuinely optional widgets (many subjects
+    // have neither), so they get the same soft-fail treatment as the Promise.all entries above
+    // instead of taking the whole page down with them.
+    let certificationTracks: SubjectPageCertificationTrack[];
+    try {
+      certificationTracks = await this.getCertificationTracksForSubject(
+        subjectId,
+        raw.title,
+        raw.slug,
+        subjectTrackMap,
+        userId,
+      );
+    } catch (err) {
+      this.logger.warn(`getCertificationTracksForSubject failed for subjectId=${subjectId}: ${err}`);
+      certificationTracks = [];
+    }
+
     // null until every topic in the subject has a SELF rating on file — the Overview tab's
     // "Self Rate Your Skills" widget shows a plain CTA while this is null, and a summary once
     // it isn't. Reuses the same topic-id universe `syllabus` already computed above.
-    const detailSelfRating = userId
-      ? await this.getDetailSelfRating(subjectId, userId, syllabus)
-      : null;
+    let detailSelfRating: SubjectPageDetailSelfRating | null = null;
+    if (userId) {
+      try {
+        detailSelfRating = await this.getDetailSelfRating(subjectId, userId, syllabus);
+      } catch (err) {
+        this.logger.warn(`getDetailSelfRating failed for subjectId=${subjectId}, userId=${userId}: ${err}`);
+        detailSelfRating = null;
+      }
+    }
 
     const attempted = +raw.attempted || 0;
     const correct = +raw.correct || 0;
@@ -395,8 +449,8 @@ export class SubjectStatsService {
     syllabus: any[],
     lessonsList: any[],
     subjectTracks: any[],
-    certificationTracks: any[],
-  ): any {
+    certificationTracks: SubjectPageCertificationTrack[],
+  ): SubjectNextAction {
     const inProgress = lessonsList.filter(
       (l) => l.status === UserLessonTrackerStatusEnum.Read && l.lastActivityAt,
     );
@@ -510,7 +564,7 @@ export class SubjectStatsService {
     subjectSlug: string,
     subjectTrackMap: Map<number, any>,
     userId?: number,
-  ) {
+  ): Promise<SubjectPageCertificationTrack[]> {
     const nativeTracks = await this.dataSource
       .getRepository(CertificationTrack)
       .find({ where: { subjectId, isPublished: true } });
@@ -641,7 +695,7 @@ export class SubjectStatsService {
 
   // ─── Lessons ────────────────────────────────────────────────────────────────
 
-  private async getSubjectLessons(subjectId: number, userId?: number) {
+  private async getSubjectLessons(subjectId: number, userId?: number): Promise<SubjectPageLessons> {
     const qb = this.dataSource
       .createQueryBuilder()
       .select('l.id', 'id')
@@ -715,7 +769,7 @@ export class SubjectStatsService {
 
   // ─── Related Job Roles ────────────────────────────────────────────────────────
 
-  private async getRelatedJobRoles(subjectId: number) {
+  private async getRelatedJobRoles(subjectId: number): Promise<SubjectPageRelatedJobRole[]> {
     const rows = await this.dataSource
       .createQueryBuilder()
       .select('jr.id', 'id')
@@ -737,7 +791,7 @@ export class SubjectStatsService {
 
   // ─── Assessment Ratings ───────────────────────────────────────────────────────
 
-  async getSubjectRatings(subjectId: number, userId: number) {
+  async getSubjectRatings(subjectId: number, userId: number): Promise<SubjectPageAssessmentRating[]> {
     const sessions = await this.dataSource
       .getRepository(AssessmentSession)
       .createQueryBuilder('session')
@@ -776,7 +830,7 @@ export class SubjectStatsService {
     subjectId: number,
     userId: number,
     topics: { id: number }[],
-  ): Promise<{ totalTopics: number; averageRating: number; lastRatedAt: Date } | null> {
+  ): Promise<SubjectPageDetailSelfRating | null> {
     const topicIds = topics.map((t) => t.id);
     if (!topicIds.length) return null;
 

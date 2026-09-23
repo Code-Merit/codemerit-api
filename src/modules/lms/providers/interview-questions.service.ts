@@ -52,6 +52,7 @@ export class InterviewQuestionsService {
       .select('q.id', 'id')
       .addSelect('q.slug', 'slug')
       .addSelect('q.level', 'level')
+      .addSelect('q.tag', 'tag')
       .addSelect('q.question', 'question')
       .addSelect('q.answer', 'answerHtml')
       .addSelect('t.slug', 'topicSlug')
@@ -80,6 +81,7 @@ export class InterviewQuestionsService {
       topicSlug: r.topicSlug,
       topicTitle: r.topicTitle,
       level: r.level,
+      tag: r.tag,
       question: r.question,
       answerHtml: r.answerHtml,
     }));
