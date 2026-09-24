@@ -288,7 +288,7 @@ export class SubjectStatsService {
     const [raw, syllabus, subjectMerits, popularTopicsMap, ratings, lessons, relatedJobRoles, badges] = await Promise.all([
       this.getSubjectStats(subjectId, userId),
       this.topicAnalyzer.getTopicStatsBySubject(subjectId, userId),
-      this.meritService.getSubjectMasteryLeaderboards([subjectId], userId).catch((err) => {
+      this.meritService.getSubjectMasteryLeaderboards([subjectId], userId, 10, 'marks').catch((err) => {
         this.logger.warn(`getSubjectMasteryLeaderboards failed for subjectId=${subjectId}: ${err}`);
         return { meritLists: new Map<number, any[]>(), userRanks: new Map<number, number | null>() };
       }),

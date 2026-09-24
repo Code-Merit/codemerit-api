@@ -28,7 +28,25 @@ import { PermissionsService } from 'src/common/policies/permissions.service';
 import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
 import { MailService } from 'src/common/mail/providers/mail.service';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
+import { Not } from 'typeorm';
+import { EnrollmentTierEnum, TIER_RANK } from 'src/common/enum/enrollment-tier.enum';
+import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import * as crypto from 'crypto';
+
+// Mock-interview quota per tier — scoped per (user, jobRoleId), see
+// resolveMockInterviewEligibility. A tier below Pro gets no bookings at all (cap 0).
+const MOCK_INTERVIEW_CAPS: Partial<Record<EnrollmentTierEnum, number>> = {
+  [EnrollmentTierEnum.Pro]: 1,
+  [EnrollmentTierEnum.Intern]: 3,
+  [EnrollmentTierEnum.Serious]: 3,
+};
+
+export interface MockInterviewEligibility {
+  tier: EnrollmentTierEnum;
+  cap: number;
+  used: number;
+  eligible: boolean;
+}
 
 @Injectable()
 export class InterviewService {
@@ -46,7 +64,31 @@ export class InterviewService {
     private readonly activityService: ActivityService,
     private readonly permissionsService: PermissionsService,
     private readonly mailService: MailService,
+    private readonly skillEnrollmentService: SkillEnrollmentService,
   ) {}
+
+  // Highest tier the user holds across this job role's subjects (Basic if none/not
+  // enrolled), then the cap/used/eligible for booking a mock interview against this
+  // (user, jobRoleId) pair. Shared by createInterview()'s enforcement and the
+  // quota-display endpoint — one set of rules, no duplicated logic (same pattern as
+  // quiz.service.ts's sumQuestionsUsedTodayBySubject).
+  async resolveMockInterviewEligibility(
+    userId: number,
+    jobRoleId: number,
+  ): Promise<MockInterviewEligibility> {
+    const breakdown = await this.skillEnrollmentService.getJobRoleSubjectsBreakdown(userId, jobRoleId);
+    const tier = breakdown.subjects.reduce<EnrollmentTierEnum>((best, s) => {
+      return s.tier && TIER_RANK[s.tier] > TIER_RANK[best] ? s.tier : best;
+    }, EnrollmentTierEnum.Basic);
+
+    const cap = MOCK_INTERVIEW_CAPS[tier] ?? 0;
+
+    const used = await this.interviewRepo.count({
+      where: { userId, jobRoleId, status: Not(InterviewStatusEnum.CANCELLED) },
+    });
+
+    return { tier, cap, used, eligible: cap > 0 && used < cap };
+  }
 
   // A round is "outstanding" if it's been assigned but not yet resolved
   // (submitted or cancelled).
@@ -211,6 +253,26 @@ export class InterviewService {
 
     if (!jobRole) {
       throw new NotFoundException('Invalid Job Role');
+    }
+
+    // Quota only applies to a real candidate account (dto.userId) — the
+    // anonymous/visitor lead-gen path (firstName+email, no account context to hold a
+    // tier against) is deliberately left unaffected, per schedule-interview.component.ts's
+    // existing isVisitor split (the only caller of this endpoint with a real userId).
+    if (dto.userId) {
+      const quota = await this.resolveMockInterviewEligibility(dto.userId, dto.jobRoleId);
+      if (!quota.eligible) {
+        if (quota.cap === 0) {
+          throw new BadRequestException(
+            `Mock interviews are a Pro-plan benefit — upgrade a subject in "${jobRole.title}" to Pro or above to book one.`,
+          );
+        }
+        const tierLabel = quota.tier.charAt(0).toUpperCase() + quota.tier.slice(1);
+        throw new BadRequestException(
+          `You've used your ${quota.used} of ${quota.cap} mock interview${quota.cap === 1 ? '' : 's'} ` +
+            `for "${jobRole.title}" on your current plan (${tierLabel}).`,
+        );
+      }
     }
 
     const scheduledAt = new Date(dto.scheduledAt);

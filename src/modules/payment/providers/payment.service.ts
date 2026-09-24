@@ -97,14 +97,26 @@ export class PaymentService {
       );
     }
 
-    const alreadyActive = await this.skillEnrollmentService.hasActiveEnrollment(
+    // Not eligible = an active enrollment already exists at this tier or higher — still
+    // needs an admin to revoke first. Eligible covers both an ordinary fresh purchase (no
+    // active row at all) AND a self-serve upgrade (active row at a lower tier) — either
+    // way, the old enrollment is NOT touched here, only at payment confirmation
+    // (fulfillOrder() → fulfillPurchase(), which passes allowUpgrade: true) — an abandoned
+    // or failed checkout must never cost the learner their existing plan.
+    const { eligible, currentEnrollment } = await this.skillEnrollmentService.resolveUpgradeEligibility(
       userId,
       dto.subjectId,
+      dto.tier,
     );
-    if (alreadyActive) {
+    if (!eligible) {
+      // currentEnrollment is guaranteed set here — eligible is only ever false when one
+      // exists (see resolveUpgradeEligibility) — so this can name the actual tier instead
+      // of a generic "already enrolled," same style as the mock-interview-quota and
+      // quiz-cap 403 messages elsewhere in this app (name the specific reason, not just
+      // that something was blocked).
       throw new AppCustomException(
         HttpStatus.CONFLICT,
-        `You already have an active enrollment for this subject.`,
+        `You already have active ${currentEnrollment!.tier} access to this subject — ${dto.tier} isn't a higher plan than that.`,
       );
     }
 
@@ -212,9 +224,12 @@ export class PaymentService {
     }
 
     const uniqueIds = Array.from(new Set(dto.subjectIds));
+    // Passing dto.tier makes an already-enrolled-but-lower-tier subject eligible (upgrade)
+    // instead of skipped — same self-serve-upgrade rule as the single-subject checkout.
     const { eligible, skipped } = await this.skillEnrollmentService.partitionSubjectsForEnrollment(
       userId,
       uniqueIds,
+      dto.tier,
     );
 
     const founderPricingEnabled =
@@ -504,16 +519,24 @@ export class PaymentService {
       }
     } catch (error) {
       if (error instanceof AppCustomException) {
-        // A CONFLICT here almost always means the webhook and POST /apis/payments/verify
-        // raced for this exact purchase — one of them already created the enrollment via
-        // createEnrollment()'s per-(userId,subjectId) lock, and this call just lost that
-        // race. That is NOT a real failure (the payment was captured and access was
-        // granted, just via the other caller) — recording it as Failed would be wrong and
-        // would hide a successful purchase behind a scary status. Attach this order to
-        // whichever active enrollment now exists instead.
+        // A CONFLICT here can mean two very different things now that upgrades exist:
+        // (a) the webhook and POST /apis/payments/verify raced for this EXACT purchase —
+        //     one of them already created the enrollment via createEnrollment()'s
+        //     per-(userId,subjectId) lock, and this call just lost that race. NOT a real
+        //     failure (the payment was captured and access was granted, just via the
+        //     other caller) — safe to attach this order to that enrollment instead.
+        // (b) the learner's active tier changed between checkout and this webhook firing
+        //     (an admin grant, or a different purchase in another tab) in a way that makes
+        //     THIS purchase no longer a valid upgrade — the payment was captured but
+        //     doesn't correspond to what's now active. Blindly attaching here would mark a
+        //     captured payment "fulfilled" against an enrollment the learner never actually
+        //     got from this purchase. Only (a) is safe to auto-recover; distinguish them by
+        //     checking the active enrollment is for the EXACT tier this order paid for —
+        //     anything else falls through to the Failed/manual-review path below, same as
+        //     any other unexpected conflict.
         if (error.status === HttpStatus.CONFLICT) {
           const existing = await this.skillEnrollmentService.getActiveEnrollment(order.userId, order.subjectId);
-          if (existing) {
+          if (existing && existing.tier === order.tier) {
             order.status = PaymentOrderStatusEnum.Paid;
             order.providerPaymentId = providerPaymentId;
             order.paidAt = new Date();

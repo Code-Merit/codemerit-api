@@ -90,6 +90,21 @@ export class SkillEnrollment extends AbstractEntity {
   @Column({ type: 'text', nullable: true, default: null })
   cancelReason: string | null;
 
+  // Set only when this row was created by a self-serve upgrade — points at the
+  // enrollment it superseded (already Cancelled by the time this row exists). Null for
+  // every other creation path (fresh purchase, admin grant, Basic self-enroll). See
+  // SkillEnrollmentService.createEnrollmentLocked()'s upgrade branch — the sole writer.
+  @Column({ type: 'integer', nullable: true, default: null })
+  previousEnrollmentId: number | null;
+
+  // DB-generated (see migration AddEnrollmentUpgradeSupport) — never set from application
+  // code. Emulates a partial unique index (MySQL/MariaDB has no native one): NULL unless
+  // status='active', with a UNIQUE INDEX on the column, so two Active rows for the same
+  // (userId, subjectId) are physically impossible to insert. Read-only from TypeORM's
+  // perspective; marked `select: false` so it never leaks into API responses by accident.
+  @Column({ type: 'varchar', length: 64, nullable: true, select: false, insert: false, update: false })
+  activeGuardKey: string | null;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 

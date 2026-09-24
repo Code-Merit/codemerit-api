@@ -13,6 +13,7 @@ import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { Quiz } from 'src/common/typeorm/entities/quiz.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { UserPermissionModule } from '../user-permission/user-permission.module';
+import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.module';
 import { Lesson } from 'src/common/typeorm/entities/lesson.entity';
 import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
 import { QualityMetric } from 'src/common/typeorm/entities/quality-metric.entity';
@@ -42,6 +43,7 @@ import { LmsManagerGuard } from './guards/lms-manager.guard';
       QualityReviewTag,
     ]),
     UserPermissionModule,
+    SkillEnrollmentModule,
   ],
   providers: [LmsService, QuestionQualityService, LmsDashboardService, InterviewQuestionsService, LmsManagerGuard],
   controllers: [LmsController],

@@ -7,8 +7,8 @@ import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
 export const DEFAULT_TIER_CAPS: Partial<
   Record<EnrollmentTierEnum, { dailyQuestionCap: number }>
 > = {
-  [EnrollmentTierEnum.Basic]: { dailyQuestionCap: 50 },
-  [EnrollmentTierEnum.Curious]: { dailyQuestionCap: 120 },
+  [EnrollmentTierEnum.Basic]: { dailyQuestionCap: 20 },
+  [EnrollmentTierEnum.Curious]: { dailyQuestionCap: 40 },
 };
 
 // Fallback access-window length, in months, used when a SkillTierOffering has no

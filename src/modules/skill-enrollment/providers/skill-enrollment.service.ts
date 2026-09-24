@@ -24,6 +24,30 @@ import {
   DEFAULT_TIER_DURATION_MONTHS,
 } from '../constants/skill-enrollment.constants';
 
+// Internal-only — shared by createEnrollment() and createEnrollmentLocked() (the outer
+// lock/transaction wrapper and the actual insert logic it wraps), named once instead of
+// duplicated inline on both signatures, which is how allowUpgrade nearly went missing
+// from one of the two when it was added.
+interface CreateEnrollmentParams {
+  userId: number;
+  subjectId: number;
+  tier: EnrollmentTierEnum;
+  months?: number;
+  source: EnrollmentSourceEnum;
+  price: number | null;
+  currency: string | null;
+  reference: string | null;
+  grantedBy: number | null;
+  note: string | null;
+  batchId?: number | null;
+  // Self-serve upgrade support: when true and an active enrollment already exists at a
+  // LOWER rank than tier, it's cancelled and superseded instead of 409ing. Only
+  // fulfillPurchase() (real paid checkout) sets this — grantEnrollment (admin) and
+  // enrollBasicBatch (Basic can never outrank anything) keep the original "any active
+  // row blocks a new one" behavior, unchanged.
+  allowUpgrade?: boolean;
+}
+
 export type EnrollmentSkipReason = 'subject_not_found' | 'already_enrolled' | 'tier_not_offered';
 
 export interface EnrollmentSkip {
@@ -201,10 +225,17 @@ export class SkillEnrollmentService {
    * why — shared by the free batch path above and PaymentService's paid batch
    * checkout, which additionally filters on tier-offering availability on top of
    * this. Reasons: 'subject_not_found' (bad id) or 'already_enrolled' (any active
-   * enrollment already exists for that subject, any tier). */
+   * enrollment already exists for that subject, at the same tier or higher).
+   *
+   * `requestedTier`, when passed (the paid batch checkout path), makes a subject with an
+   * active enrollment at a LOWER rank eligible instead of skipped — self-serve upgrade,
+   * same rule as the single-subject path (see resolveUpgradeEligibility). Omitted (the
+   * free enrollBasicBatch call site, unchanged) means the original all-or-nothing rule:
+   * Basic can never outrank anything, so this is a no-op for that caller either way. */
   async partitionSubjectsForEnrollment(
     userId: number,
     subjectIds: number[],
+    requestedTier?: EnrollmentTierEnum,
   ): Promise<{ eligible: number[]; skipped: EnrollmentSkip[] }> {
     if (!subjectIds.length) return { eligible: [], skipped: [] };
 
@@ -222,14 +253,17 @@ export class SkillEnrollmentService {
       .andWhere('e.status = :status', { status: EnrollmentStatusEnum.Active })
       .andWhere('(e.expiresAt IS NULL OR e.expiresAt > :now)', { now })
       .getMany();
-    const activeSubjectIds = new Set(activeEnrollments.map((e) => e.subjectId));
+    const activeTierBySubjectId = new Map(activeEnrollments.map((e) => [e.subjectId, e.tier]));
 
     const eligible: number[] = [];
     const skipped: EnrollmentSkip[] = [];
     for (const subjectId of subjectIds) {
+      const activeTier = activeTierBySubjectId.get(subjectId);
+      const isUpgradeEligible =
+        activeTier != null && requestedTier != null && TIER_RANK[requestedTier] > TIER_RANK[activeTier];
       if (!existingIds.has(subjectId)) {
         skipped.push({ subjectId, reason: 'subject_not_found' });
-      } else if (activeSubjectIds.has(subjectId)) {
+      } else if (activeTier != null && !isUpgradeEligible) {
         skipped.push({ subjectId, reason: 'already_enrolled' });
       } else {
         eligible.push(subjectId);
@@ -262,6 +296,9 @@ export class SkillEnrollmentService {
       grantedBy: null,
       note: null,
       batchId: params.batchId ?? null,
+      // The one and only self-serve upgrade entry point — a real paid purchase may
+      // supersede an existing lower-tier active enrollment instead of 409ing.
+      allowUpgrade: true,
     });
   }
 
@@ -309,25 +346,41 @@ export class SkillEnrollmentService {
    * scoped to the connection that acquired them, so a dedicated QueryRunner is held
    * for the duration — a pooled repo.query() call can silently land on a different
    * physical connection each time, which would break the release. */
-  private async createEnrollment(params: {
-    userId: number;
-    subjectId: number;
-    tier: EnrollmentTierEnum;
-    months?: number;
-    source: EnrollmentSourceEnum;
-    price: number | null;
-    currency: string | null;
-    reference: string | null;
-    grantedBy: number | null;
-    note: string | null;
-    batchId?: number | null;
-  }): Promise<SkillEnrollment & { subjectTitle: string }> {
+  private async createEnrollment(
+    params: CreateEnrollmentParams,
+  ): Promise<SkillEnrollment & { subjectTitle: string }> {
     const lockKey = `skill_enrollment:${params.userId}:${params.subjectId}`;
     const queryRunner = this.enrollmentRepo.manager.connection.createQueryRunner();
     await queryRunner.connect();
     try {
-      await queryRunner.query('SELECT GET_LOCK(?, 10)', [lockKey]);
-      return await this.createEnrollmentLocked(params, queryRunner.manager);
+      // GET_LOCK returns 1 (acquired), 0 (timed out after 10s — real contention, e.g. a
+      // webhook retry racing the client's own /verify call for the same purchase), or
+      // NULL (a server-side error acquiring it). The result was previously discarded
+      // entirely, which meant a timeout or error silently fell through as if the lock
+      // *had* been acquired — reopening the exact TOCTOU race this lock exists to close,
+      // now with a real transaction underneath it too. Must check it.
+      const [lockRow] = await queryRunner.query('SELECT GET_LOCK(?, 10) AS acquired', [lockKey]);
+      if (Number(lockRow?.acquired) !== 1) {
+        throw new AppCustomException(
+          HttpStatus.CONFLICT,
+          'This enrollment is being processed by another request right now. Please try again in a moment.',
+        );
+      }
+      // Transaction on THIS SAME QueryRunner, not a fresh dataSource.transaction() call.
+      // GET_LOCK/RELEASE_LOCK are scoped to the connection that acquired them — a separate
+      // transaction helper can silently run on a different pooled connection, which would
+      // let the "atomic" cancel-old+create-new upgrade happen outside the very lock meant
+      // to serialize it. Keeping both on one QueryRunner is what makes them the same
+      // session, and therefore genuinely atomic together.
+      await queryRunner.startTransaction();
+      try {
+        const result = await this.createEnrollmentLocked(params, queryRunner.manager);
+        await queryRunner.commitTransaction();
+        return result;
+      } catch (err) {
+        await queryRunner.rollbackTransaction();
+        throw err;
+      }
     } finally {
       await queryRunner.query('SELECT RELEASE_LOCK(?)', [lockKey]).catch(() => undefined);
       await queryRunner.release();
@@ -335,19 +388,7 @@ export class SkillEnrollmentService {
   }
 
   private async createEnrollmentLocked(
-    params: {
-      userId: number;
-      subjectId: number;
-      tier: EnrollmentTierEnum;
-      months?: number;
-      source: EnrollmentSourceEnum;
-      price: number | null;
-      currency: string | null;
-      reference: string | null;
-      grantedBy: number | null;
-      note: string | null;
-      batchId?: number | null;
-    },
+    params: CreateEnrollmentParams,
     manager: EntityManager,
   ): Promise<SkillEnrollment & { subjectTitle: string }> {
     const isBasic = params.tier === EnrollmentTierEnum.Basic;
@@ -359,11 +400,25 @@ export class SkillEnrollmentService {
       : await this.assertSubjectOffersTier(params.subjectId, params.tier, manager);
 
     const existingActive = await this.findActiveEnrollment(params.userId, params.subjectId, manager);
+    let previousEnrollmentId: number | null = null;
     if (existingActive) {
-      throw new AppCustomException(
-        HttpStatus.CONFLICT,
-        `This user already has an active enrollment for this subject. Revoke it first to change tiers.`,
-      );
+      const isValidUpgrade =
+        params.allowUpgrade && TIER_RANK[params.tier] > TIER_RANK[existingActive.tier];
+      if (!isValidUpgrade) {
+        throw new AppCustomException(
+          HttpStatus.CONFLICT,
+          `This user already has an active enrollment for this subject. Revoke it first to change tiers.`,
+        );
+      }
+      // Cancel-then-insert, both inside the same lock+transaction createEnrollment()
+      // opened above — genuinely atomic, not just sequential. previousEnrollmentId links
+      // the new row back to what it replaced, purely for audit/history.
+      await manager.update(SkillEnrollment, existingActive.id, {
+        status: EnrollmentStatusEnum.Cancelled,
+        cancelledAt: new Date(),
+        cancelReason: `Superseded by an upgrade to ${params.tier}.`,
+      });
+      previousEnrollmentId = existingActive.id;
     }
 
     const startAt = new Date();
@@ -391,6 +446,7 @@ export class SkillEnrollmentService {
       grantedBy: params.grantedBy,
       note: params.note,
       batchId: params.batchId ?? null,
+      previousEnrollmentId,
     });
 
     const saved = await manager.save(SkillEnrollment, enrollment);
@@ -476,6 +532,27 @@ export class SkillEnrollmentService {
    * order rather than treating the conflict as a real failure. */
   async getActiveEnrollment(userId: number, subjectId: number): Promise<SkillEnrollment | null> {
     return this.findActiveEnrollment(userId, subjectId);
+  }
+
+  /** Whether `requestedTier` is purchasable right now for this user/subject: either
+   * there's no active enrollment at all (an ordinary fresh purchase), or one exists and
+   * `requestedTier` ranks strictly higher (a valid self-serve upgrade). Same tier or a
+   * downgrade against an existing active enrollment is never eligible here — that still
+   * requires an admin to revoke first. Used by PaymentService's checkout pre-flight (and
+   * anywhere else that wants to show/hide an upgrade CTA before the real purchase
+   * attempt) — the actual purchase still goes through createEnrollment()'s own
+   * lock+transaction-guarded check, this is a best-effort read for UI/pre-flight only. */
+  async resolveUpgradeEligibility(
+    userId: number,
+    subjectId: number,
+    requestedTier: EnrollmentTierEnum,
+  ): Promise<{ eligible: boolean; currentEnrollment: SkillEnrollment | null }> {
+    const currentEnrollment = await this.findActiveEnrollment(userId, subjectId);
+    if (!currentEnrollment) {
+      return { eligible: true, currentEnrollment: null };
+    }
+    const eligible = TIER_RANK[requestedTier] > TIER_RANK[currentEnrollment.tier];
+    return { eligible, currentEnrollment };
   }
 
   async revokeEnrollment(id: number, reason?: string): Promise<SkillEnrollment> {

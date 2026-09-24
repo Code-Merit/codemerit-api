@@ -41,7 +41,10 @@ export class InterviewController {
       'existing account, or `firstName`+`email` (+ optional `lastName`/`mobile`/`yearsExperience`) ' +
       'to register a new one — if that email already has an account, it is silently reused instead ' +
       'of erroring. Rejects with 400 if the candidate already has another active interview ' +
-      '(any status except CANCELLED/COMPLETED) whose window overlaps this request.',
+      '(any status except CANCELLED/COMPLETED) whose window overlaps this request. When `userId` ' +
+      'is provided, also enforces the mock-interview quota for that job role (0 below Pro, 1 on ' +
+      'Pro, 3 on Intern/Serious — see GET .../quota/job-role/:jobRoleId) — 400 if exhausted or ' +
+      'ineligible. The anonymous `firstName`+`email` path has no quota (no account tier to check).',
   })
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
@@ -247,6 +250,27 @@ export class InterviewController {
   async getSmeDirectory(): Promise<ApiResponse<any>> {
     const result = await this.interviewService.getSmeDirectory();
     return new ApiResponse('SME directory fetched successfully', result);
+  }
+
+  @ApiOperation({
+    summary: "Get the caller's mock-interview quota/eligibility for a job role",
+    description:
+      'Tier is the highest the caller holds across this job role\'s subjects (Basic if ' +
+      'none/not enrolled). Basic/Curious → cap 0 (not eligible). Pro → cap 1. ' +
+      'Intern/Serious → cap 3. `used` counts this job role\'s non-CANCELLED interviews ' +
+      'already booked by the caller. Same rules `POST apis/interviews` enforces — call this ' +
+      'first to show remaining quota before the candidate fills out the booking form.',
+  })
+  @ApiParam({ name: 'jobRoleId', description: 'Job role id', type: Number })
+  // Registered before ':interviewCode' — otherwise Nest would match this path as
+  // {interviewCode: 'quota'}, same reasoning as 'sme-directory' above.
+  @Get('quota/job-role/:jobRoleId')
+  async getMockInterviewQuota(
+    @Param('jobRoleId', ParseIntPipe) jobRoleId: number,
+    @Req() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.interviewService.resolveMockInterviewEligibility(req.user.id, jobRoleId);
+    return new ApiResponse('Mock interview quota fetched successfully', result);
   }
 
   @ApiOperation({

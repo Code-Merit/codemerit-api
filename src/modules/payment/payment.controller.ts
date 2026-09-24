@@ -51,11 +51,14 @@ export class PaymentController {
       'amount and gateway: INR -> Razorpay, USD -> Stripe) — never trust a client-submitted ' +
       'amount. Returns whatever the caller\'s frontend needs to launch that gateway\'s ' +
       'checkout (Razorpay order id + key id for Checkout.js, or a Stripe-hosted checkout URL). ' +
-      '409 if the caller already has an active enrollment for this scope.',
+      'Self-serve upgrade: if the caller already holds a STRICTLY LOWER active tier here, ' +
+      'this proceeds normally — at payment confirmation the old enrollment is cancelled and ' +
+      'replaced (full price, no proration). 409 only if the caller already holds this tier ' +
+      'or higher for this subject — an admin has to revoke that first.',
   })
   @ApiResponseDoc({ status: 404, description: 'No subject exists with the given id.' })
   @ApiResponseDoc({ status: 400, description: 'The subject does not offer the given tier, or the tier is Basic (not purchasable).' })
-  @ApiResponseDoc({ status: 409, description: 'Caller already has an active enrollment for this subject.' })
+  @ApiResponseDoc({ status: 409, description: 'Caller already holds this tier or higher for this subject (not a valid upgrade).' })
   @ApiResponseDoc({ status: 503, description: 'The gateway for the requested currency is not configured on this environment.' })
   @ApiBearerAuth('access-token')
   @Post('checkout')
@@ -73,9 +76,12 @@ export class PaymentController {
       'The same field whether you\'re checking out "all of a job role\'s subjects" ' +
       'or a hand-picked subset — just send that subject-id list. Price is looked up ' +
       'server-side per subject and summed — never trust a client-submitted amount. ' +
-      'Skip-and-proceed: a subject that\'s already enrolled, doesn\'t exist, or ' +
-      'doesn\'t offer this tier is dropped from the batch rather than failing the ' +
-      'whole request — `skipped` always lists what and why, and `totalAmount` only ' +
+      'Skip-and-proceed: a subject that doesn\'t exist, doesn\'t offer this tier, or ' +
+      'where the caller already holds this tier or higher is dropped from the batch ' +
+      'rather than failing the whole request (self-serve upgrade: a subject already held ' +
+      'at a STRICTLY LOWER tier is NOT dropped — it\'s eligible, same rule as the single-' +
+      'subject checkout, and cancels/replaces the old one at fulfillment) — `skipped` ' +
+      'always lists what and why, and `totalAmount` only ' +
       'reflects what\'s actually being charged. `eligibleSubjectIds` empty (and ' +
       '`batchId: null`) means nothing was eligible — no gateway call was made, ' +
       'nothing to pay for. 503 if the gateway isn\'t configured yet.',

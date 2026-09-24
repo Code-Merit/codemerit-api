@@ -58,35 +58,85 @@ export class MeritService {
     };
   }
 
-  /** Leaders within one or more subjects, bucketed per subject. */
+  /**
+   * Leaders within one or more subjects, bucketed per subject.
+   *
+   * `scoreField` picks what `masteryCount` actually adds up — default `'count'` is the
+   * original "one point per distinct question answered correctly" rule (still what
+   * every other caller of this method gets, unchanged: program.service.ts's Job-Role
+   * Course Dashboard aggregation in particular, which labels this value "correct" in
+   * the frontend and must keep meaning that). `'marks'` is additive and opt-in: it sums
+   * each distinctly-correctly-answered question's own authored `Question.marks` weight
+   * instead of counting it as 1, so a harder/higher-value question contributes more —
+   * closer in spirit to how AchievementService.awardXpAndLevel() weights real XP by
+   * level, without claiming to BE that number (this stays subject-scoped and doesn't
+   * include quiz-completion/perfect-score bonuses the real XP economy adds). Currently
+   * only SubjectStatsService's Subject Dashboard leaderboard opts into `'marks'`.
+   */
   async getSubjectMasteryLeaderboards(
     subjectIds: number[],
     userId?: number,
     limit = 10,
+    scoreField: 'count' | 'marks' = 'count',
   ): Promise<{ meritLists: Map<number, any[]>; userRanks: Map<number, number | null> }> {
     if (!subjectIds.length) return { meritLists: new Map(), userRanks: new Map() };
 
-    const rows = await this.dataSource
-      .createQueryBuilder()
-      .select('q.subjectId', 'subjectId')
-      .addSelect('u.id', 'userId')
-      .addSelect("CONCAT(u.firstName, ' ', u.lastName)", 'name')
-      .addSelect('u.username', 'username')
-      .addSelect('u.image', 'image')
-      .addSelect('jr.title', 'designationName')
-      .addSelect('COUNT(DISTINCT qa.questionId)', 'masteryCount')
-      .from('question_attempt', 'qa')
-      .innerJoin(
-        'question', 'q',
-        'q.id = qa.questionId AND q.subjectId IN (:...subjectIds) AND q.status = :active AND q.questionType = :trivia',
-        { subjectIds, active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
-      )
-      .innerJoin('user', 'u', 'u.id = qa.userId')
-      .leftJoin('job_role', 'jr', 'jr.id = u.designation')
-      .where('qa.isCorrect = 1')
-      .groupBy('q.subjectId')
-      .addGroupBy('u.id')
-      .getRawMany();
+    const rows = scoreField === 'marks'
+      ? await this.dataSource
+          .createQueryBuilder()
+          .select('t.subjectId', 'subjectId')
+          .addSelect('t.userId', 'userId')
+          .addSelect('t.name', 'name')
+          .addSelect('t.username', 'username')
+          .addSelect('t.image', 'image')
+          .addSelect('t.designationName', 'designationName')
+          .addSelect('SUM(t.marks)', 'masteryCount')
+          .from((subQb) => subQb
+            // DISTINCT over (subjectId, userId, questionId, marks) — a question answered
+            // correctly more than once (retries) still contributes its marks exactly
+            // once, same "first correct answer, permanent credit" rule the count variant
+            // already applies via COUNT(DISTINCT questionId).
+            .select('DISTINCT q.subjectId', 'subjectId')
+            .addSelect('u.id', 'userId')
+            .addSelect("CONCAT(u.firstName, ' ', u.lastName)", 'name')
+            .addSelect('u.username', 'username')
+            .addSelect('u.image', 'image')
+            .addSelect('jr.title', 'designationName')
+            .addSelect('q.id', 'questionId')
+            .addSelect('q.marks', 'marks')
+            .from('question_attempt', 'qa')
+            .innerJoin(
+              'question', 'q',
+              'q.id = qa.questionId AND q.subjectId IN (:...subjectIds) AND q.status = :active AND q.questionType = :trivia',
+              { subjectIds, active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
+            )
+            .innerJoin('user', 'u', 'u.id = qa.userId')
+            .leftJoin('job_role', 'jr', 'jr.id = u.designation')
+            .where('qa.isCorrect = 1'), 't')
+          .groupBy('t.subjectId')
+          .addGroupBy('t.userId')
+          .getRawMany()
+      : await this.dataSource
+          .createQueryBuilder()
+          .select('q.subjectId', 'subjectId')
+          .addSelect('u.id', 'userId')
+          .addSelect("CONCAT(u.firstName, ' ', u.lastName)", 'name')
+          .addSelect('u.username', 'username')
+          .addSelect('u.image', 'image')
+          .addSelect('jr.title', 'designationName')
+          .addSelect('COUNT(DISTINCT qa.questionId)', 'masteryCount')
+          .from('question_attempt', 'qa')
+          .innerJoin(
+            'question', 'q',
+            'q.id = qa.questionId AND q.subjectId IN (:...subjectIds) AND q.status = :active AND q.questionType = :trivia',
+            { subjectIds, active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
+          )
+          .innerJoin('user', 'u', 'u.id = qa.userId')
+          .leftJoin('job_role', 'jr', 'jr.id = u.designation')
+          .where('qa.isCorrect = 1')
+          .groupBy('q.subjectId')
+          .addGroupBy('u.id')
+          .getRawMany();
 
     const buckets = new Map<number, any[]>();
     for (const row of rows) {

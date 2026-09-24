@@ -272,16 +272,20 @@ export class LmsController {
   }
 
   @ApiOperation({
-    summary: 'Get General interview questions for a subject (public)',
+    summary: 'Get General interview questions for a subject (public, tier-gated)',
     description:
-      'No auth required — OptionalJwtAuthGuard populates req.user when a valid JWT is sent, ' +
-      'so a logged-in caller\'s completedIds come back in this same response instead of a ' +
-      'second request. Returns General+Active questions for the subject, grouped into topics ' +
-      'whose stats (total/easy/intermediate/advanced) are computed from the real rows, never ' +
-      'a separately maintained count — a topic can never be listed with more content than it ' +
-      'actually has. topicSlug/levels narrow server-side, but the intended client pattern is ' +
-      'to call this once per subject (cached client-side for the session) and filter the ' +
-      'cached list by topic/level instead of refetching on every filter change.',
+      'No auth required to call — OptionalJwtAuthGuard populates req.user when a valid JWT ' +
+      'is sent, so a logged-in caller\'s completedIds AND effective tier come back in this ' +
+      'same response instead of a second request. Returns General+Active questions for the ' +
+      'subject, grouped into topics whose stats (total/easy/intermediate/advanced) are ' +
+      'computed from the real rows (never a separately maintained count). Only the first 5 ' +
+      'questions PER TOPIC carry real `question`/`answerHtml` for a caller below Intern tier ' +
+      '— the rest come back with those fields null and `locked: true` (redacted server-side, ' +
+      'not just hidden client-side). Intern/Serious tier on this subject gets every question ' +
+      'unlocked. ' +
+      'topicSlug/levels narrow server-side, but the intended client pattern is to call this ' +
+      'once per subject (cached client-side for the session) and filter the cached list by ' +
+      'topic/level instead of refetching on every filter change.',
   })
   @ApiQuery({ name: 'subjectSlug', required: true, type: String })
   @ApiQuery({ name: 'topicSlug', required: false, type: String })

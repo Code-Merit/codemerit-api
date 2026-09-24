@@ -9,6 +9,7 @@ import { InterviewController } from './interview.controller';
 import { InterviewService } from './providers/interview.service';
 import { UsersModule } from 'src/core/users/users.module';
 import { ActivityModule } from '../activity/activity.module';
+import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ActivityModule } from '../activity/activity.module';
     ]),
     UsersModule,
     ActivityModule,
+    SkillEnrollmentModule,
   ],
   controllers: [InterviewController],
   providers: [InterviewService],
