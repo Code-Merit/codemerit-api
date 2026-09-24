@@ -8,6 +8,8 @@ import { Topic } from 'src/common/typeorm/entities/topic.entity';
 import { computeAttemptMetrics, getAggregateUserLevel } from 'src/common/utils/common-functions';
 import { DataSource, Repository } from 'typeorm';
 import { TopicAnalysisService } from './topic-analysis.service';
+import { SubjectStatsService } from './subject-stats.service';
+import { SubjectPageGeneralQuestions, SubjectPageLessons } from './subject-page.types';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { UserJobRole } from 'src/common/typeorm/entities/user-job-role.entity';
@@ -37,7 +39,8 @@ export class SubjectAnalysisService {
     private userJobRoleRepo: Repository<UserJobRole>,
 
     private readonly dataSource: DataSource,
-    private topicAnalyzer: TopicAnalysisService
+    private topicAnalyzer: TopicAnalysisService,
+    private subjectStatsService: SubjectStatsService,
   ) { }
 
   /**
@@ -190,7 +193,12 @@ export class SubjectAnalysisService {
    * The central method — returns a subject dashboard object.
    * - fullData=true will include meritList & popularTopics (expensive)
    */
-  async getSubjectDashboard(subjectId: number, userId?: number, fullData = false) {
+  // `includeExtras` fetches Lessons + General-question completion alongside the Trivia stats
+  // this function already returned. Defaults false because getJobSubjectDashboards() is also
+  // the login-response hot path (see class doc comment) — two more per-subject queries per
+  // enrolled subject on every login would be a real regression there. Only the Profile-serving
+  // call path (UserProfileAggregatorService) passes true.
+  async getSubjectDashboard(subjectId: number, userId?: number, fullData = false, includeExtras = false) {
     const row = await this.getSubjectStats(subjectId, userId);
     if (!row) return null;
     const attempted = +row.attempted || 0;
@@ -232,18 +240,25 @@ export class SubjectAnalysisService {
       color: row.color,
       numQuestions: +row.numQuestions || 0,
       numTrivia,
-      numEasyTrivia: row.numEasyTrivia,
-      numIntTrivia: row.numIntTrivia,
-      numAdvTrivia: row.numAdvTrivia,
+      // These 9 fields come straight off a raw SQL COUNT()/SUM() row — the mysql2 driver
+      // returns those as strings, not numbers. Every other raw-row field in this function (see
+      // `attempted`/`correct`/`journeyAttempts` above) already gets the `+row.x || 0` coercion;
+      // these were missed, so consumers doing arithmetic on them (e.g. summing tier counts for
+      // a "X of Y questions" total) got string concatenation instead of addition — confirmed by
+      // comparing against SubjectStatsService.getSubjectPage, which already coerces the same
+      // fields correctly (subject-stats.service.ts:386-397).
+      numEasyTrivia: +row.numEasyTrivia || 0,
+      numIntTrivia: +row.numIntTrivia || 0,
+      numAdvTrivia: +row.numAdvTrivia || 0,
       isSubscribed: row.isSubscribed === 1 || row.isSubscribed === '1',
       attempted,
-      attemptedEasy: row.attemptedEasy,
-      attemptedMedium: row.attemptedMedium,
-      attemptedHard: row.attemptedHard,
+      attemptedEasy: +row.attemptedEasy || 0,
+      attemptedMedium: +row.attemptedMedium || 0,
+      attemptedHard: +row.attemptedHard || 0,
       correct,
-      correctEasy : row.correctEasy,
-      correctMedium : row.correctMedium,
-      correctHard : row.correctHard,
+      correctEasy: +row.correctEasy || 0,
+      correctMedium: +row.correctMedium || 0,
+      correctHard: +row.correctHard || 0,
       wrong,
       skipped,
       currentAccuracy,
@@ -258,8 +273,24 @@ export class SubjectAnalysisService {
       syllabus: [],
       meritList: [],
       popularTopics: [],
-      subjectRatings: []
+      subjectRatings: [],
+      // Populated below only when includeExtras is set — Trivia-only otherwise, matching this
+      // function's return shape before Lessons/General questions existed as tracked dimensions.
+      lessons: null as SubjectPageLessons | null,
+      generalQuestions: null as SubjectPageGeneralQuestions | null,
     };
+
+    if (includeExtras) {
+      [dashboard.lessons, dashboard.generalQuestions] = await Promise.all([
+        this.subjectStatsService.getSubjectLessons(subjectId, userId).catch(() => ({
+          total: 0, completed: 0, inProgress: 0, totalViews: 0,
+          lastActivityAt: null, learningCompleteness: 0, list: [],
+        } as SubjectPageLessons)),
+        this.subjectStatsService.getSubjectGeneralQuestions(subjectId, userId).catch(() => ({
+          total: 0, completed: 0, completionPercent: 0,
+        } as SubjectPageGeneralQuestions)),
+      ]);
+    }
 
     if (fullData) {
       // Subject ratings for the full-data view are served by
@@ -276,7 +307,7 @@ export class SubjectAnalysisService {
     return dashboard;
   }
 
-  async getJobSubjectDashboards(userId: number, fullData = false) {
+  async getJobSubjectDashboards(userId: number, fullData = false, includeExtras = false) {
   // Step 1: Get all job roles for the user
   const userJobRoles = await this.userJobRoleRepo
     .createQueryBuilder('ujr')
@@ -300,7 +331,7 @@ export class SubjectAnalysisService {
   // Step 3: Fetch dashboards for unique subjects
   return Promise.all(
     roleSubjects.map((s) =>
-      this.getSubjectDashboard(+s.subjectId, userId, fullData),
+      this.getSubjectDashboard(+s.subjectId, userId, fullData, includeExtras),
     ),
   );
 }
@@ -318,7 +349,7 @@ export class SubjectAnalysisService {
    * it's real, paid-for or free-Basic access. `status != Cancelled` mirrors getSubjectStats'
    * own isSubscribed definition, not a stricter 'active'-only filter.
    */
-  async getEnrolledSubjectDashboards(userId: number, fullData = false) {
+  async getEnrolledSubjectDashboards(userId: number, fullData = false, includeExtras = false) {
     const enrolledRows = await this.dataSource
       .createQueryBuilder()
       .select('DISTINCT se.subjectId', 'subjectId')
@@ -330,7 +361,7 @@ export class SubjectAnalysisService {
     if (!enrolledRows.length) return [];
 
     const dashboards = await Promise.all(
-      enrolledRows.map((r) => this.getSubjectDashboard(+r.subjectId, userId, fullData)),
+      enrolledRows.map((r) => this.getSubjectDashboard(+r.subjectId, userId, fullData, includeExtras)),
     );
     return dashboards.filter((d) => d != null);
   }

@@ -79,6 +79,17 @@ export interface SubjectPageLessons {
   list: SubjectPageLessonItem[];
 }
 
+// General questions (Question.questionType = 'General') are a separate completion track from
+// Trivia — a learner reads one and marks it complete via UserQuestionTracker (one-way, no
+// partial-progress concept, unlike lessons' Pending/Read/Completed states), so this shape is
+// deliberately flatter than SubjectPageLessons: no `inProgress`, no per-item `list` (the
+// standalone /interview-questions page already owns browsing; this is a summary rollup only).
+export interface SubjectPageGeneralQuestions {
+  total: number;
+  completed: number;
+  completionPercent: number;
+}
+
 export interface SubjectPageCertSubjectTrack {
   id: number;
   title: string;
@@ -196,6 +207,7 @@ export interface SubjectPageResponse {
   subjectTracks: any[];
   certificationTracks: SubjectPageCertificationTrack[];
   lessons: SubjectPageLessons;
+  generalQuestions: SubjectPageGeneralQuestions;
   nextAction: SubjectNextAction;
   relatedJobRoles: SubjectPageRelatedJobRole[];
   meritList: any[];

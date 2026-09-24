@@ -28,6 +28,7 @@ import {
   SubjectPageAssessmentRating,
   SubjectPageCertificationTrack,
   SubjectPageDetailSelfRating,
+  SubjectPageGeneralQuestions,
   SubjectPageLessons,
   SubjectPageRelatedJobRole,
   SubjectPageResponse,
@@ -285,7 +286,7 @@ export class SubjectStatsService {
     // to build anything else from. Every other call here backs one supporting widget; a hiccup
     // in any one of them (merit service down, badge query timeout, ...) now degrades that one
     // widget to its empty state instead of 500ing the entire dashboard.
-    const [raw, syllabus, subjectMerits, popularTopicsMap, ratings, lessons, relatedJobRoles, badges] = await Promise.all([
+    const [raw, syllabus, subjectMerits, popularTopicsMap, ratings, lessons, generalQuestions, relatedJobRoles, badges] = await Promise.all([
       this.getSubjectStats(subjectId, userId),
       this.topicAnalyzer.getTopicStatsBySubject(subjectId, userId),
       this.meritService.getSubjectMasteryLeaderboards([subjectId], userId, 10, 'marks').catch((err) => {
@@ -306,6 +307,10 @@ export class SubjectStatsService {
           total: 0, completed: 0, inProgress: 0, totalViews: 0,
           lastActivityAt: null, learningCompleteness: 0, list: [],
         } as SubjectPageLessons;
+      }),
+      this.getSubjectGeneralQuestions(subjectId, userId).catch((err) => {
+        this.logger.warn(`getSubjectGeneralQuestions failed for subjectId=${subjectId}: ${err}`);
+        return { total: 0, completed: 0, completionPercent: 0 } as SubjectPageGeneralQuestions;
       }),
       this.getRelatedJobRoles(subjectId).catch((err) => {
         this.logger.warn(`getRelatedJobRoles failed for subjectId=${subjectId}: ${err}`);
@@ -418,6 +423,7 @@ export class SubjectStatsService {
       subjectTracks,
       certificationTracks,
       lessons,
+      generalQuestions,
       nextAction: this.computeNextAction(syllabus, lessons.list, subjectTracks, certificationTracks),
       relatedJobRoles,
       meritList: subjectMerits.meritLists.get(subjectId) ?? [],
@@ -695,7 +701,9 @@ export class SubjectStatsService {
 
   // ─── Lessons ────────────────────────────────────────────────────────────────
 
-  private async getSubjectLessons(subjectId: number, userId?: number): Promise<SubjectPageLessons> {
+  // Public — SubjectAnalysisService.getSubjectDashboard() (the profile/login-feeding producer)
+  // reuses this rather than re-deriving lesson completion with its own query.
+  async getSubjectLessons(subjectId: number, userId?: number): Promise<SubjectPageLessons> {
     const qb = this.dataSource
       .createQueryBuilder()
       .select('l.id', 'id')
@@ -765,6 +773,39 @@ export class SubjectStatsService {
     const learningCompleteness = list.length > 0 ? +((completed / list.length) * 100).toFixed(1) : 0;
 
     return { total: list.length, completed, inProgress, totalViews, lastActivityAt, learningCompleteness, list };
+  }
+
+  // ─── General Questions ─────────────────────────────────────────────────────────
+
+  // Third completion track alongside Trivia (computeAttemptMetrics) and Lessons (above) — a
+  // General question is marked complete once, one-way, via UserQuestionTracker (see
+  // InterviewQuestionsService.markComplete, the same table the standalone /interview-questions
+  // page already writes to). This is the first place anything rolls that up per subject; the
+  // raw `numGeneral*` counts getSubjectStats() computes are content counts only, never joined
+  // against completion before now. Public for the same reason getSubjectLessons is.
+  async getSubjectGeneralQuestions(subjectId: number, userId?: number): Promise<SubjectPageGeneralQuestions> {
+    const qb = this.dataSource
+      .createQueryBuilder()
+      .select('q.id', 'id')
+      .from('question', 'q')
+      .where('q.subjectId = :subjectId', { subjectId })
+      .andWhere('q.questionType = :questionType', { questionType: QuestionTypeEnum.General })
+      .andWhere('q.status = :status', { status: QuestionStatusEnum.Active });
+
+    if (userId) {
+      qb.leftJoin(
+        'user_question_tracker', 'uqt',
+        'uqt.questionId = q.id AND uqt.userId = :userId', { userId },
+      ).addSelect('uqt.completedAt', 'completedAt');
+    }
+
+    const rows = await qb.getRawMany();
+    const total = rows.length;
+    const completed = userId ? rows.filter((r) => r.completedAt).length : 0;
+    // Same numerator/denominator*100, .toFixed(1) convention as learningCompleteness above.
+    const completionPercent = total > 0 ? +((completed / total) * 100).toFixed(1) : 0;
+
+    return { total, completed, completionPercent };
   }
 
   // ─── Related Job Roles ────────────────────────────────────────────────────────

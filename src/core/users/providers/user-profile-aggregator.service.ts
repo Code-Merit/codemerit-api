@@ -46,9 +46,12 @@ export class UserProfileAggregatorService {
   // (getEnrolledSubjectDashboards) can legitimately overlap — union by subject id rather than
   // concatenating, so a subject reachable both ways only ever shows once.
   private async getCourseStats(userId: number) {
+    // includeExtras=true — this is the Profile-serving call path, not the login hot path (see
+    // getSubjectDashboard's own doc comment), so it's safe to also pull Lessons + General-
+    // question completion here, giving the Subject Performance card all three completion tracks.
     const [byJobRole, byEnrollment] = await Promise.all([
-      this.subjectAnalysisService.getJobSubjectDashboards(userId, false),
-      this.subjectAnalysisService.getEnrolledSubjectDashboards(userId, false),
+      this.subjectAnalysisService.getJobSubjectDashboards(userId, false, true),
+      this.subjectAnalysisService.getEnrolledSubjectDashboards(userId, false, true),
     ]);
     const byId = new Map<number, any>();
     for (const s of [...byJobRole, ...byEnrollment]) byId.set(s.id, s);
