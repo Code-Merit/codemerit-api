@@ -322,6 +322,21 @@ export class UserService {
     return userProfileResponse;
   }
 
+  // Self-serve, JWT-scoped — every other User field stays behind the Admin-gated updateUser() below.
+  async updateOwnBasicInfo(
+    userId: number,
+    data: { city?: string; country?: string; designation?: string },
+  ): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'User not Found.');
+    }
+    if (data.city !== undefined) user.city = data.city;
+    if (data.country !== undefined) user.country = data.country;
+    if (data.designation !== undefined) user.designation = data.designation;
+    return this.userRepo.save(user);
+  }
+
   async findAll(): Promise<User[]> {
     return this.userRepo.find();
   }

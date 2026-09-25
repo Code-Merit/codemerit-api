@@ -16,6 +16,7 @@ import { CertificationTrackModule } from './certification-track/certification-tr
 import { ActivityModule } from './activity/activity.module';
 import { SkillEnrollmentModule } from './skill-enrollment/skill-enrollment.module';
 import { PaymentModule } from './payment/payment.module';
+import { UserPreferenceModule } from './user-preference/user-preference.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { PaymentModule } from './payment/payment.module';
     CertificationTrackModule,
     SkillEnrollmentModule,
     PaymentModule,
+    UserPreferenceModule,
   ],
 })
 export class DomainModule {}

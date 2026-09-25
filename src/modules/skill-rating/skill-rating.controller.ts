@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Delete,
+  Request,
   UseGuards,
   ParseIntPipe,
   BadRequestException,
@@ -19,7 +20,10 @@ import {
   ApiResponse as ApiResponseDoc,
 } from '@nestjs/swagger';
 import { CreateAssessmentSessionDto } from './dtos/create-assessment-session.dto';
+import { CreateSelfAssessmentDto } from './dtos/create-self-assessment.dto';
 import { ApiResponse } from 'src/common/utils/api-response';
+import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
+import { SkillTypeEnum } from 'src/common/enum/skill-type.enum';
 
 @ApiTags('Skill Ratings')
 @ApiBearerAuth('access-token') // Same name used in `addBearerAuth`
@@ -48,6 +52,32 @@ export class SkillRatingController {
       `${dto.assessmentTitle} added successfully.`,
       result,
     );
+  }
+
+  @ApiOperation({
+    summary: 'Create a self-assessment for the caller',
+    description:
+      'Self-serve alternative to the generic POST above: userId comes from the JWT and ' +
+      'ratingType/skillType are forced to SELF/SkillMetric server-side, so a caller can only ever ' +
+      'rate themselves against the SkillMetric catalog (GET skill-metrics).',
+  })
+  @Post('self')
+  async createSelfAssessment(
+    @Request() req: any,
+    @Body() dto: CreateSelfAssessmentDto,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.skillRatingService.create({
+      userId: req.user.id,
+      assessmentTitle: dto.assessmentTitle || 'Self Assessment',
+      ratingType: RatingTypeEnum.SELF,
+      skillRatings: dto.skillRatings.map((r) => ({
+        skillId: r.skillId,
+        rating: r.rating,
+        skillType: SkillTypeEnum.SKILL_METRIC,
+        ratingType: RatingTypeEnum.SELF,
+      })),
+    });
+    return new ApiResponse('Self assessment saved successfully.', result);
   }
 
   @ApiOperation({

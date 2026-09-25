@@ -54,6 +54,7 @@ import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
 import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offering.entity';
 import { EnrollmentTierCapConfig } from 'src/common/typeorm/entities/enrollment-tier-cap-config.entity';
 import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
+import { UserPreference } from 'src/common/typeorm/entities/user-preference.entity';
 import { IDatabaseConfig } from 'src/config/database-config';
 @Injectable()
 export class TypeormConfigService implements TypeOrmOptionsFactory {
@@ -124,6 +125,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         QualityMetric,
         QualityReview,
         QualityReviewTag,
+        UserPreference,
       ],
       // entities: [__dirname + '/../**/*.entity.{ts,js}'],
       // entities: ['src/**/*.entity.ts'],

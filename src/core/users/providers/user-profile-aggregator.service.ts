@@ -1,10 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
 import { AssessmentSession } from 'src/common/typeorm/entities/assessment-session.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
+import { UserPreference } from 'src/common/typeorm/entities/user-preference.entity';
+import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { ApiUsageService } from 'src/common/services/api-usage.service';
 import { SubjectAnalysisService } from 'src/modules/master/providers/subject-analysis.service';
 import { UserPermissionService } from 'src/modules/user-permission/providers/user-permission.service';
@@ -39,6 +41,8 @@ export class UserProfileAggregatorService {
     private readonly activityService: ActivityService,
     @InjectRepository(UserStreak)
     private readonly userStreakRepository: Repository<UserStreak>,
+    @InjectRepository(UserPreference)
+    private readonly userPreferenceRepository: Repository<UserPreference>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -148,6 +152,12 @@ export class UserProfileAggregatorService {
    */
   async getPublicProfile(username: string) {
     const user = await this.userService.findByUsername(username);
+
+    // A private profile is indistinguishable from a nonexistent one — same error either way.
+    const preference = await this.userPreferenceRepository.findOne({ where: { userId: user.id } });
+    if (preference?.isProfilePublic === false) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'User not Found.');
+    }
 
     const [courseStats, certificates, badgeData, globalBadges, streak] = await Promise.all([
       this.getCourseStats(user.id),
@@ -307,7 +317,7 @@ export class UserProfileAggregatorService {
       ])
       .where('qr.userId = :userId', { userId })
       .orderBy('qr.createdAt', 'DESC')
-      .limit(10)
+      .limit(20)
       .getRawMany();
 
     const recent = rows.map((r) => ({
@@ -330,35 +340,61 @@ export class UserProfileAggregatorService {
       createdAt: r.createdAt,
     }));
 
-    const totalTaken = recent.length;
-    const avgScore =
-      totalTaken > 0
-        ? +(recent.reduce((s, r) => s + r.score, 0) / totalTaken).toFixed(1)
-        : 0;
-    const totalCorrect = recent.reduce((s, r) => s + (r.correct || 0), 0);
-    const totalWrong = recent.reduce((s, r) => s + (r.wrong || 0), 0);
+    // A real lifetime aggregate, not derived from the capped `recent` list above.
+    const summary = await this.getQuizSummary(userId);
+
+    return { recent, summary };
+  }
+
+  private async getQuizSummary(userId: number): Promise<{ totalTaken: number; avgScore: number; totalCorrect: number; totalWrong: number }> {
+    const row = await this.dataSource
+      .createQueryBuilder(QuizResult, 'qr')
+      .select('COUNT(*)', 'totalTaken')
+      .addSelect('AVG(qr.score)', 'avgScore')
+      .addSelect('SUM(qr.correct)', 'totalCorrect')
+      .addSelect('SUM(qr.wrong)', 'totalWrong')
+      .where('qr.userId = :userId', { userId })
+      .getRawOne();
 
     return {
-      recent,
-      summary: { totalTaken, avgScore, totalCorrect, totalWrong },
+      totalTaken: Number(row?.totalTaken) || 0,
+      avgScore: row?.avgScore != null ? +Number(row.avgScore).toFixed(1) : 0,
+      totalCorrect: Number(row?.totalCorrect) || 0,
+      totalWrong: Number(row?.totalWrong) || 0,
     };
   }
 
   private async getAssessmentSessions(userId: number) {
-    const [selfSessions, interviewSessions] = await Promise.all([
+    const [selfSessions, interviewSessions, selfSummary, interviewSummary] = await Promise.all([
       this.fetchSessionsByType(userId, RatingTypeEnum.SELF),
       this.fetchSessionsByType(userId, RatingTypeEnum.INTERVIEW),
+      this.getAssessmentSummary(userId, RatingTypeEnum.SELF),
+      this.getAssessmentSummary(userId, RatingTypeEnum.INTERVIEW),
     ]);
 
     return {
-      self_assessments: {
-        sessions: selfSessions,
-        summary: this.buildAssessmentSummary(selfSessions),
-      },
-      external_assessments: {
-        sessions: interviewSessions,
-        summary: this.buildAssessmentSummary(interviewSessions),
-      },
+      self_assessments: { sessions: selfSessions, summary: selfSummary },
+      external_assessments: { sessions: interviewSessions, summary: interviewSummary },
+    };
+  }
+
+  // A real lifetime aggregate, not derived from fetchSessionsByType's capped 5-session list.
+  private async getAssessmentSummary(
+    userId: number,
+    ratingType: RatingTypeEnum,
+  ): Promise<{ totalSessions: number; avgRating: number }> {
+    const row = await this.dataSource
+      .createQueryBuilder(AssessmentSession, 's')
+      .leftJoin('s.skillRatings', 'sr')
+      .select('COUNT(DISTINCT s.id)', 'totalSessions')
+      .addSelect('AVG(sr.rating)', 'avgRating')
+      .where('s.userId = :userId', { userId })
+      .andWhere('s.ratingType = :ratingType', { ratingType })
+      .getRawOne();
+
+    return {
+      totalSessions: Number(row?.totalSessions) || 0,
+      avgRating: row?.avgRating != null ? +Number(row.avgRating).toFixed(1) : 0,
     };
   }
 
@@ -389,20 +425,4 @@ export class UserProfileAggregatorService {
     }));
   }
 
-  private buildAssessmentSummary(sessions: Array<{ skillRatings: Array<{ rating: number }> }>) {
-    const totalSessions = sessions.length;
-    if (!totalSessions) return { totalSessions: 0, avgRating: 0 };
-
-    const allRatings = sessions.flatMap((s) =>
-      s.skillRatings.map((r) => r.rating),
-    );
-    const avgRating =
-      allRatings.length > 0
-        ? +(
-            allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length
-          ).toFixed(1)
-        : 0;
-
-    return { totalSessions, avgRating };
-  }
 }

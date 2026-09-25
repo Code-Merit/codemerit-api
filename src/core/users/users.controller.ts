@@ -17,6 +17,7 @@ import { AppCustomException } from 'src/common/exceptions/app-custom-exception.f
 import { QuizService } from 'src/modules/quiz/providers/quiz.service';
 import { CreateUserDto } from '../auth/dto/create-user.dto';
 import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
+import { UpdateBasicInfoDto } from './dtos/update-basic-info.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { LinkedinShareDto } from './dtos/linkedin-share.dto';
@@ -281,6 +282,29 @@ export class UsersController {
       updateProfileDto,
     );
     return new ApiResponse('User profile updated successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: "Update the caller's own basic info (designation, city, country, bio, LinkedIn)",
+    description:
+      "Self-serve, resolved from the JWT — never touches another user's account. Narrower than " +
+      'the Admin-only `PUT /update`: designation/city/country on the User row, about/linkedinUrl ' +
+      'on the Profile row. Partial patch.',
+  })
+  @Put('basic-info')
+  async updateBasicInfo(
+    @Request() req: any,
+    @Body() dto: UpdateBasicInfoDto,
+  ): Promise<ApiResponse<any>> {
+    const { city, country, designation, ...profileFields } = dto;
+    if (city !== undefined || country !== undefined || designation !== undefined) {
+      await this.usersService.updateOwnBasicInfo(req.user.id, { city, country, designation });
+    }
+    if (Object.keys(profileFields).length > 0) {
+      await this.userProfileService.updateProfile(req.user.id, profileFields);
+    }
+    const result = await this.usersService.getOwnUserInfo(req.user.id);
+    return new ApiResponse('Profile updated successfully.', result);
   }
 
   @ApiOperation({

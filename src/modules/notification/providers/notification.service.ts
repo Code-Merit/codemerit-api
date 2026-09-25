@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Notification } from 'src/common/typeorm/entities/notification.entity';
+import { UserPreference } from 'src/common/typeorm/entities/user-preference.entity';
+import { DEFAULT_USER_PREFERENCES } from 'src/common/utils/user-preference-defaults';
 import { CreateNotificationDto } from '../dtos/create-notification.dto';
 import { EmailService } from './email.service';
 import { NOTIFICATION_MESSAGES } from '../constants/notification.constants';
@@ -11,8 +13,19 @@ export class NotificationService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepo: Repository<Notification>,
+    @InjectRepository(UserPreference)
+    private readonly preferenceRepo: Repository<UserPreference>,
     private readonly emailService: EmailService,
   ) {}
+
+  // No row (or an unset column) means "use the default," same as UserPreferenceService.
+  private async isEmailEnabled(
+    userId: number,
+    key: 'emailAchievements' | 'emailEnrollmentConfirmations',
+  ): Promise<boolean> {
+    const row = await this.preferenceRepo.findOne({ where: { userId } });
+    return row?.[key] ?? DEFAULT_USER_PREFERENCES[key];
+  }
 
   private format(
     template: string,
@@ -59,7 +72,9 @@ export class NotificationService {
       createdBy: userId,
     });
     const saved = await this.notificationRepo.save(entity);
-    await this.emailService.sendRoleEnrolledEmail(userId, jobRole);
+    if (await this.isEmailEnabled(userId, 'emailEnrollmentConfirmations')) {
+      await this.emailService.sendRoleEnrolledEmail(userId, jobRole);
+    }
     return saved;
   }
 
@@ -125,11 +140,13 @@ export class NotificationService {
       createdBy: userId,
     });
     const saved = await this.notificationRepo.save(entity);
-    await this.emailService.sendCertificateIssuedEmail(
-      userId,
-      trackTitle,
-      certificateNumber,
-    );
+    if (await this.isEmailEnabled(userId, 'emailAchievements')) {
+      await this.emailService.sendCertificateIssuedEmail(
+        userId,
+        trackTitle,
+        certificateNumber,
+      );
+    }
     return saved;
   }
 
@@ -150,7 +167,9 @@ export class NotificationService {
       createdBy: userId,
     });
     const saved = await this.notificationRepo.save(entity);
-    await this.emailService.sendBadgeEarnedEmail(userId, badgeName);
+    if (await this.isEmailEnabled(userId, 'emailAchievements')) {
+      await this.emailService.sendBadgeEarnedEmail(userId, badgeName);
+    }
     return saved;
   }
 
@@ -170,7 +189,9 @@ export class NotificationService {
       createdBy: userId,
     });
     const saved = await this.notificationRepo.save(entity);
-    await this.emailService.sendStreakMilestoneEmail(userId, days);
+    if (await this.isEmailEnabled(userId, 'emailAchievements')) {
+      await this.emailService.sendStreakMilestoneEmail(userId, days);
+    }
     return saved;
   }
 
@@ -191,7 +212,9 @@ export class NotificationService {
       createdBy: userId,
     });
     const saved = await this.notificationRepo.save(entity);
-    await this.emailService.sendLevelUpEmail(userId, level, levelTitle);
+    if (await this.isEmailEnabled(userId, 'emailAchievements')) {
+      await this.emailService.sendLevelUpEmail(userId, level, levelTitle);
+    }
     return saved;
   }
 

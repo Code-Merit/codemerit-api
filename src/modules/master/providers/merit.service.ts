@@ -112,7 +112,10 @@ export class MeritService {
             )
             .innerJoin('user', 'u', 'u.id = qa.userId')
             .leftJoin('job_role', 'jr', 'jr.id = u.designation')
-            .where('qa.isCorrect = 1'), 't')
+            // Excludes users with showOnLeaderboard = false; no row defaults to visible.
+            .leftJoin('user_preference', 'up', 'up.userId = u.id')
+            .where('qa.isCorrect = 1')
+            .andWhere('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)'), 't')
           .groupBy('t.subjectId')
           .addGroupBy('t.userId')
           .getRawMany()
@@ -133,7 +136,9 @@ export class MeritService {
           )
           .innerJoin('user', 'u', 'u.id = qa.userId')
           .leftJoin('job_role', 'jr', 'jr.id = u.designation')
+          .leftJoin('user_preference', 'up', 'up.userId = u.id')
           .where('qa.isCorrect = 1')
+          .andWhere('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
           .groupBy('q.subjectId')
           .addGroupBy('u.id')
           .getRawMany();
@@ -181,7 +186,9 @@ export class MeritService {
       .innerJoin('question_attempt', 'qa', 'qa.questionId = q.id AND qa.isCorrect = 1')
       .innerJoin('user', 'u', 'u.id = qa.userId')
       .leftJoin('job_role', 'jr', 'jr.id = u.designation')
+      .leftJoin('user_preference', 'up', 'up.userId = u.id')
       .where('stt.subjectTrackId IN (:...subjectTrackIds)', { subjectTrackIds })
+      .andWhere('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
       .groupBy('stt.subjectTrackId')
       .addGroupBy('u.id')
       .getRawMany();
@@ -228,7 +235,9 @@ export class MeritService {
       )
       .innerJoin('user', 'u', 'u.id = qa.userId')
       .leftJoin('job_role', 'jr', 'jr.id = u.designation')
+      .leftJoin('user_preference', 'up', 'up.userId = u.id')
       .where('qa.isCorrect = 1')
+      .andWhere('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
       .groupBy('u.id')
       .getRawMany();
 
@@ -264,7 +273,9 @@ export class MeritService {
       .innerJoin('question_attempt', 'qa', 'qa.questionId = q.id AND qa.isCorrect = 1')
       .innerJoin('user', 'u', 'u.id = qa.userId')
       .leftJoin('job_role', 'jr', 'jr.id = u.designation')
+      .leftJoin('user_preference', 'up', 'up.userId = u.id')
       .where('jrs.jobRoleId IN (:...jobRoleIds)', { jobRoleIds })
+      .andWhere('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
       .groupBy('jrs.jobRoleId')
       .addGroupBy('u.id')
       .getRawMany();
@@ -388,7 +399,9 @@ export class MeritService {
         .addSelect('u.image', 'image')
         .addSelect('u.points', 'points')
         .from('user', 'u')
+        .leftJoin('user_preference', 'up', 'up.userId = u.id')
         .where('u.points > 0')
+        .andWhere('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
         .orderBy('u.points', 'DESC')
         .getRawMany();
     } else {
@@ -402,6 +415,8 @@ export class MeritService {
         .addSelect('SUM(xl.xpAwarded)', 'points')
         .from('user', 'u')
         .innerJoin('user_xp_log', 'xl', 'xl.userId = u.id AND xl.createdAt >= :periodStart', { periodStart })
+        .leftJoin('user_preference', 'up', 'up.userId = u.id')
+        .where('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
         .groupBy('u.id')
         .orderBy('SUM(xl.xpAwarded)', 'DESC')
         .getRawMany();

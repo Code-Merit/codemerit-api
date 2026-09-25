@@ -8,6 +8,7 @@ import { User } from 'src/common/typeorm/entities/user.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
+import { UserPreference } from 'src/common/typeorm/entities/user-preference.entity';
 import { UserOtpService } from './providers/user-otp.service';
 import { UserProfileService } from './providers/user-profile.service';
 import { UserProfileAggregatorService } from './providers/user-profile-aggregator.service';
@@ -38,6 +39,7 @@ import { LinkedinShareService } from './providers/linkedin-share.service';
       QuizResult,
       Certificate,
       UserStreak,
+      UserPreference,
     ]),
     NotificationModule,
     MasterModule,
