@@ -14,7 +14,8 @@ export function registrationWelcomeTemplate(
   return {
     subject: 'Welcome to CodeMerit — verify your account',
     html: renderEmailLayout({
-      preheader: 'Use this code to verify your CodeMerit account and get started.',
+      preheader:
+        'Use this code to verify your CodeMerit account and get started.',
       heading: `Welcome, ${safeName}!`,
       bodyHtml: `
         <p>Thanks for joining CodeMerit. We’re excited to help you learn faster, practice smarter, and build momentum toward your goals.</p>
@@ -22,9 +23,11 @@ export function registrationWelcomeTemplate(
         ${otpBlock(otp)}
         <p>This code will expire soon, so please verify your account as soon as possible. If you didn’t create this account, you can safely ignore this email.</p>
       `,
-      highlightHtml: '<strong>What happens next?</strong><p>Verify your account, explore your dashboard, and start your first learning session.</p>',
+      highlightHtml:
+        '<strong>What happens next?</strong><p>Verify your account, explore your dashboard, and start your first learning session.</p>',
       sectionTitle: 'What you can expect',
-      sectionHtml: '<p>Personalized recommendations, progress tracking, streaks, badges, certificates, and career-focused learning paths.</p>',
+      sectionHtml:
+        '<p>Personalized recommendations, progress tracking, streaks, badges, certificates, and career-focused learning paths.</p>',
       bulletPoints: [
         'Verify your account in one step',
         'Start quizzes and track your growth',
@@ -81,7 +84,8 @@ export function accountVerifiedTemplate(name: string): EmailTemplate {
       bodyHtml: `
         <p>Your CodeMerit account is now verified. You can sign in and start learning, practicing, and building your achievements right away.</p>
       `,
-      highlightHtml: '<strong>Your learning journey is ready.</strong><p>Open your dashboard to continue your streak, explore new lessons, and move toward your next milestone.</p>',
+      highlightHtml:
+        '<strong>Your learning journey is ready.</strong><p>Open your dashboard to continue your streak, explore new lessons, and move toward your next milestone.</p>',
       ctaLabel: 'Go to CodeMerit',
       ctaUrl: '{{FRONTEND_URL}}',
     }),
@@ -142,7 +146,8 @@ export function certificateIssuedTemplate(
         <p>Your certificate reference number is <strong>${safeCertNumber}</strong>.</p>
       `,
       sectionTitle: 'Certificate details',
-      sectionHtml: '<p>Share your achievement with your network and keep the momentum going by taking on your next challenge.</p>',
+      sectionHtml:
+        '<p>Share your achievement with your network and keep the momentum going by taking on your next challenge.</p>',
       ctaLabel: 'View your certificate',
       ctaUrl: '{{FRONTEND_URL}}',
     }),
@@ -164,7 +169,8 @@ export function badgeEarnedTemplate(
         <p>Hi ${safeName}, you’ve just earned the <strong>${safeBadge}</strong> badge.</p>
         <p>This recognition reflects your consistency and progress, and it’s a great sign that your effort is paying off.</p>
       `,
-      highlightHtml: '<strong>Keep the momentum going.</strong><p>Your next lesson or quiz is waiting—keep building on this success.</p>',
+      highlightHtml:
+        '<strong>Keep the momentum going.</strong><p>Your next lesson or quiz is waiting—keep building on this success.</p>',
       ctaLabel: 'View your badges',
       ctaUrl: '{{FRONTEND_URL}}',
     }),
@@ -185,7 +191,8 @@ export function streakMilestoneTemplate(
         <p>Hi ${safeName}, you’ve been active on CodeMerit for ${days} days in a row.</p>
         <p>That consistency is building real momentum, and one small session today can keep it going.</p>
       `,
-      highlightHtml: '<strong>Small daily effort adds up.</strong><p>A short session today can help you build toward your next milestone and keep the streak alive.</p>',
+      highlightHtml:
+        '<strong>Small daily effort adds up.</strong><p>A short session today can help you build toward your next milestone and keep the streak alive.</p>',
       ctaLabel: 'Keep the streak going',
       ctaUrl: '{{FRONTEND_URL}}',
     }),
@@ -482,6 +489,26 @@ export function levelUpTemplate(
         <p>Hi ${safeName}, you've leveled up to <strong>Level ${level}: ${safeTitle}</strong>. Keep earning XP to reach the next level.</p>
       `,
       ctaLabel: 'View your progress',
+      ctaUrl: '{{FRONTEND_URL}}',
+    }),
+  };
+}
+
+export function dailyEngagementTemplate(
+  name: string,
+  attemptCount: number,
+): EmailTemplate {
+  const safeName = escapeHtml(name);
+  return {
+    subject: `You completed ${attemptCount} questions today! 🔥`,
+    html: renderEmailLayout({
+      preheader: `Great job on attempting ${attemptCount} questions in the last 24 hours.`,
+      heading: 'Keep up the momentum!',
+      bodyHtml: `
+        <p>Hi ${safeName}, you've been working hard on CodeMerit today with <strong>${attemptCount} question attempts</strong> in the last 24 hours.</p>
+        <p>Consistent daily practice is the key to mastering your track and acing technical interviews.</p>
+      `,
+      ctaLabel: 'Continue practicing',
       ctaUrl: '{{FRONTEND_URL}}',
     }),
   };

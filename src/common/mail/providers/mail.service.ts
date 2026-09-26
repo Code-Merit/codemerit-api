@@ -23,6 +23,7 @@ import {
   registrationWelcomeTemplate,
   roleEnrolledTemplate,
   streakMilestoneTemplate,
+  dailyEngagementTemplate,
   EmailTemplate,
 } from '../templates/mail-templates';
 
@@ -36,7 +37,9 @@ export class MailService {
   private readonly frontendUrl: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.resend = new Resend(this.configService.get<string>('mail.resendApiKey'));
+    this.resend = new Resend(
+      this.configService.get<string>('mail.resendApiKey'),
+    );
     const fromName = this.configService.get<string>('mail.fromName');
     const fromEmail = this.configService.get<string>('mail.fromEmail');
     this.fromAddress = `${fromName} <${fromEmail}>`;
@@ -51,8 +54,14 @@ export class MailService {
       return;
     }
 
-    const html = template.html.replace(/\{\{FRONTEND_URL\}\}/g, this.frontendUrl);
-    const subject = template.subject.replace(/\{\{FRONTEND_URL\}\}/g, this.frontendUrl);
+    const html = template.html.replace(
+      /\{\{FRONTEND_URL\}\}/g,
+      this.frontendUrl,
+    );
+    const subject = template.subject.replace(
+      /\{\{FRONTEND_URL\}\}/g,
+      this.frontendUrl,
+    );
     try {
       await this.resend.emails.send({
         from: this.fromAddress,
@@ -134,7 +143,10 @@ export class MailService {
     title: string,
     scheduledAt: string,
   ): Promise<void> {
-    await this.dispatch(to, interviewRescheduledTemplate(name, title, scheduledAt));
+    await this.dispatch(
+      to,
+      interviewRescheduledTemplate(name, title, scheduledAt),
+    );
   }
 
   async sendInterviewAssignedEmail(
@@ -143,7 +155,10 @@ export class MailService {
     title: string,
     scheduledAt: string,
   ): Promise<void> {
-    await this.dispatch(to, interviewAssignedTemplate(name, title, scheduledAt));
+    await this.dispatch(
+      to,
+      interviewAssignedTemplate(name, title, scheduledAt),
+    );
   }
 
   async sendInterviewScheduledEmail(
@@ -152,7 +167,10 @@ export class MailService {
     title: string,
     scheduledAt: string,
   ): Promise<void> {
-    await this.dispatch(to, interviewScheduledTemplate(name, title, scheduledAt));
+    await this.dispatch(
+      to,
+      interviewScheduledTemplate(name, title, scheduledAt),
+    );
   }
 
   async sendInterviewCancelledEmail(
@@ -170,7 +188,10 @@ export class MailService {
     title: string,
     reason: string,
   ): Promise<void> {
-    await this.dispatch(to, interviewCancelledSmeNoticeTemplate(name, title, reason));
+    await this.dispatch(
+      to,
+      interviewCancelledSmeNoticeTemplate(name, title, reason),
+    );
   }
 
   async sendInterviewCompletedEmail(
@@ -192,7 +213,13 @@ export class MailService {
   ): Promise<void> {
     await this.dispatch(
       to,
-      interviewRoundScheduledTemplate(name, title, roundNumber, scheduledAt, interviewerName),
+      interviewRoundScheduledTemplate(
+        name,
+        title,
+        roundNumber,
+        scheduledAt,
+        interviewerName,
+      ),
     );
   }
 
@@ -255,5 +282,13 @@ export class MailService {
     levelTitle: string,
   ): Promise<void> {
     await this.dispatch(to, levelUpTemplate(name, level, levelTitle));
+  }
+
+  async sendDailyEngagementEmail(
+    to: string,
+    name: string,
+    attemptCount: number,
+  ): Promise<void> {
+    await this.dispatch(to, dailyEngagementTemplate(name, attemptCount));
   }
 }
