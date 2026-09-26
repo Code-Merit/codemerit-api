@@ -31,7 +31,10 @@ export class EmailService {
     );
   }
 
-  async sendRoleEnrolledEmail(userId: number, jobRoleTitle: string): Promise<void> {
+  async sendRoleEnrolledEmail(
+    userId: number,
+    jobRoleTitle: string,
+  ): Promise<void> {
     try {
       const recipient = await this.getRecipient(userId);
       if (!recipient) return;
@@ -108,6 +111,23 @@ export class EmailService {
       );
     } catch (error) {
       this.handleFailure('level-up', userId, error);
+    }
+  }
+
+  async sendDailyEngagementEmail(
+    userId: number,
+    attemptCount: number,
+  ): Promise<void> {
+    try {
+      const recipient = await this.getRecipient(userId);
+      if (!recipient) return;
+      await this.mailService.sendDailyEngagementEmail(
+        recipient.email,
+        recipient.name,
+        attemptCount,
+      );
+    } catch (error) {
+      this.handleFailure('daily-engagement', userId, error);
     }
   }
 }

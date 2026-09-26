@@ -19,9 +19,13 @@ import { ApiUsageInterceptor } from './common/interceptors/api-usage.interceptor
 import { ApiUsageModule } from './common/services/api-usage.module';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from './modules/tasks/tasks.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
+    TasksModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -38,7 +42,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     ConfigModule.forRoot({
       load: [appConfig, databaseConfig, jwtConfig, mailConfig, paymentConfig],
       isGlobal: true,
-      envFilePath: '.env'
+      envFilePath: '.env',
     }),
     LoggerModule,
     DatabaseModule,
