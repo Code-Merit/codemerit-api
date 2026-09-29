@@ -42,6 +42,18 @@ export class PermissionsService {
         return Boolean(result);
     }
 
+    /** Every resourceId this user holds a scoped grant for, under the given permission +
+     * resourceType (e.g. every Subject id a Question:Review grant covers). A grant with a
+     * NULL resourceId (global-within-type) is a broader case none of today's callers use —
+     * returns an empty array for a user with no scoped grants at all, never null. */
+    async getGrantedResourceIds(userId: number, permission: string, resourceType: UserPermissionTitleEnum): Promise<number[]> {
+        const grants = await this.userPermissionRepo.find({
+            where: { userId, permission: { permission }, resourceType },
+            select: { resourceId: true },
+        });
+        return grants.map((g) => g.resourceId).filter((id): id is number => id !== null);
+    }
+
     /** Distinct users holding any of the given global ("Role:"-style) permissions —
      * e.g. sourcing an SME picker for an assign-round UI. Unscoped (resourceType/
      * resourceId ignored), matching how hasGlobalPermission checks these grants. */

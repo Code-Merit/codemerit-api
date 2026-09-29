@@ -15,7 +15,10 @@ import { CertificationTrackJobRole } from 'src/common/typeorm/entities/certifica
 import { InterviewStatusHistory } from 'src/common/typeorm/entities/interview-status-history.entity';
 import { Interview } from 'src/common/typeorm/entities/interview.entity';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
+import { JobRoleSubjectTrack } from 'src/common/typeorm/entities/job-role-subject-track.entity';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
+import { JobRoleGroup } from 'src/common/typeorm/entities/job-role-group.entity';
+import { JobRoleRelation } from 'src/common/typeorm/entities/job-role-relation.entity';
 import { CertificationTrackSubjectTrack } from 'src/common/typeorm/entities/certification-track-subject-track.entity';
 import { SubjectTrackTopic } from 'src/common/typeorm/entities/subject-track-topic.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
@@ -76,7 +79,10 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         Profile,
         Subject,
         JobRole,
+        JobRoleGroup,
+        JobRoleRelation,
         JobRoleSubject,
+        JobRoleSubjectTrack,
         UserJobRole,
         Topic,
         UserOtp,

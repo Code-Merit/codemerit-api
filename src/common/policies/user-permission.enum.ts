@@ -26,6 +26,11 @@ export enum UserPermissionEnum {
   CertificationTrackDelete = 'CertificationTrack:Delete',
   CertificationTrackGrant = 'CertificationTrack:Grant',
   BadgeGrant = 'Badge:Grant',
+  // Scoped per subject (resourceType: Subject, resourceId: subjectId) via the same
+  // UserPermission grant table as the Resource:Action permissions above — deliberately NOT
+  // "Role:"-prefixed since it's never a global grant. Lets the SME quality-review pool grow
+  // without handing out full LmsManager (which stays global-only, see QuestionReviewAccessGuard).
+  QuestionReview = 'Question:Review',
   Sme = 'SME',
 
   // "Role:" prefix marks broad, unscoped capability grants (job-title-style access),

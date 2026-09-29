@@ -12,6 +12,7 @@ import { User } from 'src/common/typeorm/entities/user.entity';
 import { PermissionsService } from 'src/common/policies/permissions.service';
 import { UserPermissionEnum, UserPermissionTitleEnum } from 'src/common/policies/user-permission.enum';
 import { generate6DigitNumber } from 'src/common/utils/common-functions';
+import { renderCertificateContent } from 'src/common/utils/certificate-content.util';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { NotificationService } from 'src/modules/notification/providers/notification.service';
@@ -40,6 +41,7 @@ export interface VerifyCertificateResult {
   holderName?: string;
   scorePercentage?: number | null;
   verificationCode?: string | null;
+  content?: string | null;
 }
 
 @Injectable()
@@ -90,6 +92,7 @@ export class CertificateService {
       holderName: cert.user ? `${cert.user.firstName} ${cert.user.lastName}`.trim() : undefined,
       scorePercentage: cert.scorePercentage,
       verificationCode: cert.verificationCode,
+      content: cert.content,
     };
   }
 
@@ -105,10 +108,14 @@ export class CertificateService {
     if (!track) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, `CertificationTrack ID ${dto.certificationTrackId} not found.`);
     }
-    const learner = await this.userRepo.findOne({ where: { id: dto.userId }, select: ['id'] });
+    const learner = await this.userRepo.findOne({
+      where: { id: dto.userId },
+      select: ['id', 'firstName', 'lastName'],
+    });
     if (!learner) {
       throw new AppCustomException(HttpStatus.NOT_FOUND, `User with ID ${dto.userId} not found.`);
     }
+    const learnerName = `${learner.firstName ?? ''} ${learner.lastName ?? ''}`.trim();
 
     await this.ensureCanManageCertificate(granter, track.id);
 
@@ -124,6 +131,8 @@ export class CertificateService {
         revokedAt: null,
         revokedBy: null,
         revokeReason: null,
+        // Backfill only — never overwrite a content snapshot an already-issued cert already has.
+        content: existing.content ?? renderCertificateContent(track.content, learnerName, track.title),
       });
       return { certificateNumber: existing.certificateNumber, certificationTrackId: track.id, alreadyIssued: true };
     }
@@ -137,6 +146,7 @@ export class CertificateService {
           certificateNumber: `CM-${track.id}-${generate6DigitNumber()}`,
           verificationCode: `${generate6DigitNumber()}${generate6DigitNumber()}`,
           skillName: track.title,
+          content: renderCertificateContent(track.content, learnerName, track.title),
           source: CertificateSourceEnum.MANUAL,
           awardedBy: granter.id,
           note: dto.note ?? null,
@@ -315,6 +325,7 @@ export class CertificateService {
             scorePercentage: cert.scorePercentage,
             skillName: cert.skillName,
             tierDisplayName: cert.tierDisplayName,
+            content: cert.content,
           }
         : null;
 
@@ -322,6 +333,7 @@ export class CertificateService {
         id: track.id,
         title: track.title,
         description: track.description,
+        content: track.content,
         subjectId: track.subjectId,
         jobRoles: jobRolesByTrack.get(track.id) ?? [],
         totalSubjectTracks: total,

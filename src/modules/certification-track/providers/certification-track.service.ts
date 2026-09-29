@@ -213,6 +213,7 @@ export class CertificationTrackService {
       id: track.id,
       title: track.title,
       description: track.description,
+      content: track.content,
       subjectId: track.subjectId,
       passThreshold: track.passThreshold,
       isPublished: track.isPublished,

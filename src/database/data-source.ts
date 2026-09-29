@@ -12,7 +12,10 @@ import { CertificationTrackSubjectTrack } from 'src/common/typeorm/entities/cert
 import { Interview } from 'src/common/typeorm/entities/interview.entity';
 import { InterviewStatusHistory } from 'src/common/typeorm/entities/interview-status-history.entity';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
+import { JobRoleGroup } from 'src/common/typeorm/entities/job-role-group.entity';
+import { JobRoleRelation } from 'src/common/typeorm/entities/job-role-relation.entity';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
+import { JobRoleSubjectTrack } from 'src/common/typeorm/entities/job-role-subject-track.entity';
 import { Lesson } from 'src/common/typeorm/entities/lesson.entity';
 import { LessonSection } from 'src/common/typeorm/entities/lesson-section.entity';
 import { Notification } from 'src/common/typeorm/entities/notification.entity';
@@ -67,7 +70,10 @@ export const AppDataSource = new DataSource({
     Profile,
     Subject,
     JobRole,
+    JobRoleGroup,
+    JobRoleRelation,
     JobRoleSubject,
+    JobRoleSubjectTrack,
     UserJobRole,
     Topic,
     UserOtp,

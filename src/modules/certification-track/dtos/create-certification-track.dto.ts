@@ -16,6 +16,17 @@ export class CreateCertificationTrackDto {
 
   @ApiPropertyOptional({
     description:
+      'Certificate FACE copy (the sentence printed inside the certificate itself), distinct ' +
+      'from `description`. Supports {{userName}} and {{skillName}} tokens. Omit to fall back ' +
+      'to the platform default template.',
+    example: 'This certificate is awarded to {{userName}} for successfully passing the {{skillName}} skill assessment conducted at CodeMerit.',
+  })
+  @IsString()
+  @IsOptional()
+  content?: string;
+
+  @ApiPropertyOptional({
+    description:
       'Set this to make the track native to a single subject (composed only from that ' +
       "subject's own subject tracks) instead of the job-role-bundle model. Omit for a " +
       'job-role-bundle track, same as today.',

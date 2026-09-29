@@ -20,6 +20,7 @@ import { InterviewQuestionsService } from './providers/interview-questions.servi
 import { SubmitQualityReviewDto } from './dtos/submit-quality-review.dto';
 import { AuthGuard } from '@nestjs/passport';
 import { LmsManagerGuard } from './guards/lms-manager.guard';
+import { QuestionReviewAccessGuard } from './guards/question-review-access.guard';
 import { Public } from 'src/core/auth/decorators/public.decorator';
 import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard';
 
@@ -77,53 +78,68 @@ export class LmsController {
   }
 
   @ApiOperation({
-    summary: 'List questions for SME quality review, any author (LMS Manager only)',
+    summary: 'List questions for SME quality review, any author (LmsManager or Question:Review)',
     description:
       'Deliberately cross-author — unlike GET apis/question, which scopes non-Admin callers ' +
       'to their own createdBy. Quality review only makes sense across every author. ' +
       '`status=unreviewed` (reviewCount=0), `status=flagged` (latest outcome NeedsRevision/' +
-      'Rejected), or `status=all` (default). Ordered least-reviewed first.',
+      'Rejected), or `status=all` (default). Ordered least-reviewed first. A caller holding ' +
+      'only the subject-scoped Question:Review permission (not global LmsManager) is ' +
+      'restricted to their granted subjects — omitting subjectSlug scopes the queue to all of ' +
+      'them, and passing a subjectSlug outside their grant is a 403. Keyset-paginated: the ' +
+      'response carries `hasMore`/`nextCursor` alongside `rows` — pass `nextCursor` back as ' +
+      '`cursor` to fetch the next page. Chosen over OFFSET specifically because this queue is ' +
+      'worked by many SMEs concurrently and its pool shrinks under everyone\'s own usage, ' +
+      'which OFFSET pagination handles by routinely skipping rows. `cursor` is opaque — never ' +
+      'construct one client-side, only echo back what a previous response returned.',
   })
   @ApiQuery({ name: 'subjectSlug', required: false, type: String })
   @ApiQuery({ name: 'status', required: false, enum: ['unreviewed', 'flagged', 'all'] })
   @ApiQuery({ name: 'questionType', required: false, enum: QuestionTypeEnum })
   @ApiQuery({ name: 'limit', required: false, type: String, description: 'Default 20, capped at 100.' })
-  @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
+  @ApiQuery({ name: 'cursor', required: false, type: String, description: 'Opaque — from a previous response\'s nextCursor. Omit for the first page.' })
+  @ApiResponseDoc({ status: 403, description: 'Caller holds neither permission, or the subject is outside their Question:Review grant.' })
   @ApiResponseDoc({ status: 404, description: 'No subject found for the given slug.' })
-  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
+  @UseGuards(AuthGuard('jwt'), QuestionReviewAccessGuard)
   @Get('questions')
   async getReviewQueue(
+    @Request() req: any,
     @Query('subjectSlug') subjectSlug?: string,
     @Query('status') status?: 'unreviewed' | 'flagged' | 'all',
     @Query('questionType') questionType?: QuestionTypeEnum,
     @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
   ): Promise<ApiResponse<any>> {
     const result = await this.questionQualityService.getReviewQueue({
       subjectSlug,
       status,
+      cursor,
       questionType,
       limit: limit ? Number(limit) : undefined,
+      access: req.reviewAccess,
     });
     return new ApiResponse('Review queue fetched successfully.', result);
   }
 
   @ApiOperation({
-    summary: 'Get one question for SME quality review, any author (LMS Manager only)',
+    summary: 'Get one question for SME quality review, any author (LmsManager or Question:Review)',
     description:
       'Full question detail (options, hint, answer, topics) for the review dialog — ' +
       'deliberately not author-scoped, same reasoning as the queue above. Also embeds ' +
       'reviewHistory (this question\'s full past review audit trail, newest first) so the ' +
       'review dialog only needs one request instead of a separate call to ' +
-      'questions/:id/quality-reviews.',
+      'questions/:id/quality-reviews. 403 if a subject-scoped caller opens a question outside ' +
+      'their granted subjects.',
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
-  @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
+  @ApiResponseDoc({ status: 403, description: 'Caller holds neither permission, or the question\'s subject is outside their Question:Review grant.' })
+  @UseGuards(AuthGuard('jwt'), QuestionReviewAccessGuard)
   @Get('questions/:id/review-detail')
   async getQuestionReviewDetail(
     @Param('id', ParseIntPipe) id: number,
+    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.questionQualityService.getQuestionReviewDetail(id);
+    const result = await this.questionQualityService.getQuestionReviewDetail(id, req.reviewAccess);
     if (!result) {
       return new ApiResponse('Question not found.', null);
     }
@@ -131,15 +147,15 @@ export class LmsController {
   }
 
   @ApiOperation({
-    summary: 'List the SME content-quality issue-tag catalog (LMS Manager only)',
+    summary: 'List the SME content-quality issue-tag catalog (LmsManager or Question:Review)',
     description:
       'Named, reusable quality issues an SME can attach to a question review (e.g. "Wrong ' +
       'question or answer"). Admin/seed-managed — no create/edit endpoint yet. Optionally ' +
       'filtered to tags that apply to a given question type (Trivia/General); tags with a ' +
       'null questionTypeScope apply to both.',
   })
-  @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
+  @ApiResponseDoc({ status: 403, description: 'Caller does not hold either the LmsManager or Question:Review permission.' })
+  @UseGuards(AuthGuard('jwt'), QuestionReviewAccessGuard)
   @Get('quality-metrics')
   async getQualityMetrics(
     @Query('questionType') questionType?: QuestionTypeEnum,
@@ -149,22 +165,27 @@ export class LmsController {
   }
 
   @ApiOperation({
-    summary: "Submit the caller's SME quality review for a question (LMS Manager only)",
+    summary: "Submit the caller's SME quality review for a question (LmsManager or Question:Review)",
     description:
       'Upserts by (resourceType, resourceId, reviewerId) — if this reviewer has already ' +
       'reviewed this question, their existing row is updated in place rather than a new one ' +
       'being inserted; grade/outcome/tags always reflect the latest submission, while ' +
       '`comment` accumulates as a dated, append-only changelog of what changed on each ' +
-      'submission (never overwritten). Computes an advisory grade-cap from the worst ' +
-      'attached issue tag\'s severity (never enforced, returned once in the response, not ' +
-      'stored), and rolls the result up onto the question (lastReviewedAt/latestGrade/' +
-      'lastReviewOutcome unconditionally, reviewCount only on a genuine first-time pass by ' +
-      'this reviewer), including nudging its moderation status ' +
-      '(Approve: Pending -> Active; Reject: Active -> Pending).',
+      'submission (never overwritten). Every review resolves to a grade: Approve requires ' +
+      'one explicitly (400 if missing); Reject/NeedsRevision accept an explicit grade or, if ' +
+      'omitted, derive one from the worst-severity issue tag selected (400 if neither a grade ' +
+      'nor a severity tag is given). Rolls the result up onto the question ' +
+      '(lastReviewedAt/latestGrade/lastReviewOutcome/averageGrade, reviewCount only on a ' +
+      'genuine first-time pass by this reviewer) and recomputes averageGrade = AVG(grade) ' +
+      'across every review the question has received, nudging status Pending->Active at ' +
+      'averageGrade >= 5 and Active->Pending below 5 — consensus-driven, so no single ' +
+      'reviewer can permanently decide the outcome. 403 if a subject-scoped caller targets a ' +
+      'question outside their granted subjects.',
   })
   @ApiParam({ name: 'id', description: 'Question id', type: Number })
-  @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
-  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
+  @ApiResponseDoc({ status: 400, description: 'Grade missing on Approve, or missing and underivable (no severity tag) on Reject/NeedsRevision.' })
+  @ApiResponseDoc({ status: 403, description: 'Caller holds neither permission, or the question\'s subject is outside their Question:Review grant.' })
+  @UseGuards(AuthGuard('jwt'), QuestionReviewAccessGuard)
   @Post('questions/:id/quality-reviews')
   async submitQuestionQualityReview(
     @Param('id', ParseIntPipe) id: number,
@@ -176,24 +197,26 @@ export class LmsController {
       id,
       req.user?.id,
       body,
+      req.reviewAccess,
     );
     return new ApiResponse('Quality review submitted successfully.', result);
   }
 
   @ApiOperation({
-    summary: 'Get review stats for a subject/questionType combo (LMS Manager only)',
+    summary: 'Get review stats for a subject/questionType combo (LmsManager or Question:Review)',
     description:
       'Rollup over the same Pending-or-Active universe as the review queue\'s "All" tab: ' +
-      'total, reviewed, unreviewed, outcome breakdown (approved/needsRevision/rejected), and ' +
-      'how many the calling SME has personally reviewed. Omitting subjectSlug aggregates ' +
-      'across every subject. Powers the Quality Review Queue header\'s stat rail, refetched ' +
-      'whenever the subject or questionType filter changes.',
+      'total, reviewed, unreviewed, outcome breakdown (approved/needsRevision/rejected), ' +
+      'average rating across the set, and how many the calling SME has personally reviewed. ' +
+      'Omitting subjectSlug aggregates across every subject the caller is permitted to see. ' +
+      'Powers the Quality Review Queue header\'s stat rail, refetched whenever the subject or ' +
+      'questionType filter changes.',
   })
   @ApiQuery({ name: 'subjectSlug', required: false })
   @ApiQuery({ name: 'questionType', required: false, enum: QuestionTypeEnum })
-  @ApiResponseDoc({ status: 403, description: 'Caller does not hold the LmsManager permission.' })
+  @ApiResponseDoc({ status: 403, description: 'Caller holds neither permission, or the subject is outside their Question:Review grant.' })
   @ApiResponseDoc({ status: 404, description: 'No subject found for the given slug.' })
-  @UseGuards(AuthGuard('jwt'), LmsManagerGuard)
+  @UseGuards(AuthGuard('jwt'), QuestionReviewAccessGuard)
   @Get('quality-reviews/subject-stats')
   async getSubjectQualityReviewStats(
     @Request() req: any,
@@ -204,8 +227,40 @@ export class LmsController {
       subjectSlug,
       questionType,
       reviewerId: req.user?.id,
+      access: req.reviewAccess,
     });
     return new ApiResponse('Subject review stats fetched successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: 'List subjects the caller is permitted to quality-review (LmsManager or Question:Review)',
+    description:
+      'LmsManager holders get every subject, matching the cross-author reach the queue above ' +
+      'already gives them. A Question:Review-only caller gets just the subjects their scoped ' +
+      'grants cover. Powers the Quality Review Queue\'s gated subject dropdown.',
+  })
+  @ApiResponseDoc({ status: 403, description: 'Caller does not hold either the LmsManager or Question:Review permission.' })
+  @UseGuards(AuthGuard('jwt'), QuestionReviewAccessGuard)
+  @Get('quality-review/permitted-subjects')
+  async getPermittedReviewSubjects(@Request() req: any): Promise<ApiResponse<any>> {
+    const result = await this.questionQualityService.getPermittedSubjects(req.reviewAccess);
+    return new ApiResponse('Permitted subjects fetched successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: "Get the caller's own quality-review activity (LmsManager or Question:Review)",
+    description:
+      'Personal reviewing stats — total reviewed, outcome breakdown, approval rate, average ' +
+      'grade given, reviews this week — plus how many questions are still waiting across the ' +
+      'subjects this caller is permitted to review. Powers the "Your Question Reviews" ' +
+      'dashboard widget and its Start Review CTA.',
+  })
+  @ApiResponseDoc({ status: 403, description: 'Caller does not hold either the LmsManager or Question:Review permission.' })
+  @UseGuards(AuthGuard('jwt'), QuestionReviewAccessGuard)
+  @Get('quality-review/my-stats')
+  async getMyReviewStats(@Request() req: any): Promise<ApiResponse<any>> {
+    const result = await this.questionQualityService.getMyReviewStats(req.user?.id, req.reviewAccess);
+    return new ApiResponse('Review stats fetched successfully.', result);
   }
 
   @ApiOperation({

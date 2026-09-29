@@ -118,6 +118,9 @@ export interface SubjectPageCertificationTrack {
   id: number;
   title: string;
   description: string;
+  // Certificate face template ({{userName}}/{{skillName}} tokens) — the preview text for a
+  // not-yet-earned track. The resolved, final copy lives on myCertificate.content once earned.
+  content?: string | null;
   sortOrder: number;
   totalSubjectTracks: number;
   completedSubjectTracks: number;
@@ -131,7 +134,7 @@ export interface SubjectPageCertificationTrack {
   // comment in getCertificationTracksForSubject for why the frontend template depends on that.
   roleTitles?: string[];
   // Only ever set (even to null) for authenticated requests — see getCertificationTracksForSubject.
-  myCertificate?: { certificateNumber: string; status: string; issuedAt: Date; pdfUrl: string } | null;
+  myCertificate?: { certificateNumber: string; status: string; issuedAt: Date; pdfUrl: string; content?: string | null } | null;
   isAchieved: boolean;
 }
 

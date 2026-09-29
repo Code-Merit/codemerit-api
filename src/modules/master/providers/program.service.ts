@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CERT_ACHIEVED } from 'src/common/constants/completion-thresholds';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
 import { CertificateStatusEnum } from 'src/common/enum/certificate-status.enum';
+import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
 import { InterviewStatusEnum } from 'src/common/enum/interview-status.enum';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
@@ -390,11 +391,13 @@ export class ProgramService {
       .createQueryBuilder('jobRole')
       .leftJoinAndSelect('jobRole.jobRoleSubjects', 'jrs')
       .leftJoinAndSelect('jrs.subject', 'subject')
+      .leftJoinAndSelect('jobRole.group', 'jobRoleGroup')
       .select([
         'jobRole.id', 'jobRole.title', 'jobRole.slug', 'jobRole.description',
         'jobRole.image', 'jobRole.isPublished', 'jobRole.color',
-        'jrs.id', 'jrs.tag', 'subject.id', 'subject.title', 'subject.slug',
+        'jrs.id', 'jrs.tag', 'jrs.requiredLevel', 'subject.id', 'subject.title', 'subject.slug',
         'subject.image', 'subject.isPublished',
+        'jobRoleGroup.id', 'jobRoleGroup.name', 'jobRoleGroup.slug',
       ])
       .where('jobRole.isPublished = :isPublished', { isPublished: 1 })
       .orderBy('jobRole.orderId', 'ASC');
@@ -406,7 +409,10 @@ export class ProgramService {
       qb.addSelect('FALSE', 'isSubscribed');
     }
 
-    const [certCounts, stCounts, triviaCounts, badgeCounts, { raw: rawRows, entities }] = await Promise.all([
+    const [
+      certCounts, stCounts, includedTrackCounts, questionCounts, topicTrackCounts,
+      lessonCounts, enrollmentCounts, badgeCounts, xpPossibleCounts, { raw: rawRows, entities },
+    ] = await Promise.all([
       this.dataSource
         .createQueryBuilder()
         .select('ctjr.jobRoleId', 'jobRoleId')
@@ -422,8 +428,13 @@ export class ProgramService {
         .groupBy('st.subjectId')
         .getRawMany()
         .then((rows) => new Map(rows.map((r) => [+r.subjectId, +r.count]))),
-      this.fetchTriviaCountsByJobRole(),
+      this.fetchIncludedTrackCountsByJobRoleSubject(),
+      this.fetchQuestionCountsByJobRole(),
+      this.fetchTopicAndTrackCountsByJobRole(),
+      this.fetchLessonCountsByJobRole(),
+      this.fetchEnrollmentCountsByJobRole(),
       this.fetchBadgeCountsByJobRole(),
+      this.fetchXpPossibleByJobRole(),
       qb.getRawAndEntities(),
     ]);
 
@@ -441,12 +452,33 @@ export class ProgramService {
       color: jr.color,
       isPublished: jr.isPublished,
       isSubscribed: Boolean(Number(rawById.get(jr.id)?.isSubscribed)),
+      group: jr.group ? { id: jr.group.id, name: jr.group.name, slug: jr.group.slug } : null,
       certificationTrackCount: certCounts.get(jr.id) ?? 0,
-      // Card-level stats — see fetchTriviaCountsByJobRole/fetchBadgeCountsByJobRole. Interview
-      // question counts are deliberately not surfaced here (product call: not shown on the
-      // job-role catalog card).
-      numTrivia: triviaCounts.get(jr.id) ?? 0,
+      // Card-level stats. Trivia/General/Topics/Tracks/Lessons are scoped to exactly the
+      // SubjectTrack rows this role declares via job_role_subject_track (see
+      // fetchQuestionCountsByJobRole/fetchTopicAndTrackCountsByJobRole/fetchLessonCountsByJobRole)
+      // — NOT the whole subject — so two roles sharing a subject at different depths (e.g.
+      // Frontend Engineer Trainee's Intermediate JS vs Frontend Engineer's Advanced JS) show
+      // genuinely different numbers instead of an identical subject-wide total. A role with no
+      // JobRoleSubjectTrack rows for a subject yet (e.g. the unpublished React placeholder)
+      // correctly shows 0 rather than a misleading whole-subject count.
+      numTopics: topicTrackCounts.get(jr.id)?.topicCount ?? 0,
+      numSubjectTracks: topicTrackCounts.get(jr.id)?.trackCount ?? 0,
+      numTrivia: questionCounts.get(jr.id)?.numTrivia ?? 0,
+      numGeneral: questionCounts.get(jr.id)?.numGeneral ?? 0,
+      numLessons: lessonCounts.get(jr.id) ?? 0,
       numBadges: badgeCounts.get(jr.id) ?? 0,
+      // Sum of Question.marks across every Active question in scope (Trivia + General) — "how
+      // much XP a learner could earn by correctly answering everything available today." Not
+      // real awarded XP (see AchievementService.awardXpAndLevel — XP is per-submission, dedup'd
+      // per question, plus completion/perfect-score bonuses with no natural "total" definition);
+      // this is a simpler, well-defined proxy the product asked for: marks, not XP history.
+      xpPossible: xpPossibleCounts.get(jr.id) ?? 0,
+      // Distinct users with any/an Active SkillEnrollment in one of this role's subjects — the
+      // real enrollment signal in this app (never isSubscribed/UserJobRole, see
+      // SkillEnrollmentService). currentEnrollments <= totalEnrollments always.
+      currentEnrollments: enrollmentCounts.get(jr.id)?.current ?? 0,
+      totalEnrollments: enrollmentCounts.get(jr.id)?.total ?? 0,
       // Unpublished subjects (admin drafts, retired tech) never reach the catalog card.
       subjects: jr.jobRoleSubjects
         .filter((jrs) => jrs.subject?.isPublished)
@@ -456,28 +488,130 @@ export class ProgramService {
           slug: jrs.subject.slug,
           image: jrs.subject.image,
           tag: jrs.tag,
+          requiredLevel: jrs.requiredLevel,
+          // Total tracks the SUBJECT has vs. how many of them THIS role actually declares —
+          // e.g. Angular Developer 2/5, Angular Architect 5/5 — the per-subject transparency
+          // signal backing the job-role-level numSubjectTracks/numTopics rollups above.
           subjectTrackCount: stCounts.get(jrs.subject.id) ?? 0,
+          includedTrackCount: includedTrackCounts.get(jrs.id) ?? 0,
         })),
     }));
   }
 
-  /** Total published Trivia questions across every subject mapped to each job role (every tag,
-   * not just MANDATORY) — backs the "N Trivia" stat on the job-role catalog card. One grouped
-   * query via job_role_subject, not one per role — same shape as fetchTimeInvestedByJobRole. */
-  private async fetchTriviaCountsByJobRole(): Promise<Map<number, number>> {
+  /** How many SubjectTracks each JobRoleSubject pairing actually declares (via
+   * job_role_subject_track) — the per-subject-chip counterpart to fetchTopicAndTrackCountsByJobRole's
+   * job-role-level rollup. Keyed by job_role_subject.id, not jobRoleId. */
+  private async fetchIncludedTrackCountsByJobRoleSubject(): Promise<Map<number, number>> {
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('jrst.jobRoleSubjectId', 'jrsId')
+      .addSelect('COUNT(DISTINCT jrst.subjectTrackId)', 'count')
+      .from('job_role_subject_track', 'jrst')
+      .groupBy('jrst.jobRoleSubjectId')
+      .getRawMany();
+    return new Map(rows.map((r) => [+r.jrsId, +r.count]));
+  }
+
+  /** Distinct SubjectTracks/Topics reachable from a job role's declared scope
+   * (job_role_subject -> job_role_subject_track -> subject_track_topic) — backs the "N Topics"
+   * / "N Subject Tracks" stats on the job-role catalog card. */
+  private async fetchTopicAndTrackCountsByJobRole(): Promise<Map<number, { topicCount: number; trackCount: number }>> {
     const rows = await this.dataSource
       .createQueryBuilder()
       .select('jrs.jobRoleId', 'jobRoleId')
-      .addSelect('COUNT(q.id)', 'count')
+      .addSelect('COUNT(DISTINCT jrst.subjectTrackId)', 'trackCount')
+      .addSelect('COUNT(DISTINCT stt.topicId)', 'topicCount')
       .from('job_role_subject', 'jrs')
-      .innerJoin(
-        'question', 'q',
-        'q.subjectId = jrs.subjectId AND q.status = :active AND q.questionType = :trivia',
-        { active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
-      )
+      .innerJoin('job_role_subject_track', 'jrst', 'jrst.jobRoleSubjectId = jrs.id')
+      .innerJoin('subject_track_topic', 'stt', 'stt.subjectTrackId = jrst.subjectTrackId')
+      .groupBy('jrs.jobRoleId')
+      .getRawMany();
+    return new Map(rows.map((r) => [+r.jobRoleId, { topicCount: +r.topicCount, trackCount: +r.trackCount }]));
+  }
+
+  /** Active Trivia and General question counts, scoped to exactly the topics reachable from a
+   * job role's declared SubjectTrack scope (see fetchTopicAndTrackCountsByJobRole) — replaces
+   * the old whole-subject count so roles sharing a subject at different depths show genuinely
+   * different numbers. Backs the "N Trivia" / "N General" stats on the job-role catalog card. */
+  private async fetchQuestionCountsByJobRole(): Promise<Map<number, { numTrivia: number; numGeneral: number }>> {
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('jrs.jobRoleId', 'jobRoleId')
+      .addSelect(`COUNT(DISTINCT CASE WHEN q.questionType = :trivia THEN q.id END)`, 'numTrivia')
+      .addSelect(`COUNT(DISTINCT CASE WHEN q.questionType = :general THEN q.id END)`, 'numGeneral')
+      .from('job_role_subject', 'jrs')
+      .innerJoin('job_role_subject_track', 'jrst', 'jrst.jobRoleSubjectId = jrs.id')
+      .innerJoin('subject_track_topic', 'stt', 'stt.subjectTrackId = jrst.subjectTrackId')
+      .innerJoin('question_topic', 'qt', 'qt.topicId = stt.topicId')
+      .innerJoin('question', 'q', 'q.id = qt.questionId AND q.status = :active')
+      .setParameters({
+        trivia: QuestionTypeEnum.Trivia,
+        general: QuestionTypeEnum.General,
+        active: QuestionStatusEnum.Active,
+      })
+      .groupBy('jrs.jobRoleId')
+      .getRawMany();
+    return new Map(rows.map((r) => [+r.jobRoleId, { numTrivia: +r.numTrivia, numGeneral: +r.numGeneral }]));
+  }
+
+  /** Sum of Question.marks across every distinct Active question (Trivia + General) reachable
+   * from a job role's declared SubjectTrack scope — "how much XP could be earned by correctly
+   * answering everything available." A subquery with DISTINCT(jobRoleId, questionId) avoids
+   * double-counting a question reachable via more than one topic in scope, the same
+   * over-count risk fetchQuestionCountsByJobRole avoids with COUNT(DISTINCT ...). */
+  private async fetchXpPossibleByJobRole(): Promise<Map<number, number>> {
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('x.jobRoleId', 'jobRoleId')
+      .addSelect('SUM(x.marks)', 'xpPossible')
+      .from((qb) => qb
+        .select('jrs.jobRoleId', 'jobRoleId')
+        .addSelect('q.id', 'questionId')
+        .addSelect('q.marks', 'marks')
+        .distinct(true)
+        .from('job_role_subject', 'jrs')
+        .innerJoin('job_role_subject_track', 'jrst', 'jrst.jobRoleSubjectId = jrs.id')
+        .innerJoin('subject_track_topic', 'stt', 'stt.subjectTrackId = jrst.subjectTrackId')
+        .innerJoin('question_topic', 'qt', 'qt.topicId = stt.topicId')
+        .innerJoin('question', 'q', 'q.id = qt.questionId AND q.status = :active'), 'x')
+      .setParameter('active', QuestionStatusEnum.Active)
+      .groupBy('x.jobRoleId')
+      .getRawMany();
+    return new Map(rows.map((r) => [+r.jobRoleId, +r.xpPossible]));
+  }
+
+  /** Lessons reachable from a job role's declared SubjectTrack scope (Lesson.topicId falling
+   * inside one of those tracks) — backs the "N Lessons" stat on the job-role catalog card. */
+  private async fetchLessonCountsByJobRole(): Promise<Map<number, number>> {
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('jrs.jobRoleId', 'jobRoleId')
+      .addSelect('COUNT(DISTINCT l.id)', 'count')
+      .from('job_role_subject', 'jrs')
+      .innerJoin('job_role_subject_track', 'jrst', 'jrst.jobRoleSubjectId = jrs.id')
+      .innerJoin('subject_track_topic', 'stt', 'stt.subjectTrackId = jrst.subjectTrackId')
+      .innerJoin('lesson', 'l', 'l.topicId = stt.topicId')
       .groupBy('jrs.jobRoleId')
       .getRawMany();
     return new Map(rows.map((r) => [+r.jobRoleId, +r.count]));
+  }
+
+  /** Distinct users enrolled (SkillEnrollment) in any of a job role's subjects — current
+   * (status=Active right now) vs total (any status, ever) — backs the "Enrollments" stat on
+   * the job-role catalog card. Subject-scoped, not track-scoped: enrollment is a subject-level
+   * concept in this app (see SkillEnrollment entity), unlike the content stats above. */
+  private async fetchEnrollmentCountsByJobRole(): Promise<Map<number, { current: number; total: number }>> {
+    const rows = await this.dataSource
+      .createQueryBuilder()
+      .select('jrs.jobRoleId', 'jobRoleId')
+      .addSelect('COUNT(DISTINCT se.userId)', 'total')
+      .addSelect(`COUNT(DISTINCT CASE WHEN se.status = :active THEN se.userId END)`, 'current')
+      .from('job_role_subject', 'jrs')
+      .innerJoin('skill_enrollment', 'se', 'se.subjectId = jrs.subjectId')
+      .setParameters({ active: EnrollmentStatusEnum.Active })
+      .groupBy('jrs.jobRoleId')
+      .getRawMany();
+    return new Map(rows.map((r) => [+r.jobRoleId, { current: +r.current, total: +r.total }]));
   }
 
   /** Published badges earnable toward each job role: badges scoped directly to the JobRole

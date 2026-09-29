@@ -14,6 +14,11 @@ export class UpdateCertificationTrackDto {
   @IsOptional()
   description?: string;
 
+  @ApiPropertyOptional({ example: 'This certificate is awarded to {{userName}} for successfully passing the {{skillName}} skill assessment conducted at CodeMerit.' })
+  @IsString()
+  @IsOptional()
+  content?: string;
+
   @ApiPropertyOptional({ example: 12 })
   @IsInt()
   @IsOptional()

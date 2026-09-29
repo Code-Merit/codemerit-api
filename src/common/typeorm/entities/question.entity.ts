@@ -104,6 +104,13 @@ export class Question extends AbstractEntity implements IQuestion {
   @Column({ type: 'int', nullable: true, default: null })
   latestGrade: number | null;
 
+  // AVG(grade) across every QualityReview submitted for this question (grade IS NOT NULL
+  // rows only), recomputed on each submitReview. Drives the Pending<->Active status nudge —
+  // unlike latestGrade (one reviewer's own number), this is the consensus signal so a single
+  // reviewer can't permanently swing status. Nullable: null until at least one graded review exists.
+  @Column({ type: 'decimal', precision: 3, scale: 1, nullable: true, default: null })
+  averageGrade: number | null;
+
   @Column({
     type: 'enum',
     enum: QualityReviewOutcomeEnum,

@@ -27,6 +27,7 @@ import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { UserXpLog } from 'src/common/typeorm/entities/user-xp-log.entity';
 import { generate6DigitNumber } from 'src/common/utils/common-functions';
+import { renderCertificateContent } from 'src/common/utils/certificate-content.util';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { NotificationService } from 'src/modules/notification/providers/notification.service';
@@ -547,6 +548,15 @@ export class AchievementService {
     const thresholdMap = new Map<number, number>(
       tracks.map((t) => [t.id, t.passThreshold ?? CERT_ACHIEVED]),
     );
+    const trackMap = new Map<number, CertificationTrack>(tracks.map((t) => [t.id, t]));
+
+    // Fetched once for the whole batch rather than per-track inside issueCertificate — a single
+    // quiz submission can earn several certificates at once.
+    const learner = await this.userRepo.findOne({
+      where: { id: userId },
+      select: ['id', 'firstName', 'lastName'],
+    });
+    const learnerName = learner ? `${learner.firstName ?? ''} ${learner.lastName ?? ''}`.trim() : '';
 
     for (const [certTrackId, subjectTrackIdSet] of subjectTrackIdsByCert) {
       const subjectTrackIds = [...subjectTrackIdSet];
@@ -557,7 +567,13 @@ export class AchievementService {
       const threshold = thresholdMap.get(certTrackId) ?? CERT_ACHIEVED;
       if (progressPercent < threshold) continue;
 
-      const issued = await this.issueCertificate(userId, certTrackId, progressPercent);
+      const issued = await this.issueCertificate(
+        userId,
+        certTrackId,
+        progressPercent,
+        trackMap.get(certTrackId),
+        learnerName,
+      );
       if (issued) certificatesEarned.push(issued);
     }
 
@@ -575,9 +591,10 @@ export class AchievementService {
     userId: number,
     certificationTrackId: number,
     scorePercentage: number,
+    track: CertificationTrack | undefined,
+    learnerName: string,
   ): Promise<{ certificationTrackId: number; certificateNumber: string } | null> {
     try {
-      const track = await this.certificationTrackRepo.findOne({ where: { id: certificationTrackId } });
       const cert = await this.certificateRepo.save(
         this.certificateRepo.create({
           userId,
@@ -587,6 +604,7 @@ export class AchievementService {
           scorePercentage: +scorePercentage.toFixed(2),
           skillName: track?.title ?? null,
           tierDisplayName: this.tierForScore(scorePercentage),
+          content: renderCertificateContent(track?.content, learnerName, track?.title ?? 'Certification'),
         }),
       );
 

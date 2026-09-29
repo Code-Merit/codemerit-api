@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { DataSource, In } from 'typeorm';
+import { Brackets, DataSource, In } from 'typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { Question } from 'src/common/typeorm/entities/question.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
@@ -82,25 +82,50 @@ export class QuestionQualityService {
   // `comment` is the audit trail: every submit appends a dated, human-readable summary of what
   // changed (or a snapshot, on the very first submission) — see buildChangelogEntry — and
   // never erases what was there before. `grade`/`outcome`/tags always reflect only the latest
-  // submission. Computes the advisory grade-cap/mismatch transiently (never persisted) and,
-  // for Question reviews, rolls the result up onto Question (lastReviewedAt/latestGrade/
+  // submission. Every review ends up with a grade: Approve requires one explicitly, while
+  // Reject/NeedsRevision can instead derive one from the worst-severity issue tag selected
+  // (reusing the same GRADE_CAP_BY_SEVERITY map the advisory mismatch check already used) —
+  // 400 if neither is given, since a review with no number at all can't be averaged. For
+  // Question reviews, rolls the result up onto Question (lastReviewedAt/latestGrade/
   // lastReviewOutcome unconditionally, reviewCount only on a genuine first-time pass by this
-  // reviewer) plus the Approve/Reject moderation-status nudge, in one transaction.
+  // reviewer) and recomputes averageGrade = AVG(grade) across every review this question has
+  // ever received, nudging status Pending->Active at averageGrade >= 5 and Active->Pending
+  // below 5 (Inactive is never touched). Unlike the old per-outcome CASE, this is consensus-
+  // driven and self-corrects as more reviewers weigh in — no single review can permanently
+  // decide a question's fate.
   async submitReview(
     resourceType: QualityResourceTypeEnum,
     resourceId: number,
     reviewerId: number,
     input: SubmitQualityReviewInput,
+    access?: { isGlobal: boolean; subjectIds: number[] },
   ): Promise<{
     review: QualityReview;
     suggestedGradeCap: number | null;
     mismatch: boolean;
     reviewCount: number | undefined;
+    averageGrade: number | null | undefined;
+    status: QuestionStatusEnum | undefined;
   }> {
     return this.dataSource.transaction(async (manager) => {
       const reviewRepo = manager.getRepository(QualityReview);
       const tagRepo = manager.getRepository(QualityReviewTag);
       const metricRepo = manager.getRepository(QualityMetric);
+
+      // Enforced before any write — a scoped reviewer submitting for a question outside
+      // their granted subjects is the one place a missing check would be a real
+      // authorization hole, not just an information leak.
+      if (access && !access.isGlobal && resourceType === QualityResourceTypeEnum.Question) {
+        const target = await manager
+          .getRepository(Question)
+          .findOne({ where: { id: resourceId }, select: ['id', 'subjectId'] });
+        if (!target || !access.subjectIds.includes(target.subjectId)) {
+          throw new AppCustomException(
+            HttpStatus.FORBIDDEN,
+            'You are not permitted to review this subject.',
+          );
+        }
+      }
 
       const existing = await reviewRepo.findOne({
         where: { resourceType, resourceId, reviewerId },
@@ -110,11 +135,43 @@ export class QuestionQualityService {
       const tagIds = input.tagIds ?? [];
       const newMetrics = tagIds.length ? await metricRepo.findBy({ id: In(tagIds) }) : [];
 
+      // Computed up front (not after save, as before) because Reject/NeedsRevision may need
+      // it to resolve the grade itself, not just to flag an advisory mismatch.
+      const worst = newMetrics.reduce<QualityMetricSeverityEnum | null>((acc, m) => {
+        if (!m.severity) return acc;
+        if (!acc || SEVERITY_RANK[m.severity] > SEVERITY_RANK[acc]) return m.severity;
+        return acc;
+      }, null);
+      const suggestedGradeCap = worst ? GRADE_CAP_BY_SEVERITY[worst] : null;
+
+      let resolvedGrade: number;
+      if (input.outcome === QualityReviewOutcomeEnum.Approved) {
+        if (input.grade == null) {
+          throw new AppCustomException(
+            HttpStatus.BAD_REQUEST,
+            'A grade (1-10) is required to approve a question.',
+          );
+        }
+        resolvedGrade = input.grade;
+      } else if (input.grade != null) {
+        // Explicit override on Reject/NeedsRevision — still checked against suggestedGradeCap
+        // below for the advisory mismatch, same as before.
+        resolvedGrade = input.grade;
+      } else if (suggestedGradeCap != null) {
+        // No explicit grade — derive one from the worst issue tag's severity cap.
+        resolvedGrade = suggestedGradeCap;
+      } else {
+        throw new AppCustomException(
+          HttpStatus.BAD_REQUEST,
+          'Select at least one issue tag or provide a grade.',
+        );
+      }
+
       // Built from `existing` before it's mutated below — needs the old grade/outcome/tags
       // to diff against.
       const logEntry = this.buildChangelogEntry(existing, {
         outcome: input.outcome,
-        grade: input.grade ?? null,
+        grade: resolvedGrade,
         tagLabels: newMetrics.map((m) => m.label),
         note: input.comment?.trim() || null,
       });
@@ -123,7 +180,7 @@ export class QuestionQualityService {
       const isNewReview = !existing;
 
       if (existing) {
-        existing.grade = input.grade ?? null;
+        existing.grade = resolvedGrade;
         existing.outcome = input.outcome;
         // Append-only — a null comment only happens on data from before this changelog
         // model existed; every row created under this logic always has a non-null comment.
@@ -139,7 +196,7 @@ export class QuestionQualityService {
             resourceType,
             resourceId,
             reviewerId,
-            grade: input.grade ?? null,
+            grade: resolvedGrade,
             outcome: input.outcome,
             comment: logEntry,
           }),
@@ -151,24 +208,33 @@ export class QuestionQualityService {
           newMetrics.map((m) => tagRepo.create({ qualityReviewId: review.id, qualityMetricId: m.id })),
         );
       }
-      const worst = newMetrics.reduce<QualityMetricSeverityEnum | null>((acc, m) => {
-        if (!m.severity) return acc;
-        if (!acc || SEVERITY_RANK[m.severity] > SEVERITY_RANK[acc]) return m.severity;
-        return acc;
-      }, null);
-      const suggestedGradeCap = worst ? GRADE_CAP_BY_SEVERITY[worst] : null;
-      const mismatch = review.grade != null && suggestedGradeCap != null && review.grade > suggestedGradeCap;
+      const mismatch = suggestedGradeCap != null && review.grade != null && review.grade > suggestedGradeCap;
 
       // Rollup + moderation-status nudge only apply to Question today — Lesson has no
       // equivalent rollup columns yet (same resourceType gate listQualityMetrics uses).
       let reviewCount: number | undefined;
+      let averageGrade: number | null | undefined;
+      let newStatus: QuestionStatusEnum | undefined;
       if (resourceType === QualityResourceTypeEnum.Question) {
+        // Every review now carries a grade (see resolvedGrade above), so this reflects the
+        // full consensus, not just the Approve-only subset it would have covered before.
+        const avgRow = await manager
+          .createQueryBuilder()
+          .select('AVG(r.grade)', 'avg')
+          .from(QualityReview, 'r')
+          .where('r.resourceType = :resourceType', { resourceType })
+          .andWhere('r.resourceId = :resourceId', { resourceId })
+          .andWhere('r.grade IS NOT NULL')
+          .getRawOne();
+        averageGrade = avgRow?.avg != null ? Number(Number(avgRow.avg).toFixed(1)) : null;
+
         const updateSet: Record<string, unknown> = {
           // This submission's time, not the row's original createdAt — matters once the
           // same row can be updated on a later date.
           lastReviewedAt: review.updatedAt,
           latestGrade: review.grade,
           lastReviewOutcome: review.outcome,
+          averageGrade,
         };
         // Only a genuine first-time pass by this reviewer grows the count — it tracks how
         // many distinct reviewers have weighed in, not how many times this question has
@@ -177,24 +243,16 @@ export class QuestionQualityService {
           updateSet.reviewCount = () => '`reviewCount` + 1';
         }
 
-        // SME approval nudges moderation status — an Approve promotes a question waiting
-        // for its first review into rotation. NeedsRevision/Rejected both pull a live one
-        // back out (flagged content shouldn't keep serving while it's under revision — same
-        // reasoning getFlaggedForRevision already assumes when it treats both outcomes as
-        // "genuinely flagged, therefore Pending"). Anything already Inactive (or
-        // Active-and-approved, Pending-and-flagged) is left alone — this only ever moves
-        // status one way per outcome, never the reverse or through Inactive. A CASE on the
-        // row's *current* status keeps this one atomic update instead of a separate
-        // read-then-write with a race window.
-        if (review.outcome === QualityReviewOutcomeEnum.Approved) {
+        // Consensus-driven moderation nudge — the running average across ALL reviewers
+        // decides this, not any single outcome, so no one review can permanently swing
+        // status either way (see submitReview's doc comment above). Anything already
+        // Inactive is left alone, same as before. A CASE on the row's *current* status keeps
+        // this one atomic update instead of a separate read-then-write with a race window.
+        if (averageGrade != null) {
           updateSet.status = () =>
-            `CASE WHEN \`status\` = '${QuestionStatusEnum.Pending}' THEN '${QuestionStatusEnum.Active}' ELSE \`status\` END`;
-        } else if (
-          review.outcome === QualityReviewOutcomeEnum.Rejected ||
-          review.outcome === QualityReviewOutcomeEnum.NeedsRevision
-        ) {
-          updateSet.status = () =>
-            `CASE WHEN \`status\` = '${QuestionStatusEnum.Active}' THEN '${QuestionStatusEnum.Pending}' ELSE \`status\` END`;
+            `CASE WHEN \`status\` = '${QuestionStatusEnum.Pending}' AND ${averageGrade} >= 5 THEN '${QuestionStatusEnum.Active}' ` +
+            `WHEN \`status\` = '${QuestionStatusEnum.Active}' AND ${averageGrade} < 5 THEN '${QuestionStatusEnum.Pending}' ` +
+            `ELSE \`status\` END`;
         }
 
         await manager
@@ -204,18 +262,19 @@ export class QuestionQualityService {
           .where('id = :resourceId', { resourceId })
           .execute();
 
-        // createQueryBuilder().update() doesn't return the mutated row (unlike .save()),
-        // so the post-increment count needs one cheap single-row PK lookup — this lets the
-        // queue patch its cached row in place instead of refetching the whole list, without
-        // the client having to (possibly incorrectly, under concurrent SME reviews) infer
-        // the new count by incrementing its own last-known value.
+        // createQueryBuilder().update() doesn't return the mutated row (unlike .save()), so
+        // the post-update state needs one cheap single-row PK lookup — this lets the queue
+        // patch its cached row in place instead of refetching the whole list, without the
+        // client having to (possibly incorrectly, under concurrent SME reviews) infer the new
+        // count/status by mutating its own last-known values.
         const updatedQuestion = await manager
           .getRepository(Question)
-          .findOne({ where: { id: resourceId }, select: ['reviewCount'] });
+          .findOne({ where: { id: resourceId }, select: ['reviewCount', 'status'] });
         reviewCount = updatedQuestion?.reviewCount;
+        newStatus = updatedQuestion?.status;
       }
 
-      return { review, suggestedGradeCap, mismatch, reviewCount };
+      return { review, suggestedGradeCap, mismatch, reviewCount, averageGrade, status: newStatus };
     });
   }
 
@@ -386,8 +445,15 @@ export class QuestionQualityService {
     status?: 'unreviewed' | 'flagged' | 'all';
     questionType?: QuestionTypeEnum;
     limit?: number;
-  }): Promise<
-    {
+    // Opaque keyset cursor from a previous page's nextCursor (see encodeQueueCursor/
+    // decodeQueueCursor, and the controller's Swagger doc for why keyset over OFFSET).
+    cursor?: string;
+    // Populated from QuestionReviewAccessGuard's request.reviewAccess. Omitted entirely by
+    // callers that pre-date the scoped-reviewer permission (none left in this codebase, but
+    // keeps the method usable standalone) — undefined is treated as unrestricted.
+    access?: { isGlobal: boolean; subjectIds: number[] };
+  }): Promise<{
+    rows: {
       id: number;
       question: string;
       questionType: QuestionTypeEnum;
@@ -396,10 +462,13 @@ export class QuestionQualityService {
       level: number;
       reviewCount: number;
       latestGrade: number | null;
+      averageGrade: number | null;
       lastReviewOutcome: QualityReviewOutcomeEnum | null;
       lastReviewedAt: Date | null;
-    }[]
-  > {
+    }[];
+    hasMore: boolean;
+    nextCursor: string | null;
+  }> {
     const status = filters.status ?? 'all';
     // This page's job is to hand an SME a working batch, not dump the whole question
     // bank — 20 keeps each fetch small and fast regardless of which tab is active. Capped
@@ -419,6 +488,15 @@ export class QuestionQualityService {
         );
       }
       resolvedSubjectId = subject.id;
+      // A scoped reviewer asking for a subject outside their grant — reject rather than
+      // silently returning an empty queue, so the frontend can tell "no access" apart from
+      // "no questions right now".
+      if (filters.access && !filters.access.isGlobal && !filters.access.subjectIds.includes(resolvedSubjectId)) {
+        throw new AppCustomException(
+          HttpStatus.FORBIDDEN,
+          'You are not permitted to review this subject.',
+        );
+      }
     }
 
     const qb = this.dataSource
@@ -431,6 +509,7 @@ export class QuestionQualityService {
       .addSelect('q.level', 'level')
       .addSelect('q.reviewCount', 'reviewCount')
       .addSelect('q.latestGrade', 'latestGrade')
+      .addSelect('q.averageGrade', 'averageGrade')
       .addSelect('q.lastReviewOutcome', 'lastReviewOutcome')
       .addSelect('q.lastReviewedAt', 'lastReviewedAt')
       .from(Question, 'q')
@@ -457,7 +536,13 @@ export class QuestionQualityService {
       );
     }
 
-    if (resolvedSubjectId) qb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
+    if (resolvedSubjectId) {
+      qb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
+    } else if (filters.access && !filters.access.isGlobal) {
+      // No specific subject requested — a scoped reviewer without a subjectSlug only ever
+      // sees their own permitted subjects, never the full cross-author universe LmsManager gets.
+      qb.andWhere('q.subjectId IN (:...allowedSubjectIds)', { allowedSubjectIds: filters.access.subjectIds });
+    }
     if (filters.questionType) qb.andWhere('q.questionType = :questionType', { questionType: filters.questionType });
     if (status === 'unreviewed') qb.andWhere('q.reviewCount = 0');
     if (status === 'flagged') {
@@ -466,19 +551,53 @@ export class QuestionQualityService {
       });
     }
 
+    // Keyset condition — only added when a valid cursor decodes. Bracketed OR so it combines
+    // correctly with every AND above regardless of which filters are active.
+    const cursor = this.decodeQueueCursor(filters.cursor);
+    if (cursor) {
+      if (status === 'flagged') {
+        const curVal = new Date(cursor.sortValue);
+        qb.andWhere(
+          new Brackets((sub) => {
+            sub
+              .where('q.lastReviewedAt < :curVal', { curVal })
+              .orWhere(new Brackets((s2) => s2.where('q.lastReviewedAt = :curVal', { curVal }).andWhere('q.id < :curId', { curId: cursor.id })));
+          }),
+        );
+      } else {
+        const curVal = Number(cursor.sortValue);
+        qb.andWhere(
+          new Brackets((sub) => {
+            sub
+              .where('q.reviewCount > :curVal', { curVal })
+              .orWhere(new Brackets((s2) => s2.where('q.reviewCount = :curVal', { curVal }).andWhere('q.id > :curId', { curId: cursor.id })));
+          }),
+        );
+      }
+    }
+
     if (status === 'flagged') {
       // Most-recently-flagged first, matching getFlaggedForRevision's own ordering — a
-      // reviewCount/createdAt sort is meaningless here (every flagged row already has
-      // reviewCount >= 1) and was surfacing the oldest-created flagged questions instead
-      // of the ones that most recently need attention.
-      qb.orderBy('q.lastReviewedAt', 'DESC');
+      // reviewCount/id sort is meaningless here (every flagged row already has reviewCount
+      // >= 1) and was surfacing the oldest-created flagged questions instead of the ones that
+      // most recently need attention. `id DESC` tiebreak added for keyset pagination — two
+      // rows flagged in the same millisecond previously had undefined relative order.
+      qb.orderBy('q.lastReviewedAt', 'DESC').addOrderBy('q.id', 'DESC');
     } else {
-      qb.orderBy('q.reviewCount', 'ASC').addOrderBy('q.createdAt', 'ASC');
+      // `id ASC` tiebreak (was `createdAt ASC`) — a no-op in practice, since `id` is a strict
+      // auto-increment PK that already orders identically to createdAt in this schema, but
+      // gives the keyset cursor a clean unique key without carrying a second timestamp.
+      qb.orderBy('q.reviewCount', 'ASC').addOrderBy('q.id', 'ASC');
     }
-    qb.limit(limit);
+    // Fetch one extra row to learn hasMore without a separate COUNT query — sliced off below,
+    // never included in the response or used to build nextCursor.
+    qb.limit(limit + 1);
 
-    const rows = await qb.getRawMany();
-    return rows.map((r) => ({
+    const rawRows = await qb.getRawMany();
+    const hasMore = rawRows.length > limit;
+    const pageRows = hasMore ? rawRows.slice(0, limit) : rawRows;
+
+    const rows = pageRows.map((r) => ({
       id: Number(r.id),
       question: r.question,
       questionType: r.questionType,
@@ -487,9 +606,46 @@ export class QuestionQualityService {
       level: Number(r.level),
       reviewCount: Number(r.reviewCount) || 0,
       latestGrade: r.latestGrade !== null ? Number(r.latestGrade) : null,
+      averageGrade: r.averageGrade !== null ? Number(r.averageGrade) : null,
       lastReviewOutcome: r.lastReviewOutcome,
       lastReviewedAt: r.lastReviewedAt,
     }));
+
+    let nextCursor: string | null = null;
+    if (hasMore && pageRows.length) {
+      const last = pageRows[pageRows.length - 1];
+      const sortValue = status === 'flagged' ? new Date(last.lastReviewedAt).toISOString() : Number(last.reviewCount);
+      nextCursor = this.encodeQueueCursor(sortValue, Number(last.id));
+    }
+
+    return { rows, hasMore, nextCursor };
+  }
+
+  // Opaque keyset cursor — "<sortValue>|<id>", base64-encoded into one safe query-string
+  // token. sortValue is whichever field the active status branch sorts by (reviewCount for
+  // unreviewed/all, lastReviewedAt ISO string for flagged) — the frontend never parses this,
+  // just echoes it back verbatim as the next page's `cursor`.
+  private encodeQueueCursor(sortValue: string | number, id: number): string {
+    return Buffer.from(`${sortValue}|${id}`, 'utf8').toString('base64');
+  }
+
+  // A cursor that fails to decode (stale, corrupted, or issued under a different status
+  // branch than the one now requested) is treated as "no cursor" — starts the query over from
+  // the top rather than 400ing, since a broken cursor shouldn't hard-fail the page for a
+  // reviewer.
+  private decodeQueueCursor(cursor: string | undefined): { sortValue: string; id: number } | null {
+    if (!cursor) return null;
+    try {
+      const decoded = Buffer.from(cursor, 'base64').toString('utf8');
+      const lastPipe = decoded.lastIndexOf('|');
+      if (lastPipe === -1) return null;
+      const sortValue = decoded.slice(0, lastPipe);
+      const id = Number(decoded.slice(lastPipe + 1));
+      if (!sortValue || !Number.isFinite(id)) return null;
+      return { sortValue, id };
+    } catch {
+      return null;
+    }
   }
 
   // Powers the queue header's stat rail — outcome breakdown for whichever subject/questionType
@@ -502,6 +658,7 @@ export class QuestionQualityService {
     subjectSlug?: string;
     questionType?: QuestionTypeEnum;
     reviewerId: number;
+    access?: { isGlobal: boolean; subjectIds: number[] };
   }): Promise<{
     total: number;
     reviewed: number;
@@ -510,6 +667,7 @@ export class QuestionQualityService {
     needsRevision: number;
     rejected: number;
     reviewedByMe: number;
+    avgRating: number | null;
   }> {
     let resolvedSubjectId: number | undefined;
     if (filters.subjectSlug) {
@@ -523,6 +681,12 @@ export class QuestionQualityService {
         );
       }
       resolvedSubjectId = subject.id;
+      if (filters.access && !filters.access.isGlobal && !filters.access.subjectIds.includes(resolvedSubjectId)) {
+        throw new AppCustomException(
+          HttpStatus.FORBIDDEN,
+          'You are not permitted to review this subject.',
+        );
+      }
     }
 
     const qb = this.dataSource
@@ -532,6 +696,7 @@ export class QuestionQualityService {
       .addSelect('SUM(CASE WHEN q.lastReviewOutcome = :approved THEN 1 ELSE 0 END)', 'approved')
       .addSelect('SUM(CASE WHEN q.lastReviewOutcome = :needsRevision THEN 1 ELSE 0 END)', 'needsRevision')
       .addSelect('SUM(CASE WHEN q.lastReviewOutcome = :rejected THEN 1 ELSE 0 END)', 'rejected')
+      .addSelect('AVG(q.averageGrade)', 'avgRating')
       .from(Question, 'q')
       .where('(q.status = :pending OR q.status = :active)', {
         pending: QuestionStatusEnum.Pending,
@@ -542,7 +707,11 @@ export class QuestionQualityService {
         needsRevision: QualityReviewOutcomeEnum.NeedsRevision,
         rejected: QualityReviewOutcomeEnum.Rejected,
       });
-    if (resolvedSubjectId) qb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
+    if (resolvedSubjectId) {
+      qb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
+    } else if (filters.access && !filters.access.isGlobal) {
+      qb.andWhere('q.subjectId IN (:...allowedSubjectIds)', { allowedSubjectIds: filters.access.subjectIds });
+    }
     if (filters.questionType) qb.andWhere('q.questionType = :questionType', { questionType: filters.questionType });
 
     const meQb = this.dataSource
@@ -556,7 +725,11 @@ export class QuestionQualityService {
         pending: QuestionStatusEnum.Pending,
         active: QuestionStatusEnum.Active,
       });
-    if (resolvedSubjectId) meQb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
+    if (resolvedSubjectId) {
+      meQb.andWhere('q.subjectId = :subjectId', { subjectId: resolvedSubjectId });
+    } else if (filters.access && !filters.access.isGlobal) {
+      meQb.andWhere('q.subjectId IN (:...allowedSubjectIds)', { allowedSubjectIds: filters.access.subjectIds });
+    }
     if (filters.questionType) meQb.andWhere('q.questionType = :questionType', { questionType: filters.questionType });
 
     const [r, meRow] = await Promise.all([qb.getRawOne(), meQb.getRawOne()]);
@@ -570,13 +743,17 @@ export class QuestionQualityService {
       needsRevision: Number(r?.needsRevision) || 0,
       rejected: Number(r?.rejected) || 0,
       reviewedByMe: Number(meRow?.count) || 0,
+      avgRating: r?.avgRating != null ? Number(Number(r.avgRating).toFixed(1)) : null,
     };
   }
 
   // Embeds reviewHistory (this question's full past review audit trail, newest first) so
   // the SME review dialog only needs one request instead of two — review-detail and history
   // are always requested together, for the same question, every single time.
-  async getQuestionReviewDetail(questionId: number): Promise<{
+  async getQuestionReviewDetail(
+    questionId: number,
+    access?: { isGlobal: boolean; subjectIds: number[] },
+  ): Promise<{
     id: number;
     question: string;
     hint: string | null;
@@ -590,6 +767,7 @@ export class QuestionQualityService {
     options: { id: number; option: string; correct: boolean; comment: string | null }[];
     reviewCount: number;
     latestGrade: number | null;
+    averageGrade: number | null;
     lastReviewOutcome: QualityReviewOutcomeEnum | null;
     lastReviewedAt: Date | null;
     reviewHistory: QualityReview[];
@@ -599,6 +777,16 @@ export class QuestionQualityService {
       relations: { options: true, subject: true, questionTopics: { topic: true } },
     });
     if (!question) return null;
+
+    // A scoped reviewer opening a question outside their granted subjects (e.g. via a direct
+    // link) — reject rather than silently serving it, same rule getReviewQueue enforces on
+    // its subjectSlug filter.
+    if (access && !access.isGlobal && !access.subjectIds.includes(question.subjectId)) {
+      throw new AppCustomException(
+        HttpStatus.FORBIDDEN,
+        'You are not permitted to review this subject.',
+      );
+    }
 
     const reviewHistory = await this.getReviewHistory(QualityResourceTypeEnum.Question, questionId);
 
@@ -621,9 +809,91 @@ export class QuestionQualityService {
       })),
       reviewCount: question.reviewCount,
       latestGrade: question.latestGrade,
+      averageGrade: question.averageGrade,
       lastReviewOutcome: question.lastReviewOutcome,
       lastReviewedAt: question.lastReviewedAt,
       reviewHistory,
+    };
+  }
+
+  // Powers the queue's subject dropdown — a global (LmsManager) caller sees every subject,
+  // same universe MasterService's subject list already draws from; a scoped (Question:Review)
+  // caller sees only the subjects their grants cover. isGlobal is echoed back so the frontend
+  // can render "N of M subjects" vs. an unrestricted picker without a second permission call.
+  async getPermittedSubjects(
+    access: { isGlobal: boolean; subjectIds: number[] },
+  ): Promise<{ isGlobal: boolean; subjects: { id: number; slug: string; title: string }[] }> {
+    const repo = this.dataSource.getRepository(Subject);
+    const subjects = access.isGlobal
+      ? await repo.find({ select: ['id', 'slug', 'title'], order: { title: 'ASC' } })
+      : await repo.find({
+          where: { id: In(access.subjectIds) },
+          select: ['id', 'slug', 'title'],
+          order: { title: 'ASC' },
+        });
+    return { isGlobal: access.isGlobal, subjects };
+  }
+
+  // Powers the "Your Question Reviews" dashboard widget — the caller's own reviewing
+  // activity (not a subject-wide rollup, see getSubjectReviewStats for that), plus how many
+  // questions are still waiting across whichever subjects they're permitted to review, as the
+  // Start Review nudge.
+  async getMyReviewStats(
+    reviewerId: number,
+    access: { isGlobal: boolean; subjectIds: number[] },
+  ): Promise<{
+    reviewedTotal: number;
+    approvedCount: number;
+    needsRevisionCount: number;
+    rejectedCount: number;
+    approvalRate: number | null;
+    avgRatingGiven: number | null;
+    reviewedThisWeek: number;
+    pendingInMySubjects: number;
+  }> {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const mineQb = this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'total')
+      .addSelect('SUM(CASE WHEN r.outcome = :approved THEN 1 ELSE 0 END)', 'approvedCount')
+      .addSelect('SUM(CASE WHEN r.outcome = :needsRevision THEN 1 ELSE 0 END)', 'needsRevisionCount')
+      .addSelect('SUM(CASE WHEN r.outcome = :rejected THEN 1 ELSE 0 END)', 'rejectedCount')
+      .addSelect('AVG(r.grade)', 'avgGrade')
+      .addSelect('SUM(CASE WHEN r.updatedAt >= :weekAgo THEN 1 ELSE 0 END)', 'reviewedThisWeek')
+      .from(QualityReview, 'r')
+      .where('r.resourceType = :resourceType', { resourceType: QualityResourceTypeEnum.Question })
+      .andWhere('r.reviewerId = :reviewerId', { reviewerId })
+      .setParameters({
+        approved: QualityReviewOutcomeEnum.Approved,
+        needsRevision: QualityReviewOutcomeEnum.NeedsRevision,
+        rejected: QualityReviewOutcomeEnum.Rejected,
+        weekAgo,
+      });
+
+    const pendingQb = this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'count')
+      .from(Question, 'q')
+      .where('q.status = :pending', { pending: QuestionStatusEnum.Pending })
+      .andWhere('q.reviewCount = 0');
+    if (!access.isGlobal) {
+      pendingQb.andWhere('q.subjectId IN (:...allowedSubjectIds)', { allowedSubjectIds: access.subjectIds });
+    }
+
+    const [mine, pending] = await Promise.all([mineQb.getRawOne(), pendingQb.getRawOne()]);
+    const reviewedTotal = Number(mine?.total) || 0;
+    const approvedCount = Number(mine?.approvedCount) || 0;
+
+    return {
+      reviewedTotal,
+      approvedCount,
+      needsRevisionCount: Number(mine?.needsRevisionCount) || 0,
+      rejectedCount: Number(mine?.rejectedCount) || 0,
+      approvalRate: reviewedTotal > 0 ? Number((approvedCount / reviewedTotal).toFixed(2)) : null,
+      avgRatingGiven: mine?.avgGrade != null ? Number(Number(mine.avgGrade).toFixed(1)) : null,
+      reviewedThisWeek: Number(mine?.reviewedThisWeek) || 0,
+      pendingInMySubjects: Number(pending?.count) || 0,
     };
   }
 

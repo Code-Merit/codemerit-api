@@ -25,6 +25,14 @@ export class CertificationTrack extends AbstractEntity {
   @Column({ type: 'text', nullable: true, default: null })
   description: string;
 
+  // The certificate FACE copy (what's printed inside the certificate itself) — distinct from
+  // `description`, which is the marketing blurb shown on dashboard/explorer cards. Supports
+  // {{userName}} / {{skillName}} tokens, resolved at issuance time (see
+  // certificate-content.util.ts). NULL falls back to DEFAULT_CERTIFICATE_CONTENT_TEMPLATE, so
+  // every track behaves identically until an admin deliberately crafts a track-specific theme.
+  @Column({ type: 'text', nullable: true, default: null })
+  content: string | null;
+
   // Set when this track is native to a single subject (composed only from that subject's
   // own subject tracks) rather than the job-role-bundle model above — NULL for every
   // pre-existing track. Lets a subject's own dashboard/admin surface query its tracks

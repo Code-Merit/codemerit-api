@@ -37,12 +37,17 @@ export class CertExplorerMyCertificateDto {
   scorePercentage: number | null;
   skillName: string | null;
   tierDisplayName: string | null;
+  // Fully-resolved certificate face copy snapshotted at issuance (see Certificate.content).
+  content: string | null;
 }
 
 export class CertificateExplorerTrackDto {
   id: number;
   title: string;
   description: string | null;
+  // Certificate face template (may contain {{userName}}/{{skillName}} tokens) — used to render a
+  // "preview" face for a not-yet-earned track. The real, resolved copy lives on myCertificate.content.
+  content: string | null;
   subjectId: number | null;
   jobRoles: CertExplorerJobRoleDto[];
   totalSubjectTracks: number;

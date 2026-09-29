@@ -1,7 +1,9 @@
-import { Column, CreateDateColumn, Entity, OneToMany, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, UpdateDateColumn } from 'typeorm';
 import { IJobRole } from '../interface/job-role.interface';
 import { AbstractEntity } from './abstract.entity';
 import { CertificationTrackJobRole } from './certification-track-job-role.entity';
+import { JobRoleGroup } from './job-role-group.entity';
+import { JobRoleRelation } from './job-role-relation.entity';
 import { JobRoleSubject } from './job-role-subject.entity';
 
 @Entity()
@@ -67,6 +69,9 @@ export class JobRole extends AbstractEntity implements IJobRole {
   })
   isPublished: boolean;
 
+  @Column({ type: 'integer', nullable: true, default: null })
+  groupId: number;
+
   @Column({ name: 'createdBy', default: null, select: false })
   createdBy: number;
 
@@ -84,4 +89,12 @@ export class JobRole extends AbstractEntity implements IJobRole {
 
   @OneToMany(() => CertificationTrackJobRole, (ctjr) => ctjr.jobRole)
   certificationTrackJobRoles: CertificationTrackJobRole[];
+
+  @ManyToOne(() => JobRoleGroup, (g) => g.jobRoles, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'groupId' })
+  group: JobRoleGroup;
+
+  // This role's own "extends" edges (rows where jobRoleId = this.id) — see job-role-relation.entity.ts.
+  @OneToMany(() => JobRoleRelation, (rel) => rel.jobRole)
+  extendsRelations: JobRoleRelation[];
 }

@@ -23,6 +23,7 @@ import { QuestionQualityService } from './providers/question-quality.service';
 import { LmsDashboardService } from './providers/lms-dashboard.service';
 import { InterviewQuestionsService } from './providers/interview-questions.service';
 import { LmsManagerGuard } from './guards/lms-manager.guard';
+import { QuestionReviewAccessGuard } from './guards/question-review-access.guard';
 
 @Module({
   imports: [
@@ -45,7 +46,7 @@ import { LmsManagerGuard } from './guards/lms-manager.guard';
     UserPermissionModule,
     SkillEnrollmentModule,
   ],
-  providers: [LmsService, QuestionQualityService, LmsDashboardService, InterviewQuestionsService, LmsManagerGuard],
+  providers: [LmsService, QuestionQualityService, LmsDashboardService, InterviewQuestionsService, LmsManagerGuard, QuestionReviewAccessGuard],
   controllers: [LmsController],
   exports: [LmsService, QuestionQualityService, LmsDashboardService, InterviewQuestionsService],
 })

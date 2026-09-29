@@ -58,6 +58,13 @@ export class Certificate extends AbstractEntity {
   @Column({ type: 'varchar', length: 150, nullable: true, default: null })
   skillName: string | null;
 
+  // Fully-resolved certificate face copy, snapshotted at issuance from
+  // CertificationTrack.content (tokens already substituted with this learner's name and the
+  // track's skill name) — same snapshot rationale as skillName above, so a later edit to the
+  // track's content theme never rewrites wording on a certificate someone already holds.
+  @Column({ type: 'text', nullable: true, default: null })
+  content: string | null;
+
   // Display label derived from scorePercentage at issuance (see achievement.service.ts
   // issueCertificate()) — this product has no separate tiering concept beyond the single
   // CERT_ACHIEVED pass bar, so this is cosmetic banding of the score, not a stored grade.

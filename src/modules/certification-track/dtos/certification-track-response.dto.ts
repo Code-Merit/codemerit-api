@@ -19,6 +19,7 @@ export class CertificationTrackResponseDto {
   id: number;
   title: string;
   description: string;
+  content: string | null;
   subjectId: number | null;
   passThreshold: number | null;
   isPublished: boolean;

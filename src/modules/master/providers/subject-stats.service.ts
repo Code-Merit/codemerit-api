@@ -664,6 +664,7 @@ export class SubjectStatsService {
           id: track.id,
           title: track.title,
           description: track.description,
+          content: track.content,
           sortOrder: track.id,
           totalSubjectTracks: total,
           completedSubjectTracks: completed,
@@ -684,7 +685,7 @@ export class SubjectStatsService {
           card.myCertificate = cert
             ? {
                 certificateNumber: cert.certificateNumber, status: cert.status,
-                issuedAt: cert.issuedAt, pdfUrl: cert.pdfUrl,
+                issuedAt: cert.issuedAt, pdfUrl: cert.pdfUrl, content: cert.content,
               }
             : null;
           // Authoritative from an actual issued Certificate row — never re-derived from
