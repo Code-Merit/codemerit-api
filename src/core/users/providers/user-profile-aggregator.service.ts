@@ -4,6 +4,8 @@ import { DataSource, Repository } from 'typeorm';
 import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
 import { AssessmentSession } from 'src/common/typeorm/entities/assessment-session.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
+import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
+import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { UserPreference } from 'src/common/typeorm/entities/user-preference.entity';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
@@ -13,6 +15,10 @@ import { UserPermissionService } from 'src/modules/user-permission/providers/use
 import { AchievementService } from 'src/modules/achievement/providers/achievement.service';
 import { BadgeQueryService } from 'src/modules/achievement/providers/badge-query.service';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
+import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
+import { QualityResourceTypeEnum } from 'src/common/enum/quality-resource-type.enum';
+import { QualityReviewOutcomeEnum } from 'src/common/enum/quality-review-outcome.enum';
+import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
 import { computeLevel } from 'src/modules/achievement/constants/gamification.constants';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
@@ -46,6 +52,143 @@ export class UserProfileAggregatorService {
     private readonly dataSource: DataSource,
   ) {}
 
+  // UserQuestionTracker isn't type-scoped (it's shared with any future non-General completion
+  // tracking), so this needs an explicit join rather than a bare count. Deliberately not
+  // filtered by question.status — a lifetime count of what the user has already done, not a
+  // measure of currently-available content, so a question later going Pending/Inactive for
+  // moderation reasons shouldn't retroactively shrink what they already completed.
+  private async getCompletedGeneralQuestionsCount(userId: number): Promise<number> {
+    const row = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(DISTINCT uqt.questionId)', 'count')
+      .from('user_question_tracker', 'uqt')
+      .innerJoin('question', 'q', 'q.id = uqt.questionId')
+      .where('uqt.userId = :userId', { userId })
+      .andWhere('q.questionType = :questionType', { questionType: QuestionTypeEnum.General })
+      .getRawOne();
+    return Number(row?.count) || 0;
+  }
+
+  // Same COUNT/SUM(CASE...) shape as getRecentQuizzes' quiz-level summary below, just against
+  // QuestionAttempt instead of QuizResult. "Wrong" means explicitly answered and incorrect
+  // (selectedOption IS NOT NULL) — a skipped question is neither right nor wrong, same
+  // convention already used elsewhere in this codebase (e.g. subject-stats.service.ts).
+  private async getAttemptsSummary(userId: number): Promise<{
+    totalAttempts: number;
+    totalCorrect: number;
+    totalWrong: number;
+    accuracyPercent: number;
+    topSubjects: Array<{
+      subjectId: number;
+      title: string;
+      slug: string;
+      color: string | null;
+      attempts: number;
+      correct: number;
+      accuracyPercent: number;
+    }>;
+  }> {
+    const [row, topSubjectRows] = await Promise.all([
+      this.dataSource
+        .createQueryBuilder(QuestionAttempt, 'qa')
+        .select('COUNT(*)', 'totalAttempts')
+        .addSelect('SUM(CASE WHEN qa.isCorrect = 1 THEN 1 ELSE 0 END)', 'totalCorrect')
+        .addSelect('SUM(CASE WHEN qa.isCorrect = 0 AND qa.selectedOption IS NOT NULL THEN 1 ELSE 0 END)', 'totalWrong')
+        .where('qa.userId = :userId', { userId })
+        .getRawOne(),
+      // Ranks by attempt volume, not accuracy or recency — "top" here means "most practiced",
+      // mirroring how the Subject Performance card already orders by activity elsewhere on
+      // this page rather than by score.
+      this.dataSource
+        .createQueryBuilder(QuestionAttempt, 'qa')
+        .select('q.subjectId', 'subjectId')
+        .addSelect('s.title', 'title')
+        .addSelect('s.slug', 'slug')
+        .addSelect('s.color', 'color')
+        .addSelect('COUNT(*)', 'attempts')
+        .addSelect('SUM(CASE WHEN qa.isCorrect = 1 THEN 1 ELSE 0 END)', 'correct')
+        .innerJoin('question', 'q', 'q.id = qa.questionId')
+        .innerJoin('subject', 's', 's.id = q.subjectId')
+        .where('qa.userId = :userId', { userId })
+        .groupBy('q.subjectId')
+        .addGroupBy('s.title')
+        .addGroupBy('s.slug')
+        .addGroupBy('s.color')
+        .orderBy('attempts', 'DESC')
+        .limit(5)
+        .getRawMany(),
+    ]);
+    const totalAttempts = Number(row?.totalAttempts) || 0;
+    const totalCorrect = Number(row?.totalCorrect) || 0;
+    const totalWrong = Number(row?.totalWrong) || 0;
+    return {
+      totalAttempts,
+      totalCorrect,
+      totalWrong,
+      accuracyPercent: totalAttempts > 0 ? Number(((totalCorrect / totalAttempts) * 100).toFixed(1)) : 0,
+      topSubjects: topSubjectRows.map((r) => {
+        const attempts = Number(r.attempts) || 0;
+        const correct = Number(r.correct) || 0;
+        return {
+          subjectId: Number(r.subjectId),
+          title: r.title,
+          slug: r.slug,
+          color: r.color ?? null,
+          attempts,
+          correct,
+          accuracyPercent: attempts > 0 ? Number(((correct / attempts) * 100).toFixed(1)) : 0,
+        };
+      }),
+    };
+  }
+
+  // Same query as QuestionQualityService.getMyReviewStats' own "mine" aggregate (see that
+  // method for the live-queue variant), just parameterized by an arbitrary target reviewer
+  // instead of always the caller — and with pendingInMySubjects dropped entirely. That field
+  // needs the *caller's* subject-access resolution (QuestionReviewAccessGuard), which would be
+  // the viewing Admin's access, not the profiled user's — structurally wrong here even before
+  // considering it's a "here's your queue" nudge, not a performance signal about this person.
+  private async getReviewerStats(targetUserId: number): Promise<{
+    reviewedTotal: number;
+    approvedCount: number;
+    needsRevisionCount: number;
+    rejectedCount: number;
+    approvalRate: number | null;
+    avgRatingGiven: number | null;
+    reviewedThisWeek: number;
+  }> {
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const row = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'total')
+      .addSelect('SUM(CASE WHEN r.outcome = :approved THEN 1 ELSE 0 END)', 'approvedCount')
+      .addSelect('SUM(CASE WHEN r.outcome = :needsRevision THEN 1 ELSE 0 END)', 'needsRevisionCount')
+      .addSelect('SUM(CASE WHEN r.outcome = :rejected THEN 1 ELSE 0 END)', 'rejectedCount')
+      .addSelect('AVG(r.grade)', 'avgGrade')
+      .addSelect('SUM(CASE WHEN r.updatedAt >= :weekAgo THEN 1 ELSE 0 END)', 'reviewedThisWeek')
+      .from(QualityReview, 'r')
+      .where('r.resourceType = :resourceType', { resourceType: QualityResourceTypeEnum.Question })
+      .andWhere('r.reviewerId = :reviewerId', { reviewerId: targetUserId })
+      .setParameters({
+        approved: QualityReviewOutcomeEnum.Approved,
+        needsRevision: QualityReviewOutcomeEnum.NeedsRevision,
+        rejected: QualityReviewOutcomeEnum.Rejected,
+        weekAgo,
+      })
+      .getRawOne();
+    const reviewedTotal = Number(row?.total) || 0;
+    const approvedCount = Number(row?.approvedCount) || 0;
+    return {
+      reviewedTotal,
+      approvedCount,
+      needsRevisionCount: Number(row?.needsRevisionCount) || 0,
+      rejectedCount: Number(row?.rejectedCount) || 0,
+      approvalRate: reviewedTotal > 0 ? Number((approvedCount / reviewedTotal).toFixed(2)) : null,
+      avgRatingGiven: row?.avgGrade != null ? Number(Number(row.avgGrade).toFixed(1)) : null,
+      reviewedThisWeek: Number(row?.reviewedThisWeek) || 0,
+    };
+  }
+
   // Job-role-derived subjects (getJobSubjectDashboards) and directly-enrolled subjects
   // (getEnrolledSubjectDashboards) can legitimately overlap — union by subject id rather than
   // concatenating, so a subject reachable both ways only ever shows once.
@@ -77,6 +220,8 @@ export class UserProfileAggregatorService {
       globalBadges,
       activities,
       streak,
+      completedGeneralQuestions,
+      attemptsSummary,
     ] = await Promise.all([
       this.getCourseStats(user.id),
       this.userPermissionService.getPermissionsForProfile(user.id),
@@ -88,6 +233,8 @@ export class UserProfileAggregatorService {
       this.badgeQueryService.getUserBadgesForScope(BadgeScopeEnum.GLOBAL, undefined, user.id),
       this.activityService.findByUserId(user.id, 20),
       this.userStreakRepository.findOne({ where: { userId: user.id } }),
+      this.getCompletedGeneralQuestionsCount(user.id),
+      this.getAttemptsSummary(user.id),
     ]);
 
     // Scope title resolution needs badgeData.earned's actual contents, so it can't join the
@@ -95,6 +242,15 @@ export class UserProfileAggregatorService {
     // no title, only scopeType/scopeId numbers), which is exactly why Platform Achievements
     // couldn't show a real scope label for anything beyond the hardcoded Global badges.
     const earnedBadges = await this.achievementService.enrichWithScopeTitles(badgeData.earned);
+
+    // Reviewer performance is staff-evaluation data, not a general learning stat — gated the
+    // same as email/mobile above, not the open tier courseStats/quizzes sit in. Depends on
+    // `permissions` (only resolved once the batch above completes), and skipped entirely —
+    // no query at all — for a viewer who can't see it or a user who was never a reviewer.
+    const isReviewer = permissions.some(
+      (p) => p.permissionName === UserPermissionEnum.LmsManager || p.permissionName === UserPermissionEnum.QuestionReview,
+    );
+    const reviewerStats = canViewContactInfo && isReviewer ? await this.getReviewerStats(user.id) : null;
 
     return {
       ...user,
@@ -138,6 +294,9 @@ export class UserProfileAggregatorService {
           longest: streak?.longestStreak ?? 0,
         },
       },
+      completedGeneralQuestions,
+      attemptsSummary,
+      reviewerStats,
     };
   }
 
