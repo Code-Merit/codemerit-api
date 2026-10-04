@@ -26,7 +26,6 @@ import { User } from './user.entity';
 // UserPermission.resourceType/resourceId; there's no DB-level FK on resourceId as a result
 // (can't point at two different tables), so referential integrity here is enforced by the
 // service layer, same as UserPermission accepts.
-@Index(['resourceType', 'resourceId'])
 @Index(['reviewerId'])
 @Index('IDX_quality_review_resourceType_resourceId_reviewerId', ['resourceType', 'resourceId', 'reviewerId'], {
   unique: true,

@@ -1,7 +1,6 @@
 import { Column, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'api_usage' })
-@Index('IDX_api_usage_userId_count', ['userId', 'count'])
 @Index('UQ_api_usage_userId', ['userId'], { unique: true })
 export class ApiUsage {
   @PrimaryGeneratedColumn()

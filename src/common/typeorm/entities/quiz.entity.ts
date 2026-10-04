@@ -77,7 +77,7 @@ export class Quiz extends AbstractEntity implements IQuiz {
 
   @Column({
     type: 'varchar',
-    length: 200,
+    length: 500,
     nullable: true,
     default: null,
   })

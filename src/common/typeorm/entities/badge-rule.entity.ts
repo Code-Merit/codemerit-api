@@ -19,7 +19,7 @@ import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
  */
 @Entity()
 export class BadgeRule extends AbstractEntity {
-  @Column({ type: 'int', unique: true })
+  @Column({ type: 'int' })
   badgeId: number;
 
   @Column({ type: 'enum', enum: BadgeRuleMetricEnum })

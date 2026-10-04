@@ -826,7 +826,6 @@ export class ProgramService {
         overallScore: 0, overallAccuracy: 0, overallTriviaCompletion: 0,
         totalBadgesEarned: 0, totalCertificatesIssued: 0,
       },
-      lessons: [],
       jobRoles: [],
     };
   }
@@ -857,7 +856,7 @@ export class ProgramService {
     ] = await Promise.all([
       this.subjectStats.getSubjectStatsMap(userId),
       this.fetchCertTrackHierarchy(jobRoleIds),
-      this.fetchLessonsForSubjects(allSubjectIds, userId),
+      this.fetchLessonCompletionBySubjects(allSubjectIds, userId),
       Promise.all(
         jobRoleIds.map((jrId) =>
           this.badgeQueryService
@@ -974,21 +973,19 @@ export class ProgramService {
       const subjects = subjectsByJobRole.get(+jr.id) ?? [];
       totalSubjects += subjects.length;
 
-      // Job-role level trivia metrics (weighted totals, not average of averages)
+      // Job-role level trivia metrics (weighted totals, not average of averages) — pooled
+      // over every enrolled subject in the role, mandatory-tagged or not, so Score shares
+      // the exact same population as Accuracy/Coverage/Lessons/userLevel below instead of a
+      // MANDATORY-only subset (a prior version scoped Score to MANDATORY subjects while
+      // leaving these others unfiltered, so the two could silently describe different
+      // subjects — fixed by pooling all of them from the same totals).
       const jrTotalAttempted = subjects.reduce((s: number, sub: any) => s + sub.attempted, 0);
       const jrTotalCorrect = subjects.reduce((s: number, sub: any) => s + sub.correct, 0);
+      const jrTotalWrong = subjects.reduce((s: number, sub: any) => s + sub.wrong, 0);
       const jrTotalNumTrivia = subjects.reduce((s: number, sub: any) => s + sub.numTrivia, 0);
       const jrAccuracy = jrTotalAttempted > 0 ? +(jrTotalCorrect * 100 / jrTotalAttempted).toFixed(1) : 0;
       const jrTriviaCompletion = jrTotalNumTrivia > 0 ? +((jrTotalAttempted / jrTotalNumTrivia) * 100).toFixed(1) : 0;
-
-      // Score: pooled over MANDATORY subjects (fallback: all subjects) — sum raw counts
-      // first, one generateScore() call, same pooling jrAccuracy above already uses.
-      const mandatory = subjects.filter((s: any) => s.tag === 'MANDATORY');
-      const scoreSrc = mandatory.length ? mandatory : subjects;
-      const jrScoreAttempted = scoreSrc.reduce((s: number, sub: any) => s + sub.attempted, 0);
-      const jrScoreCorrect = scoreSrc.reduce((s: number, sub: any) => s + sub.correct, 0);
-      const jrScoreWrong = scoreSrc.reduce((s: number, sub: any) => s + sub.wrong, 0);
-      const jrScore = +generateScore(jrScoreAttempted, jrScoreCorrect, jrScoreWrong).toFixed(0);
+      const jrScore = +generateScore(jrTotalAttempted, jrTotalCorrect, jrTotalWrong).toFixed(0);
 
       // Lesson completion
       const jrLessonTotal = subjects.reduce((s: number, sub: any) => s + sub.lessonTotal, 0);
@@ -1164,67 +1161,29 @@ export class ProgramService {
         totalBadgesEarned: badgeCertTotals.totalBadgesEarned,
         totalCertificatesIssued: badgeCertTotals.totalCertificatesIssued,
       },
-      lessons,
       jobRoles: jobRoleDashboards,
     };
   }
 
-  // ─── Lessons for subjects (used by enriched career dashboard) ────────────────
-
-  private async fetchLessonsForSubjects(subjectIds: number[], userId?: number) {
+  // ─── Lesson completion for subjects (used by enriched career dashboard) ──────
+  // Only ever used to derive completion counts/percentages (summary.totalLessons/
+  // completedLessons/lessonCompletion, and the per-subject/per-role rollups above) — the
+  // dashboard no longer has a lesson list UI, so this fetches just subjectId + completion
+  // status instead of full lesson content (title/slug/summary/topic/sections/etc.).
+  private async fetchLessonCompletionBySubjects(subjectIds: number[], userId?: number) {
     if (!subjectIds.length) return [];
     const rows = await this.dataSource
       .createQueryBuilder()
-      .select('l.id', 'id')
-      .addSelect('l.title', 'title')
-      .addSelect('l.slug', 'slug')
-      .addSelect('l.summary', 'summary')
-      .addSelect('l.level', 'level')
-      .addSelect('l.format', 'format')
-      .addSelect('l.subjectId', 'subjectId')
-      .addSelect('s.title', 'subjectName')
-      .addSelect('l.topicId', 'topicId')
-      .addSelect('t.title', 'topicTitle')
-      .addSelect('t.order', 'topicOrder')
-      .addSelect('COUNT(ls.id)', 'numSections')
+      .select('l.subjectId', 'subjectId')
       .addSelect('ult.status', 'status')
-      .addSelect('ult.progressPercent', 'progressPercent')
-      .addSelect('ult.views', 'views')
       .from('lesson', 'l')
-      .innerJoin('subject', 's', 's.id = l.subjectId')
-      .innerJoin('topic', 't', 't.id = l.topicId')
-      .leftJoin('lesson_section', 'ls', 'ls.lessonId = l.id')
       .leftJoin('user_lesson_tracker', 'ult', 'ult.lessonId = l.id AND ult.userId = :userId', { userId: userId ?? 0 })
       .where('l.subjectId IN (:...subjectIds)', { subjectIds })
-      .groupBy('l.id')
-      .addGroupBy('s.title')
-      .addGroupBy('t.title')
-      .addGroupBy('t.order')
-      .addGroupBy('ult.status')
-      .addGroupBy('ult.progressPercent')
-      .addGroupBy('ult.views')
-      .orderBy('l.subjectId', 'ASC')
-      .addOrderBy('t.order', 'ASC')
-      .addOrderBy('l.level', 'ASC')
-      .addOrderBy('l.id', 'ASC')
       .getRawMany();
 
     return rows.map((r) => ({
-      id: +r.id,
-      title: r.title ?? '',
-      slug: r.slug ?? '',
-      summary: r.summary ?? '',
-      level: +(r.level ?? 1),
-      format: r.format ?? null,
       subjectId: +(r.subjectId ?? 0),
-      subjectName: r.subjectName ?? '',
-      topicId: +(r.topicId ?? 0),
-      topicTitle: r.topicTitle ?? '',
-      topicOrder: +(r.topicOrder ?? 0),
-      numSections: +(r.numSections ?? 0),
       status: r.status ?? null,
-      progressPercent: r.progressPercent != null ? +(r.progressPercent) : 0,
-      views: r.views != null ? +(r.views) : 0,
     }));
   }
 

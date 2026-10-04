@@ -132,9 +132,10 @@ export class MasterController {
   }
 
   @ApiOperation({
-    summary: "Get the caller's enriched career dashboard (scores, lessons, badges, next-best-action)",
+    summary: "Get the caller's enriched career dashboard (scores, lesson completion, badges, next-best-action)",
     description:
-      "Builds on the legacy career dashboard's data with lesson-completion metrics, per-job-role " +
+      "Builds on the legacy career dashboard's data with lesson-completion metrics (no per-lesson " +
+      'list — this dashboard has no lesson browsing UI), per-job-role ' +
       'badges, and a computed `nextCertificationTrack`/`nextSubjectTrack` suggestion (the ' +
       'closest-to-completion not-yet-achieved cert, and the closest-to-completion subject track ' +
       'within it). Any unexpected error is caught and logged server-side rather than propagated — ' +

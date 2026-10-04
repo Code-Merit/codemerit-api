@@ -37,7 +37,7 @@ export class UserPermission implements IUserPermission {
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
 
-  @ManyToOne(() => Permission, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Permission, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'permissionId', referencedColumnName: 'id' })
   permission: Permission;
 }

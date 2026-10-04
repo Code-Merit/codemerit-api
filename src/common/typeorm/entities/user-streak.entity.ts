@@ -1,12 +1,9 @@
 import {
   Column,
   Entity,
-  JoinColumn,
-  OneToOne,
   UpdateDateColumn,
 } from 'typeorm';
 import { AbstractEntity } from './abstract.entity';
-import { User } from './user.entity';
 
 @Entity()
 export class UserStreak extends AbstractEntity {
@@ -24,8 +21,4 @@ export class UserStreak extends AbstractEntity {
 
   @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;
-
-  @OneToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  user: User;
 }

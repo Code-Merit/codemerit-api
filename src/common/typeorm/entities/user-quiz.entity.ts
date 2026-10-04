@@ -25,7 +25,7 @@ import { QuizSubject } from './quiz-subject.entity';
 // (not a meaningful concept for a learner's own practice quiz).
 @Entity('user_quiz')
 export class UserQuiz extends AbstractEntity {
-  @Column({ type: 'varchar', length: 200, nullable: false })
+  @Column({ type: 'varchar', length: 500, nullable: false })
   title: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true, default: null })
@@ -39,7 +39,7 @@ export class UserQuiz extends AbstractEntity {
   })
   label: TopicLabelEnum;
 
-  @Column({ type: 'varchar', length: 200, nullable: true, default: null })
+  @Column({ type: 'varchar', length: 500, nullable: true, default: null })
   shortDesc: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true, unique: true })

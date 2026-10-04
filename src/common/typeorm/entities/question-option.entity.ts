@@ -26,7 +26,7 @@ export class QuestionOption extends AbstractEntity implements IQuestionOption {
     type: 'varchar',
     nullable: true,
     default: null,
-    length: 200,
+    length: 500,
   })
   comment: string;
 
