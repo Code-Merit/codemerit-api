@@ -9,6 +9,7 @@ const QUESTION_AUTHOR_GROUP = 'Question Author';
 const TOPIC_ACCESS_GROUP = 'Topic Access';
 const BADGE_GROUP = 'Badge Manager';
 const SME_GROUP = 'SME Access';
+const QUESTION_REVIEWER_GROUP = 'Question Reviewer';
 const INTERVIEW_GROUP = 'Interview Manager';
 const TALENT_GROUP = 'Talent Partner';
 const ORGANIZATION_GROUP = 'Organization';
@@ -35,6 +36,7 @@ const PERMISSION_META: Record<UserPermissionEnum, PermissionMeta> = {
   [UserPermissionEnum.CertificationTrackDelete]: { description: 'Delete certification tracks',                              group: CERTIFICATION_TRACK_GROUP },
   [UserPermissionEnum.CertificationTrackGrant]:  { description: 'Manually grant or revoke certificates',                    group: CERTIFICATION_TRACK_GROUP },
   [UserPermissionEnum.BadgeGrant]:               { description: 'Grant badges to learners (e.g. during an interview)',      group: BADGE_GROUP },
+  [UserPermissionEnum.QuestionReview]:           { description: 'Review question quality for assigned subjects (grant scoped to a Subject)', group: QUESTION_REVIEWER_GROUP },
   [UserPermissionEnum.Sme]:                      { description: 'Subject Matter Expert access, e.g. taking candidate interviews', group: SME_GROUP },
 
   // Ladder: LmsManager (above) < LearningManager < LearningAdmin — same group so the
