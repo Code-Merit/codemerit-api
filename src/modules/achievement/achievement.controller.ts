@@ -83,19 +83,27 @@ export class AchievementController {
   /** A persistent "what's my current standing right now" snapshot (totalPoints/level/
    * streak) — unlike the one-shot NewlyEarnedDto a quiz submit returns, this is callable
    * any time (e.g. on page load) so a caller can show an accurate XP/level readout before
-   * the learner has attempted anything this session. Always the caller's own account-wide
-   * totals — not subject-scoped. */
+   * the learner has attempted anything this session. totalPoints/level/streak are always
+   * the caller's own account-wide totals — not subject-scoped. ?subjectId=12 additionally
+   * computes `subjectXp`, a live reconstruction of XP earned specifically in that subject
+   * (see AchievementService.getUserSubjectXp for the approximation it makes); omitted,
+   * subjectXp is null and no extra query runs. */
   @ApiOperation({
     summary: "Get the caller's current XP/level/streak snapshot",
     description:
       'Returns totalPoints, the derived level tier, and current/longest streak — the same ' +
       "underlying fields a quiz submit's NewlyEarnedDto reports as a delta, but readable any " +
-      'time rather than only right after a submission.',
+      'time rather than only right after a submission. Pass subjectId to also get subjectXp, ' +
+      'a reconstructed subject-scoped XP figure.',
   })
+  @ApiQuery({ name: 'subjectId', required: false, type: Number })
   @UseGuards(AuthGuard('jwt'))
   @Get('my-stats')
-  async getMyStats(@Request() req: any) {
-    return this.achievementService.getMyGamificationStats(req.user.id);
+  async getMyStats(@Request() req: any, @Query('subjectId') subjectId?: string) {
+    return this.achievementService.getMyGamificationStats(
+      req.user.id,
+      subjectId ? +subjectId : undefined,
+    );
   }
 
   /** Catalog of badge definitions, e.g. for an interviewer picking which badge to grant.

@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
 import { DataSource } from 'typeorm';
+import { XP_HINT_PENALTY_MULTIPLIER, XP_PER_CORRECT } from 'src/modules/achievement/constants/gamification.constants';
 
 @Injectable()
 export class MeritService {
@@ -376,56 +378,154 @@ export class MeritService {
   }
 
   /**
-   * Leaderboard by XP, either all-time (User.points, unbounded) or windowed to the
-   * current week/month (summed from UserXpLog, which exists only so this can be
-   * computed — User.points itself has no history to slice by date). Windowing
-   * makes rank achievable for new users too, instead of competing against everyone's
-   * entire lifetime total forever.
+   * Leaderboard by XP, computed live from QuestionAttempt — not User.points/UserXpLog.
+   *
+   * Those two exist to drive the account's own XP chip/leveling and are written as a
+   * non-atomic read-then-set pair with no transaction (AchievementService.awardXpAndLevel) —
+   * fine for "my own running total," but a bad foundation for a *ranking* everyone is
+   * compared against: a lost update or a crash mid-write permanently desyncs them with no
+   * reconciliation job anywhere in the codebase. QuestionAttempt is the actual ground truth
+   * everything else is derived from, so this reconstructs the same per-question XP formula
+   * directly from it: for every question a user has EVER answered correctly, take only their
+   * first such attempt (a question pays out once, ever, same rule awardXpAndLevel enforces
+   * going forward), weight it by XP_PER_CORRECT[level] (halved if a hint was used), and sum.
+   *
+   * `period` filters on WHEN that first-correct attempt happened, not on raw activity —
+   * mastering a question 3 weeks ago doesn't count toward this week's total just because you
+   * reopened the quiz again this week. All-time has no date filter at all.
+   *
+   * `subjectSlug` narrows the exact same computation to one subject's questions — "Skill Wise
+   * Mastery" mode. Deliberately the SAME formula as the unscoped (global) board, not the
+   * separate marks/count-based getSubjectMasteryLeaderboards() below, so a learner never sees
+   * two differently-computed numbers both called "XP" depending on which leaderboard they're
+   * on. An unresolvable/unpublished slug is treated exactly like no slug at all — this method
+   * silently falls back to the global board rather than erroring, so a bad/stale URL never
+   * breaks the page, it just loses the subject scoping.
+   *
+   * Known, accepted gap versus the real account XP economy: this excludes the flat
+   * quiz-completion (+5) and perfect-score (+25) bonuses — those are awarded per submission,
+   * not per question, with no clean single-question (or even single-subject) attribution, so
+   * they can't be reconstructed from attempts alone. For a ranking (relative comparison)
+   * rather than an exact personal total, that's an acceptable, small, evenly-distributed gap.
+   *
+   * Equal-XP ties are resolved by accuracy, not an arbitrary tiebreaker: whoever got there with
+   * fewer wrong attempts outranks whoever needed more tries for the same total — same spirit as
+   * journeyAccuracy elsewhere in this app (correct ÷ every attempt ever, retries included, not
+   * just each question's best outcome). Computed over the user's FULL attempt history (subject-
+   * filtered when scoped, but never period-filtered) rather than just this window's attempts —
+   * a week/month can hold too few attempts for "this week's accuracy" to mean anything, so this
+   * tiebreaker asks "how accurate is this learner overall," not "how accurate were they today."
    */
-  async getGlobalXpLeaderboard(
+  async getXpLeaderboard(
     userId?: number,
     limit = 10,
     period: 'all-time' | 'weekly' | 'monthly' = 'all-time',
-  ): Promise<{ leaderboard: any[]; userRank: number | null; period: string; periodStart: string | null }> {
-    let rows: any[];
-    let periodStart: Date | null = null;
+    subjectSlug?: string,
+  ): Promise<{
+    leaderboard: any[];
+    userRank: number | null;
+    period: string;
+    periodStart: string | null;
+    subject: { id: number; title: string; slug: string } | null;
+  }> {
+    const subject = subjectSlug ? await this.resolveLeaderboardSubject(subjectSlug) : null;
 
-    if (period === 'all-time') {
-      rows = await this.dataSource
-        .createQueryBuilder()
-        .select('u.id', 'userId')
-        .addSelect("CONCAT(u.firstName, ' ', u.lastName)", 'name')
-        .addSelect('u.username', 'username')
-        .addSelect('u.image', 'image')
-        .addSelect('u.points', 'points')
-        .from('user', 'u')
-        .leftJoin('user_preference', 'up', 'up.userId = u.id')
-        .where('u.points > 0')
-        .andWhere('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
-        .orderBy('u.points', 'DESC')
-        .getRawMany();
-    } else {
-      periodStart = period === 'weekly' ? this.startOfWeek() : this.startOfMonth();
-      rows = await this.dataSource
-        .createQueryBuilder()
-        .select('u.id', 'userId')
-        .addSelect("CONCAT(u.firstName, ' ', u.lastName)", 'name')
-        .addSelect('u.username', 'username')
-        .addSelect('u.image', 'image')
-        .addSelect('SUM(xl.xpAwarded)', 'points')
-        .from('user', 'u')
-        .innerJoin('user_xp_log', 'xl', 'xl.userId = u.id AND xl.createdAt >= :periodStart', { periodStart })
-        .leftJoin('user_preference', 'up', 'up.userId = u.id')
-        .where('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
-        .groupBy('u.id')
-        .orderBy('SUM(xl.xpAwarded)', 'DESC')
-        .getRawMany();
+    const periodStart: Date | null =
+      period === 'weekly' ? this.startOfWeek() : period === 'monthly' ? this.startOfMonth() : null;
+
+    // "First correct, non-skipped attempt per (userId, questionId)" — a GROUP BY + join back
+    // to the row, not a per-row correlated subquery, so this scales across the whole attempts
+    // table in one pass instead of one subquery execution per candidate row.
+    const firstCorrectSub = this.dataSource
+      .createQueryBuilder()
+      .subQuery()
+      .select('MIN(fc.id)', 'firstId')
+      .from('question_attempt', 'fc')
+      .where('fc.isCorrect = 1')
+      .andWhere('fc.isSkipped = 0')
+      .groupBy('fc.userId')
+      .addGroupBy('fc.questionId')
+      .getQuery();
+
+    // Per-user accuracy across EVERY attempt (not just first-correct ones), same question
+    // filters as the main query, subject-scoped when `subject` is set — the accuracy tiebreak
+    // above. Built as its own derived table rather than a correlated subquery for the same
+    // scaling reason as firstCorrectSub.
+    let accuracySubBuilder = this.dataSource
+      .createQueryBuilder()
+      .subQuery()
+      .select('qa2.userId', 'userId')
+      .addSelect('SUM(CASE WHEN qa2.isCorrect = 1 THEN 1 ELSE 0 END)', 'correctCount')
+      .addSelect('COUNT(*)', 'totalCount')
+      .from('question_attempt', 'qa2')
+      .innerJoin(
+        'question', 'q2',
+        'q2.id = qa2.questionId AND q2.status = :active AND q2.questionType = :trivia',
+      )
+      .groupBy('qa2.userId');
+    if (subject) {
+      accuracySubBuilder = accuracySubBuilder.andWhere('q2.subjectId = :subjectId');
+    }
+    const accuracySub = accuracySubBuilder.getQuery();
+
+    const qb = this.dataSource
+      .createQueryBuilder()
+      .select('u.id', 'userId')
+      .addSelect("CONCAT(u.firstName, ' ', u.lastName)", 'name')
+      .addSelect('u.username', 'username')
+      .addSelect('u.image', 'image')
+      .addSelect('u.designation', 'designation')
+      .addSelect(
+        `SUM(ROUND(
+           (CASE q.level WHEN :easyLevel THEN :xpEasy WHEN :mediumLevel THEN :xpMedium WHEN :hardLevel THEN :xpHard ELSE :xpEasy END)
+           * (CASE WHEN qa.hintUsed = 1 THEN :hintMultiplier ELSE 1 END)
+         ))`,
+        'points',
+      )
+      // COALESCE guards a theoretical 0-row join only — every user reaching this SELECT already
+      // has ≥1 correct attempt in scope via firstCorrect, so accuracy.totalCount is never 0 in
+      // practice.
+      .addSelect('COALESCE(accuracy.correctCount / accuracy.totalCount, 0)', 'accuracyRatio')
+      .from('question_attempt', 'qa')
+      .innerJoin(`(${firstCorrectSub})`, 'firstCorrect', 'firstCorrect.firstId = qa.id')
+      .innerJoin(
+        'question', 'q',
+        'q.id = qa.questionId AND q.status = :active AND q.questionType = :trivia',
+        { active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
+      )
+      .innerJoin('user', 'u', 'u.id = qa.userId')
+      .leftJoin(`(${accuracySub})`, 'accuracy', 'accuracy.userId = u.id')
+      .leftJoin('user_preference', 'up', 'up.userId = u.id')
+      .where('(up.showOnLeaderboard IS NULL OR up.showOnLeaderboard = 1)')
+      .setParameters({
+        easyLevel: DifficultyLevelEnum.Easy,
+        mediumLevel: DifficultyLevelEnum.Intermediate,
+        hardLevel: DifficultyLevelEnum.Advanced,
+        xpEasy: XP_PER_CORRECT[DifficultyLevelEnum.Easy],
+        xpMedium: XP_PER_CORRECT[DifficultyLevelEnum.Intermediate],
+        xpHard: XP_PER_CORRECT[DifficultyLevelEnum.Advanced],
+        hintMultiplier: XP_HINT_PENALTY_MULTIPLIER,
+      })
+      .groupBy('u.id')
+      // XP first, then accuracy breaks equal-XP ties, then userId as the last-resort
+      // deterministic tiebreak (so which specific user lands in which on-page slot never
+      // shifts between loads even if two people are tied on both XP and accuracy).
+      .orderBy('points', 'DESC')
+      .addOrderBy('accuracyRatio', 'DESC')
+      .addOrderBy('u.id', 'ASC');
+
+    if (subject) {
+      qb.andWhere('q.subjectId = :subjectId', { subjectId: subject.id });
+    }
+    if (periodStart) {
+      qb.andWhere('qa.createdAt >= :periodStart', { periodStart });
     }
 
-    // Rows are already ordered DESC by the query itself.
+    const rows = await qb.getRawMany();
+
     const shaped = rows.map((r) => ({
       userId: +r.userId, name: r.name, username: r.username,
-      image: r.image, points: +r.points || 0,
+      image: r.image, points: +r.points || 0, designation: r.designation || null,
     }));
     const ranked = this.assignDenseRanks(shaped, (r) => r.points);
 
@@ -434,6 +534,23 @@ export class MeritService {
       userRank: userId != null ? ranked.find((r) => r.userId === userId)?.rank ?? null : null,
       period,
       periodStart: periodStart ? periodStart.toISOString() : null,
+      subject,
     };
+  }
+
+  /** Published-subject-only slug lookup for getXpLeaderboard's "Skill Wise Mastery" scoping —
+   * an unpublished or unknown slug resolves to null, which that caller treats as "no subject,
+   * show the global board" rather than a 404. */
+  private async resolveLeaderboardSubject(slug: string): Promise<{ id: number; title: string; slug: string } | null> {
+    const row = await this.dataSource
+      .createQueryBuilder()
+      .select('s.id', 'id')
+      .addSelect('s.title', 'title')
+      .addSelect('s.slug', 'slug')
+      .from('subject', 's')
+      .where('s.slug = :slug', { slug })
+      .andWhere('s.isPublished = :isPublished', { isPublished: 1 })
+      .getRawOne();
+    return row ? { id: +row.id, title: row.title, slug: row.slug } : null;
   }
 }

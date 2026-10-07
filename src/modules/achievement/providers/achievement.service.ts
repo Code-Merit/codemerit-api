@@ -202,17 +202,68 @@ export class AchievementService {
    * session. Same underlying fields (User.points, computeLevel, UserStreak) — global per
    * account, not subject-scoped.
    */
-  async getMyGamificationStats(userId: number): Promise<MyGamificationStatsDto> {
-    const [user, streak] = await Promise.all([
+  async getMyGamificationStats(userId: number, subjectId?: number): Promise<MyGamificationStatsDto> {
+    const [user, streak, subjectXp] = await Promise.all([
       this.userRepo.findOne({ where: { id: userId }, select: ['id', 'points'] }),
       this.userStreakRepo.findOne({ where: { userId } }),
+      subjectId ? this.getUserSubjectXp(userId, subjectId) : Promise.resolve(null),
     ]);
     const totalPoints = user?.points ?? 0;
     return {
       totalPoints,
       level: computeLevel(totalPoints),
       streak: streak ? { current: streak.currentStreak, longest: streak.longestStreak } : null,
+      subjectXp,
     };
+  }
+
+  /**
+   * "How much of my total XP came from this one subject" — reconstructed live from
+   * QuestionAttempt rather than stored (UserXpLog has no subjectId column, see its own doc
+   * comment), using the exact same per-question formula awardXpAndLevel() uses: for every
+   * question in this subject ever answered correctly (non-skipped), take its FIRST such
+   * attempt (MIN(id) — matches "a question only ever pays out the first time," the same rule
+   * awardXpAndLevel() enforces going forward), look up that attempt's hintUsed flag and the
+   * question's current level, and sum Math.round(XP_PER_CORRECT[level] * hint-multiplier) per
+   * question — rounding per-question, not on the total, same as the real award path.
+   *
+   * Two known gaps versus the real historical total, both accepted tradeoffs for avoiding a
+   * schema migration (see the feasibility analysis this was built from):
+   * - Excludes the flat quiz-completion (+5) and perfect-score (+25) bonuses entirely — those
+   *   are awarded per submission, not per question, and a submission can span subjects with no
+   *   clean single-subject attribution.
+   * - Uses the question's CURRENT level, not whatever it was when first mastered — there's no
+   *   level-history table, so a question re-leveled after being mastered will compute against
+   *   its new level here, which can drift from what was actually paid out at the time.
+   */
+  private async getUserSubjectXp(userId: number, subjectId: number): Promise<number> {
+    const firstCorrectSub = this.questionAttemptRepo
+      .createQueryBuilder()
+      .subQuery()
+      .select('MIN(qa2.id)')
+      .from(QuestionAttempt, 'qa2')
+      .where('qa2.userId = qa.userId')
+      .andWhere('qa2.questionId = qa.questionId')
+      .andWhere('qa2.isCorrect = 1')
+      .andWhere('qa2.isSkipped = 0')
+      .getQuery();
+
+    const rows = await this.questionAttemptRepo
+      .createQueryBuilder('qa')
+      .select('q.level', 'level')
+      .addSelect('qa.hintUsed', 'hintUsed')
+      .innerJoin('question', 'q', 'q.id = qa.questionId AND q.subjectId = :subjectId', { subjectId })
+      .where('qa.userId = :userId', { userId })
+      .andWhere('qa.isCorrect = 1')
+      .andWhere('qa.isSkipped = 0')
+      .andWhere(`qa.id = ${firstCorrectSub}`)
+      .getRawMany();
+
+    return rows.reduce((total, row) => {
+      const base = XP_PER_CORRECT[+row.level] ?? XP_PER_CORRECT[1];
+      const hintUsed = row.hintUsed === 1 || row.hintUsed === true;
+      return total + Math.round(base * (hintUsed ? XP_HINT_PENALTY_MULTIPLIER : 1));
+    }, 0);
   }
 
   /**

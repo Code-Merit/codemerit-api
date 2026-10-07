@@ -197,13 +197,16 @@ export class MasterController {
   }
 
   @ApiOperation({
-    summary: 'Get the global XP leaderboard (public — personalized when logged in)',
+    summary: 'Get the XP leaderboard — global, or scoped to one subject (public — personalized when logged in)',
     description:
-      "Ranks all users by lifetime `User.points` for `all-time`, or by XP summed from a user's " +
-      'XP log since the start of the current week/month for the `weekly`/`monthly` windows — the ' +
-      "windowed views exist so rank is achievable for newer users too, not just whoever's " +
-      "accumulated the most points ever. Any value other than 'weekly'/'monthly' silently falls " +
-      'back to `all-time`. Defaults to the top 10; pass `limit` for more (capped at 100). When ' +
+      'Ranks users by XP reconstructed live from QuestionAttempt (see MeritService.getXpLeaderboard for ' +
+      'why this reads attempts rather than the account XP counter) for `all-time`, or only counting ' +
+      "questions first mastered since the start of the current week/month for the `weekly`/`monthly` " +
+      "windows — those exist so rank is achievable for newer users too, not just whoever's mastered " +
+      "the most ever. Any value other than 'weekly'/'monthly' silently falls back to `all-time`. Pass " +
+      "`subject` (a subject slug) for \"Skill Wise Mastery\" mode, scoping the exact same ranking to " +
+      'one subject; an unknown or unpublished slug is silently ignored, falling back to the global ' +
+      'board rather than erroring. Defaults to the top 10; pass `limit` for more (capped at 100). When ' +
       "authenticated, also includes the caller's own dense rank even when it falls outside `limit`.",
   })
   @ApiQuery({
@@ -218,18 +221,25 @@ export class MasterController {
     type: Number,
     description: 'Number of ranked entries to return. Defaults to 10, capped at 100.',
   })
+  @ApiQuery({
+    name: 'subject',
+    required: false,
+    type: String,
+    description: 'Subject slug to scope the leaderboard to ("Skill Wise Mastery"). Omit, or pass an unknown slug, for the global board.',
+  })
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @Get('leaderboard')
-  async getGlobalLeaderboard(
+  async getLeaderboard(
     @Query('period') period: 'all-time' | 'weekly' | 'monthly' = 'all-time',
     @Query('limit') limit?: string,
+    @Query('subject') subject?: string,
     @Request() req?: any,
   ) {
     const userId = req?.user?.id;
     const resolvedPeriod = ['weekly', 'monthly'].includes(period) ? period : 'all-time';
     const parsedLimit = Number(limit);
     const resolvedLimit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 100) : 10;
-    return this.meritService.getGlobalXpLeaderboard(userId, resolvedLimit, resolvedPeriod);
+    return this.meritService.getXpLeaderboard(userId, resolvedLimit, resolvedPeriod, subject || undefined);
   }
 }

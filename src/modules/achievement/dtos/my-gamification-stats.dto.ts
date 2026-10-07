@@ -13,4 +13,11 @@ export interface MyGamificationStatsDto {
   totalPoints: number;
   level: LevelTier;
   streak: MyGamificationStatsStreak | null;
+  // Only computed when the caller passes ?subjectId= — "how much of totalPoints came from
+  // this one subject," reconstructed live from QuestionAttempt (see
+  // AchievementService.getUserSubjectXp). null when no subjectId was requested; a real 0 when
+  // one was requested but nothing's been mastered there yet. Approximate: excludes the flat
+  // quiz-completion/perfect-score bonuses (no subject attribution for those, see that method's
+  // doc comment) and assumes a question's current `level` matches what it was when mastered.
+  subjectXp: number | null;
 }
