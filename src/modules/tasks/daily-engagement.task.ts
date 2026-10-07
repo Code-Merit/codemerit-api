@@ -20,8 +20,20 @@ export class DailyEngagementTask {
     timeZone: 'Asia/Kolkata',
   })
   async handleDailyEngagementCron(): Promise<void> {
-    this.logger.log('CRON: Triggering 8:00 PM daily engagement job...');
-    await this.processTopPerformers();
+    this.logger.log(
+      `CRON: Triggering daily engagement job at ${new Date().toISOString()} (20:00 Asia/Kolkata)...`,
+    );
+    try {
+      const result = await this.processTopPerformers();
+      this.logger.log(
+        `CRON: Daily engagement job finished; eligible users=${result.processedCount}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `CRON: Daily engagement job failed: ${error instanceof Error ? error.message : String(error)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   // Shared method so both CRON and manual test endpoint execute identical logic
@@ -30,6 +42,9 @@ export class DailyEngagementTask {
     userIds: number[];
   }> {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    this.logger.log(
+      `Querying daily engagement attempts since ${twentyFourHoursAgo.toISOString()} (threshold: > 10)`,
+    );
 
     const topPerformers = await this.questionAttemptRepo
       .createQueryBuilder('qa')
@@ -48,6 +63,9 @@ export class DailyEngagementTask {
 
     for (const record of topPerformers) {
       const count = parseInt(record.attemptCount, 10);
+      this.logger.log(
+        `Sending daily engagement email for userId=${record.userId}, attempts=${count}`,
+      );
       await this.emailService.sendDailyEngagementEmail(record.userId, count);
       processedUserIds.push(record.userId);
     }

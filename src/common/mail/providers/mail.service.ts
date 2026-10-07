@@ -29,6 +29,11 @@ import {
 
 const SUPPRESSED_EMAIL_DOMAIN = '@codemerit.test';
 
+function maskEmail(email: string): string {
+  const [localPart, domain] = email.split('@');
+  return domain ? `${localPart.slice(0, 1)}***@${domain}` : 'invalid-email';
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
@@ -46,10 +51,14 @@ export class MailService {
     this.frontendUrl = this.configService.get<string>('mail.frontendUrl');
   }
 
-  private async dispatch(to: string, template: EmailTemplate): Promise<void> {
+  private async dispatch(
+    to: string,
+    template: EmailTemplate,
+    context?: string,
+  ): Promise<void> {
     if (to?.toLowerCase().endsWith(SUPPRESSED_EMAIL_DOMAIN)) {
       this.logger.log(
-        `Email suppressed (${SUPPRESSED_EMAIL_DOMAIN} test account) (${template.subject}) => ${to}`,
+        `Email suppressed (${SUPPRESSED_EMAIL_DOMAIN} test account) (${template.subject}) => ${maskEmail(to)}`,
       );
       return;
     }
@@ -63,15 +72,26 @@ export class MailService {
       this.frontendUrl,
     );
     try {
-      await this.resend.emails.send({
+      const result = await this.resend.emails.send({
         from: this.fromAddress,
         to,
         subject,
         html,
       });
+      if (result.error) {
+        this.logger.error(
+          `Email provider rejected ${context ?? template.subject} => ${maskEmail(to)}: ${result.error.message}`,
+        );
+        return;
+      }
+      if (context) {
+        this.logger.log(
+          `Email accepted by Resend (${context}) => ${maskEmail(to)}, messageId=${result.data?.id ?? 'unknown'}`,
+        );
+      }
     } catch (error) {
       this.logger.error(
-        `Email send failed (${template.subject}) => ${to}: ${error instanceof Error ? error.message : String(error)}`,
+        `Email send failed (${context ?? template.subject}) => ${maskEmail(to)}: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -288,7 +308,12 @@ export class MailService {
     to: string,
     name: string,
     attemptCount: number,
+    userId: number,
   ): Promise<void> {
-    await this.dispatch(to, dailyEngagementTemplate(name, attemptCount));
+    await this.dispatch(
+      to,
+      dailyEngagementTemplate(name, attemptCount),
+      `daily-engagement userId=${userId}`,
+    );
   }
 }

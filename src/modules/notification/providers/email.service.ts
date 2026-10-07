@@ -21,7 +21,10 @@ export class EmailService {
       where: { id: userId },
       select: ['email', 'firstName'],
     });
-    if (!user?.email) return null;
+    if (!user?.email) {
+      this.logger.warn(`Skipping email: userId=${userId} has no email address`);
+      return null;
+    }
     return { email: user.email, name: user.firstName || 'there' };
   }
 
@@ -125,6 +128,7 @@ export class EmailService {
         recipient.email,
         recipient.name,
         attemptCount,
+        userId,
       );
     } catch (error) {
       this.handleFailure('daily-engagement', userId, error);
