@@ -77,7 +77,8 @@ export class QuestionGeneratorService {
     if (groupIds.length === 0) {
       throw new AppCustomException(
         HttpStatus.NOT_FOUND,
-        'No content available for this quiz yet. Please try a different subject or topic.'
+        'No content available for this quiz yet. Please try a different subject or topic.',
+        'SCOPE_EMPTY',
       );
     }
 
@@ -106,9 +107,32 @@ export class QuestionGeneratorService {
     }
 
     if (uniqueQuestions.length === 0) {
+      // Was unconditionally QUESTIONS_EXHAUSTED here, but that's only true if the scope
+      // actually ever had content — resolveTopicIds() above only checks that the TOPICS are
+      // published, never that any of them actually have an Active Trivia question. A subject
+      // with published-but-empty topics (new content, nothing authored yet) sailed past the
+      // SCOPE_EMPTY check above and landed here instead, getting told "you've answered every
+      // available question" — framed as a congratulatory milestone by the frontend — when the
+      // true state is "there was never anything here for you to answer." Distinguish the two
+      // with one extra existence check, gated behind this already-rare zero-result path so it
+      // costs nothing on the normal/successful route.
+      const hasAnyContent = await this.hasAnyQuestionsInScope(groupIds);
+      if (!hasAnyContent) {
+        throw new AppCustomException(
+          HttpStatus.NOT_FOUND,
+          'No content available for this quiz yet. Please try a different subject or topic.',
+          'SCOPE_EMPTY',
+        );
+      }
+      // There IS content here, the caller has simply correctly answered all of it already.
+      // For a continueThroughSubject ("keep going") quiz, where the scope is the seed topic
+      // plus everything after it, this means the whole rest of the subject is done — the
+      // frontend (which knows whether it asked for that) renders this as a completion
+      // milestone, not a dead end. See skill-arena.component.ts's handling of this code.
       throw new AppCustomException(
         HttpStatus.NOT_FOUND,
-        "You've answered every available question here. Try another topic, or check back later for new ones."
+        "You've answered every available question here. Try another topic, or check back later for new ones.",
+        'QUESTIONS_EXHAUSTED',
       );
     }
 
@@ -351,5 +375,24 @@ export class QuestionGeneratorService {
       limit,
     ];
     return this.dataSource.query(rawQuery, params);
+  }
+
+  /**
+   * Blanket existence check — does this topic scope have ANY Active Trivia question at all,
+   * ignoring level cap and the calling user's own attempt history entirely. Only called from
+   * the zero-results branch of generateUserQuiz() to tell "this scope never had content"
+   * (SCOPE_EMPTY) apart from "the user genuinely answered all of it" (QUESTIONS_EXHAUSTED) —
+   * see that call site's comment.
+   */
+  private async hasAnyQuestionsInScope(topicIds: number[]): Promise<boolean> {
+    const count = await this.dataSource
+      .getRepository(QuestionTopic)
+      .createQueryBuilder('qt')
+      .innerJoin('question', 'q', 'q.id = qt.questionId')
+      .where('qt.topicId IN (:...topicIds)', { topicIds })
+      .andWhere('q.questionType = :trivia', { trivia: QuestionTypeEnum.Trivia })
+      .andWhere('q.status = :active', { active: QuestionStatusEnum.Active })
+      .getCount();
+    return count > 0;
   }
 }

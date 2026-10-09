@@ -28,11 +28,20 @@ export class GlobalExceptionsFilter implements ExceptionFilter {
         message = 'Please log in to continue.';
       } else if (exception instanceof ForbiddenException) {
         message = "You don't have permission to do that.";
+      } else if (typeof res === 'string') {
+        message = res;
+      } else if (Array.isArray(res)) {
+        // main.ts's ValidationPipe exceptionFactory hands a BadRequestException the
+        // flattened {property, message}[] array directly as its response body, so
+        // getResponse() returns the array itself here — NOT an object with a `.message`
+        // property. Falling through to the object branch below used to JSON.stringify this
+        // whole array into a raw JSON blob and send THAT as the client-facing message
+        // (e.g. '[{"property":"subjectIds","message":"..."}]'), since a stringified array is
+        // no longer Array.isArray by the time the unwrap below runs. Keeping it as a real
+        // array here instead lets that unwrap do its job.
+        message = res;
       } else {
-        message =
-          typeof res === 'string'
-            ? res
-            : (res as any).message || JSON.stringify(res);
+        message = (res as any).message || JSON.stringify(res);
       }
     }
 

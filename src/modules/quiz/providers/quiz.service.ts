@@ -562,9 +562,14 @@ export class QuizService {
 
   // UserQuiz rows (and their QuizSubject tags) live in user_quiz/userQuizId now — this
   // only ever concerns UserQuiz, so join there directly rather than via the old
-  // quizId/Quiz path. QuizSettings.numQuestions gives each quiz's actual question
-  // count. Shared by enforceSubjectAccessForUserQuiz (blocking) and
-  // getSubjectQuestionQuota (display, e.g. "X of Y practice questions left today").
+  // quizId/Quiz path. Counted from UserQuiz.questionIds (JSON_LENGTH) rather than a
+  // QuizSettings join — QuizSettings rows are only ever created for Standard quizzes
+  // (see createQuiz's `if (isStandard && createQuizDto.settings)` settings step), never
+  // for UserQuiz, so a qset join here always matched zero rows and silently reported
+  // 0 questions used every day regardless of real usage — both the "X of Y practice
+  // questions left today" display and enforceSubjectAccessForUserQuiz's cap check were
+  // reading off that permanently-empty join. Shared by enforceSubjectAccessForUserQuiz
+  // (blocking) and getSubjectQuestionQuota (display).
   private async sumQuestionsUsedTodayBySubject(
     userId: number,
     subjectIds: number[],
@@ -577,9 +582,8 @@ export class QuizService {
     const rows = await this.quizSubjectRepo
       .createQueryBuilder('qs')
       .innerJoin(UserQuiz, 'q', 'q.id = qs.userQuizId')
-      .innerJoin(QuizSettings, 'qset', 'qset.userQuizId = q.id')
       .select('qs.subjectId', 'subjectId')
-      .addSelect('SUM(qset.numQuestions)', 'total')
+      .addSelect('SUM(JSON_LENGTH(q.questionIds))', 'total')
       .where('q.createdBy = :userId', { userId })
       .andWhere('q.createdAt >= :startOfDay', { startOfDay })
       .andWhere('qs.subjectId IN (:...subjectIds)', { subjectIds })
