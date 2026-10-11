@@ -37,6 +37,29 @@ export class CertificateController {
     return new ApiResponse('Certificate explorer.', result);
   }
 
+  /** Powers the public "invite someone to earn this certification" page
+   * (/certification/:slug on the frontend) — a deliberately narrow, shareable view of ONE
+   * track, distinct from both `explorer` (the full catalog) and `verify` (an already-earned
+   * certificate instance by its code, wrong purpose here since the invite recipient hasn't
+   * earned anything yet). Visitor-accessible; personalizes lightly when the visitor happens
+   * to already be logged in, same OptionalJwtAuthGuard pattern as `explorer`. */
+  @ApiOperation({
+    summary: 'Get one certification track by its public slug (public, no auth)',
+    description:
+      'Backs the public "/certification/:slug" invite page. 404 if no published track has ' +
+      'this slug. No authentication required — isAchieved/progressPercent/myCertificate are ' +
+      'the caller\'s own when logged in, otherwise the track\'s neutral catalog data.',
+  })
+  @ApiParam({ name: 'slug', description: 'The CertificationTrack\'s slug' })
+  @ApiResponseDoc({ status: 404, description: 'No published certification track exists with this slug.' })
+  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('public/:slug')
+  async publicTrack(@Param('slug') slug: string, @Request() req: any): Promise<ApiResponse<any>> {
+    const result = await this.certificateService.getPublicTrack(slug, req.user?.id);
+    return new ApiResponse('Certification track.', result);
+  }
+
   @ApiOperation({
     summary: 'Verify a certificate by its printed verification code (public, no auth)',
     description:

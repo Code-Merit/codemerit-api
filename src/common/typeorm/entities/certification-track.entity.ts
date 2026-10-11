@@ -22,6 +22,13 @@ export class CertificationTrack extends AbstractEntity {
   @Column({ type: 'varchar', length: 100, nullable: false })
   title: string;
 
+  // Set once at creation (CertificationTrackService#create), never regenerated on a later
+  // title edit — a shared "/certification/:slug" invite link must keep working even if the
+  // track is later renamed. See migration AddCertificationTrackSlug1790400000000 for the
+  // backfill on pre-existing rows.
+  @Column({ type: 'varchar', length: 140, nullable: false, unique: true })
+  slug: string;
+
   @Column({ type: 'text', nullable: true, default: null })
   description: string;
 
@@ -52,6 +59,14 @@ export class CertificationTrack extends AbstractEntity {
   // per-link flag as before; this defaults true so no existing track is silently hidden.
   @Column({ type: 'boolean', default: true })
   isPublished: boolean;
+
+  // Free-text, admin-authored note shown on the public "/certification/:slug" invite page's
+  // quote strip — e.g. a short word from whoever curates this track's content. Distinct from
+  // `description` (the marketing blurb) and `content` (the certificate face copy): this is the
+  // one field meant to read as a genuine human aside, not platform copy. NULL hides that section
+  // entirely rather than falling back to generic placeholder text.
+  @Column({ type: 'text', nullable: true, default: null })
+  note: string | null;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

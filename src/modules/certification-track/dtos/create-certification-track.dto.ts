@@ -57,4 +57,14 @@ export class CreateCertificationTrackDto {
   @IsBoolean()
   @IsOptional()
   isPublished?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Free-text, admin-authored note shown on the public "/certification/:slug" invite ' +
+      "page's quote strip. Omit to leave that section hidden.",
+    example: 'Every question in this bank is reviewed for correctness, not just written and forgotten.',
+  })
+  @IsString()
+  @IsOptional()
+  note?: string;
 }

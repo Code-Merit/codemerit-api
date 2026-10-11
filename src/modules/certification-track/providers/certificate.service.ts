@@ -96,6 +96,53 @@ export class CertificateService {
     };
   }
 
+  /** Backs the public "invite someone to earn this certification" page (/certification/:slug
+   * on the frontend) — deliberately reuses getExplorer() rather than a second, parallel query
+   * path that could drift from it, instead of rebuilding the hierarchy/progress computation a
+   * second time just to narrow it to one track. Personalizes (isAchieved/progressPercent/
+   * myCertificate) when userId is present, same as the explorer itself does; works fully
+   * anonymously otherwise.
+   *
+   * A slug that isn't in the published catalog isn't necessarily a bad link — the track may be
+   * a real row still awaiting approval (isPublished: false), e.g. a link shared early or found
+   * before launch. That case gets a minimal, safe fallback DTO (title/description/content only,
+   * no progress/subjectTracks/myCertificate — none of that is real yet) with isPublished:false,
+   * so the frontend can show an "undergoing approval" notice instead of a flat 404. Only a slug
+   * matching no row at all is a genuine 404. */
+  async getPublicTrack(slug: string, userId?: number): Promise<CertificateExplorerTrackDto> {
+    const explorer = await this.getExplorer(userId);
+    const track = explorer.groups
+      .flatMap((g) => g.tracks)
+      .find((t) => t.slug === slug);
+    if (track) return track;
+
+    const raw = await this.certificationTrackRepo.findOne({ where: { slug } });
+    if (!raw) {
+      throw new AppCustomException(HttpStatus.NOT_FOUND, 'No certification track found for this link.');
+    }
+    return {
+      id: raw.id,
+      title: raw.title,
+      slug: raw.slug,
+      description: raw.description,
+      content: raw.content,
+      subjectId: raw.subjectId,
+      jobRoles: [],
+      totalSubjectTracks: 0,
+      completedSubjectTracks: 0,
+      progressPercent: 0,
+      achievementThreshold: raw.passThreshold ?? CERT_ACHIEVED,
+      totalQuestions: 0,
+      questionsAttempted: 0,
+      questionsCorrect: 0,
+      isAchieved: false,
+      subjectTracks: [],
+      myCertificate: null,
+      note: raw.note,
+      isPublished: false,
+    };
+  }
+
   /** Manually grant a certificate — mirrors AchievementService.grantBadge: create-or-reissue,
    * same unique-constraint race handling, same notification/activity side effects the
    * system-issued path already fires. Re-granting an already-ISSUED cert just refreshes
@@ -305,13 +352,24 @@ export class CertificateService {
           totalQuestions: st.numTrivia ?? 0,
           attempted: st.attempted ?? 0,
           correct: st.correct ?? 0,
+          topicTitles: ((st.topics ?? []) as any[]).map((t) => t.title).filter(Boolean),
         }));
       const total = subjectTracks.length;
       const completed = subjectTracks.filter((st) => st.isCompleted).length;
-      const progressPercent = total > 0 ? +((completed / total) * 100).toFixed(0) : 0;
       const totalQuestions = subjectTracks.reduce((sum, st) => sum + st.totalQuestions, 0);
       const questionsAttempted = subjectTracks.reduce((sum, st) => sum + st.attempted, 0);
       const questionsCorrect = subjectTracks.reduce((sum, st) => sum + st.correct, 0);
+      // Same fix subject-stats.service.ts's getCertificationTracksForSubject already carries
+      // (see its own comment) — this sibling producer of the identical CertificateExplorerTrack
+      // shape had the OLD completed/total formula, which floors at 0% until an entire subject
+      // track finishes, hiding real partial progress (confirmed live: a user with 116 real
+      // question attempts and one track 67% through still read as "0%" via this endpoint).
+      // Average each subject-track's own fine-grained progressPercent instead, floored at 1%
+      // so real-but-tiny activity never rounds back down to indistinguishable-from-zero.
+      const rawProgressPercent = total > 0
+        ? subjectTracks.reduce((sum, st) => sum + (st.progressPercent || 0), 0) / total
+        : 0;
+      const progressPercent = questionsAttempted > 0 ? Math.max(1, Math.round(rawProgressPercent)) : 0;
 
       const cert = myCertByTrack.get(track.id);
       const myCertificate: CertExplorerMyCertificateDto | null = cert
@@ -332,6 +390,7 @@ export class CertificateService {
       return {
         id: track.id,
         title: track.title,
+        slug: track.slug,
         description: track.description,
         content: track.content,
         subjectId: track.subjectId,
@@ -348,6 +407,8 @@ export class CertificateService {
         isAchieved: !!myCertificate,
         subjectTracks,
         myCertificate,
+        note: track.note,
+        isPublished: true,
       };
     };
 

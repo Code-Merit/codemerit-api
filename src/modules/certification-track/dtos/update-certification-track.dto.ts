@@ -35,4 +35,9 @@ export class UpdateCertificationTrackDto {
   @IsBoolean()
   @IsOptional()
   isPublished?: boolean;
+
+  @ApiPropertyOptional({ example: 'Every question in this bank is reviewed for correctness, not just written and forgotten.' })
+  @IsString()
+  @IsOptional()
+  note?: string;
 }

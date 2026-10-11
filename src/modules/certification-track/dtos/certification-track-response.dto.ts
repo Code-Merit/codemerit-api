@@ -18,11 +18,13 @@ export class CertTrackJobRoleDto {
 export class CertificationTrackResponseDto {
   id: number;
   title: string;
+  slug: string;
   description: string;
   content: string | null;
   subjectId: number | null;
   passThreshold: number | null;
   isPublished: boolean;
+  note: string | null;
   jobRoles: CertTrackJobRoleDto[];
   subjectTrackCount: number;
   subjectTracks: CertTrackSubjectTrackDto[];

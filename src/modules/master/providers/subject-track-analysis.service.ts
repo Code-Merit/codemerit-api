@@ -207,8 +207,22 @@ export class SubjectTrackAnalysisService {
       const stWrongHard = sumTopicField('wrongHard');
       const totalTopics = topics.length;
       const completedTopics = topics.filter((t: any) => t.isCompleted).length;
-      const progressPercent = totalTopics > 0 ? +((completedTopics / totalTopics) * 100).toFixed(0) : 0;
-      const isCompleted = progressPercent >= TRACK_DONE;
+      // Fine-grained — real attempted-question coverage across the whole track (stCoverage,
+      // already aggregated above via computeAttemptMetrics), not a count of fully-finished
+      // topics. The old completedTopics/totalTopics formula floored at a flat 0% until an
+      // entire topic first cleared TOPIC_DONE's correctness bar, so real partial progress
+      // inside a not-yet-finished topic (e.g. "7 of 115 questions attempted") never moved the
+      // number at all — this is the bug that was also showing up one level up, in the
+      // certification-track rollup that averages these per-track percentages.
+      // Math.round() alone can still land back on a flat 0 for a real-but-tiny fraction (a
+      // handful of attempts against a large question bank rounds under 0.5%) — indistinguishable
+      // from "hasn't started" on screen, which is exactly the complaint this fix exists for.
+      // Floor any nonzero activity at 1% so it's never silently invisible.
+      const progressPercent = stAttempted > 0 ? Math.max(1, Math.round(stCoverage)) : 0;
+      // Completion gate is intentionally UNCHANGED (still topic-count-based, not derived from
+      // the now fine-grained progressPercent above) — this is a display fix, not a change to
+      // what counts as "done" for existing learners' completion/certificate eligibility.
+      const isCompleted = totalTopics > 0 && +((completedTopics / totalTopics) * 100).toFixed(0) >= TRACK_DONE;
 
       result.set(stId, {
         ...meta,

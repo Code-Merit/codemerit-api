@@ -16,6 +16,9 @@ export class CertExplorerSubjectTrackDto {
   totalQuestions: number;
   attempted: number;
   correct: number;
+  // Topic titles within this subject track — backs the public "/certification/:slug" invite
+  // page's "Your Path" section, which names exactly what's covered rather than just a count.
+  topicTitles: string[];
 }
 
 export class CertExplorerJobRoleDto {
@@ -44,6 +47,10 @@ export class CertExplorerMyCertificateDto {
 export class CertificateExplorerTrackDto {
   id: number;
   title: string;
+  // Stable, human-readable identifier for the public "/certification/:slug" invite page —
+  // set once at creation (CertificationTrackService#create) and never regenerated, so a
+  // shared link keeps working even after the track is renamed.
+  slug: string;
   description: string | null;
   // Certificate face template (may contain {{userName}}/{{skillName}} tokens) — used to render a
   // "preview" face for a not-yet-earned track. The real, resolved copy lives on myCertificate.content.
@@ -63,6 +70,14 @@ export class CertificateExplorerTrackDto {
   isAchieved: boolean;
   subjectTracks: CertExplorerSubjectTrackDto[];
   myCertificate: CertExplorerMyCertificateDto | null;
+  // Free-text, admin-authored note — see CertificationTrack.note's own comment. Drives the
+  // public "/certification/:slug" page's quote strip; that section hides entirely when null.
+  note: string | null;
+  // Always true from getExplorer() (it only ever queries isPublished:true tracks) — false only
+  // on the "pending approval" fallback path in getPublicTrack(), for a real track that exists
+  // but hasn't been published yet. The public "/certification/:slug" page uses this to show an
+  // "undergoing approval" notice instead of the full invite experience.
+  isPublished: boolean;
 }
 
 // One group per job role (a job-role-bundle track can link to several roles and legitimately

@@ -117,6 +117,9 @@ export interface SubjectPageCertSubjectTrack {
 export interface SubjectPageCertificationTrack {
   id: number;
   title: string;
+  // Stable identifier for the public "/certification/:slug" invite page — lets the detail
+  // modal's Share button build that link without a second fetch. See CertificationTrack.slug.
+  slug: string;
   description: string;
   // Certificate face template ({{userName}}/{{skillName}} tokens) — the preview text for a
   // not-yet-earned track. The resolved, final copy lives on myCertificate.content once earned.
@@ -218,4 +221,7 @@ export interface SubjectPageResponse {
   subjectRatings: SubjectPageAssessmentRating[];
   badges: ScopedBadgeDto[];
   detailSelfRating: SubjectPageDetailSelfRating | null;
+  // Minutes spent answering this subject's trivia questions, summed over every attempt ever
+  // (SUM of question_attempt.timeTaken) — 0 for anonymous requests.
+  timeSpentMinutes: number;
 }

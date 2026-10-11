@@ -286,7 +286,7 @@ export class SubjectStatsService {
     // to build anything else from. Every other call here backs one supporting widget; a hiccup
     // in any one of them (merit service down, badge query timeout, ...) now degrades that one
     // widget to its empty state instead of 500ing the entire dashboard.
-    const [raw, syllabus, subjectMerits, popularTopicsMap, ratings, lessons, generalQuestions, relatedJobRoles, badges] = await Promise.all([
+    const [raw, syllabus, subjectMerits, popularTopicsMap, ratings, lessons, generalQuestions, relatedJobRoles, badges, timeSpentMinutes] = await Promise.all([
       this.getSubjectStats(subjectId, userId),
       this.topicAnalyzer.getTopicStatsBySubject(subjectId, userId),
       this.meritService.getSubjectMasteryLeaderboards([subjectId], userId, 10, 'marks').catch((err) => {
@@ -319,6 +319,10 @@ export class SubjectStatsService {
       this.badgeQueryService.getUserBadgesForScope(BadgeScopeEnum.SUBJECT, subjectId, userId).catch((err) => {
         this.logger.warn(`getUserBadgesForScope failed for subjectId=${subjectId}: ${err}`);
         return [];
+      }),
+      (userId ? this.fetchSubjectTimeSpentMinutes(subjectId, userId) : Promise.resolve(0)).catch((err) => {
+        this.logger.warn(`fetchSubjectTimeSpentMinutes failed for subjectId=${subjectId}, userId=${userId}: ${err}`);
+        return 0;
       }),
     ]);
 
@@ -433,7 +437,34 @@ export class SubjectStatsService {
       // anonymous requests, same as `subjectRatings` above.
       badges,
       detailSelfRating,
+      // Minutes spent answering this subject's trivia questions, summed over every attempt
+      // ever (retries included) — same "journey" convention as journeyAccuracy/journeyScore
+      // above, and the same SUM(qa.timeTaken) pattern ProgramService.fetchTimeInvestedByJobRole
+      // already uses for the Career Dashboard's Role Standing widget, just scoped to one
+      // subject instead of grouped across a role's subjects. 0 for anonymous requests.
+      timeSpentMinutes,
     };
+  }
+
+  // ─── Time Invested ──────────────────────────────────────────────────────────────
+
+  /** Minutes spent answering this subject's trivia questions — summed over every attempt ever
+   * (retries included), mirroring ProgramService.fetchTimeInvestedByJobRole's SUM(qa.timeTaken)
+   * query but scoped to one subject via question.subjectId directly instead of grouping across
+   * a role's job_role_subject rows. */
+  private async fetchSubjectTimeSpentMinutes(subjectId: number, userId: number): Promise<number> {
+    const row = await this.dataSource
+      .createQueryBuilder()
+      .select('COALESCE(SUM(qa.timeTaken), 0)', 'totalSeconds')
+      .from('question_attempt', 'qa')
+      .innerJoin(
+        'question', 'q',
+        'q.id = qa.questionId AND q.subjectId = :subjectId AND q.status = :active AND q.questionType = :trivia',
+        { subjectId, active: QuestionStatusEnum.Active, trivia: QuestionTypeEnum.Trivia },
+      )
+      .where('qa.userId = :userId', { userId })
+      .getRawOne();
+    return Math.round((+row?.totalSeconds || 0) / 60);
   }
 
   // ─── Next Best Action ──────────────────────────────────────────────────────────
@@ -655,14 +686,28 @@ export class SubjectStatsService {
         // was reading undefined, not a real value.
         const total = subjectTracks.length;
         const completed = subjectTracks.filter((st: any) => st.isCompleted).length;
-        const progressPercent = total > 0 ? +((completed / total) * 100).toFixed(0) : 0;
         const totalQuestions = subjectTracks.reduce((sum: number, st: any) => sum + st.totalQuestions, 0);
         const questionsAttempted = subjectTracks.reduce((sum: number, st: any) => sum + st.attempted, 0);
         const questionsCorrect = subjectTracks.reduce((sum: number, st: any) => sum + st.correct, 0);
+        // Averaging each subject-track's own (already fine-grained, coverage-based)
+        // progressPercent — not counting only fully-completed tracks — so real partial
+        // progress inside a not-yet-finished track actually moves this number. The old
+        // completed/total formula floored at 0% until an entire subject-track was finished,
+        // even with real attempts logged (e.g. "7 of 115 questions attempted" still showed
+        // 0% overall) — a completed track's own progressPercent is already 100, so this is a
+        // strict generalization of the old formula, not a behavior change for finished certs.
+        // Math.round() of an average of several small-but-real percentages can still land back
+        // on a flat 0 (e.g. one barely-started track averaged against two untouched ones) —
+        // floor any real activity at 1% so it's never indistinguishable from "hasn't started."
+        const rawProgressPercent = total > 0
+          ? subjectTracks.reduce((sum: number, st: any) => sum + (st.progressPercent || 0), 0) / total
+          : 0;
+        const progressPercent = questionsAttempted > 0 ? Math.max(1, Math.round(rawProgressPercent)) : 0;
 
         const card: any = {
           id: track.id,
           title: track.title,
+          slug: track.slug,
           description: track.description,
           content: track.content,
           sortOrder: track.id,

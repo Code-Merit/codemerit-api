@@ -7,6 +7,7 @@ import { CertificationTrackSubjectTrack } from 'src/common/typeorm/entities/cert
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
 import { SubjectTrackTopic } from 'src/common/typeorm/entities/subject-track-topic.entity';
+import { generateSlug, generateUniqueSlug } from 'src/common/utils/slugify.util';
 import { In, Repository } from 'typeorm';
 import { CertificationTrackResponseDto } from '../dtos/certification-track-response.dto';
 import { CreateCertificationTrackDto } from '../dtos/create-certification-track.dto';
@@ -33,7 +34,18 @@ export class CertificationTrackService {
   ) {}
 
   async create(dto: CreateCertificationTrackDto): Promise<CertificationTrackResponseDto> {
-    const track = await this.trackRepo.save(this.trackRepo.create(dto));
+    // Set once, here, and never regenerated on a later title edit (see update() below and the
+    // entity's own comment) — a shared "/certification/:slug" invite link must keep working
+    // even if the track is later renamed. Same generate-then-retry-on-collision loop
+    // subject-track.service.ts#create() already uses.
+    let slug = generateSlug(dto.title);
+    let existing = await this.trackRepo.findOne({ where: { slug } });
+    while (existing) {
+      slug = generateUniqueSlug(dto.title);
+      existing = await this.trackRepo.findOne({ where: { slug } });
+    }
+
+    const track = await this.trackRepo.save(this.trackRepo.create({ ...dto, slug }));
     return this.toResponseDto(track.id);
   }
 
@@ -212,11 +224,13 @@ export class CertificationTrackService {
     return {
       id: track.id,
       title: track.title,
+      slug: track.slug,
       description: track.description,
       content: track.content,
       subjectId: track.subjectId,
       passThreshold: track.passThreshold,
       isPublished: track.isPublished,
+      note: track.note,
       jobRoles,
       subjectTrackCount: subjectTracks.length,
       subjectTracks,
