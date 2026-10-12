@@ -17,6 +17,7 @@ import { ActivityModule } from './activity/activity.module';
 import { SkillEnrollmentModule } from './skill-enrollment/skill-enrollment.module';
 import { PaymentModule } from './payment/payment.module';
 import { UserPreferenceModule } from './user-preference/user-preference.module';
+import { InvitesModule } from './invites/invites.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { UserPreferenceModule } from './user-preference/user-preference.module';
     SkillEnrollmentModule,
     PaymentModule,
     UserPreferenceModule,
+    InvitesModule,
   ],
 })
 export class DomainModule {}

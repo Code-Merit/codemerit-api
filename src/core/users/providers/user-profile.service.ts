@@ -60,6 +60,7 @@ export class UserProfileService {
         'profileCompleted',
         'linkedinAccessToken',
         'linkedinTokenExpiresAt',
+        'inviteCodePromptedAt',
       ],
     });
     if (!profile) return undefined;
@@ -90,11 +91,14 @@ export class UserProfileService {
 
     const wasProfileCompleted = profile.profileCompleted;
 
-    // profileCompleted is server-managed, never client-writable — strip it even though
-    // UpdateUserProfileDto doesn't declare it (the global ValidationPipe isn't whitelisted, so
-    // an unknown body property would otherwise pass straight through to Object.assign below).
+    // profileCompleted and inviteCodePromptedAt are both server-managed, never
+    // client-writable — strip them even though UpdateUserProfileDto doesn't declare
+    // either (the global ValidationPipe isn't whitelisted, so an unknown body property
+    // would otherwise pass straight through to Object.assign below and let a caller
+    // forge/reset the one-time invite-code-prompt gate on their own account).
     const safeDto: Partial<Profile> = { ...dto };
     delete safeDto.profileCompleted;
+    delete safeDto.inviteCodePromptedAt;
     Object.assign(profile, safeDto);
 
     // A workStatus branch only ever reaches here fully populated — assertWorkStatusConsistency

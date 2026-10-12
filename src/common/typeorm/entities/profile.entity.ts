@@ -181,6 +181,16 @@ export class Profile extends AbstractEntity implements IProfile {
   })
   profileCompleted: boolean;
 
+  // Server-managed, set the moment the user either redeems or skips the post-onboarding
+  // "were you referred by an SME?" code-entry page — AuthGuard uses its absence to show
+  // that page exactly once per user, regardless of signup path (email or social).
+  @Column({
+    type: 'timestamp',
+    nullable: true,
+    default: null,
+  })
+  inviteCodePromptedAt: Date;
+
   @Column({
     type: 'integer',
     default: null,

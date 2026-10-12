@@ -57,6 +57,7 @@ import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
 import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offering.entity';
 import { EnrollmentTierCapConfig } from 'src/common/typeorm/entities/enrollment-tier-cap-config.entity';
 import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
+import { Invite } from 'src/common/typeorm/entities/invite.entity';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -123,6 +124,7 @@ export const AppDataSource = new DataSource({
     QualityMetric,
     QualityReview,
     QualityReviewTag,
+    Invite,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,

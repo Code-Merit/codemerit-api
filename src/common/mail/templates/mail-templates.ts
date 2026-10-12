@@ -1,6 +1,36 @@
 import { UserOtpTagsEnum } from 'src/core/users/enums/user-otp-Tags.enum';
 import { escapeHtml, otpBlock, renderEmailLayout } from './layout';
 
+export function inviteTemplate(
+  inviterName: string,
+  code: string,
+  targetLabel?: string,
+  note?: string,
+): EmailTemplate {
+  const safeInviter = escapeHtml(inviterName);
+  const safeTarget = targetLabel ? escapeHtml(targetLabel) : null;
+  const safeNote = note ? escapeHtml(note) : null;
+  const whatFor = safeTarget ? `start ${safeTarget}` : 'start learning on CodeMerit';
+
+  return {
+    subject: `${inviterName} invited you to ${safeTarget ?? 'CodeMerit'}`,
+    html: renderEmailLayout({
+      preheader: `${inviterName} thinks you'd do great here — join and ${whatFor}.`,
+      heading: `${safeInviter} invited you!`,
+      bodyHtml: `
+        <p>Hi there, <strong>${safeInviter}</strong> invited you to ${whatFor} on CodeMerit — skill assessments, hands-on lessons, and a certificate issued by a subject-matter specialist once you're ready.</p>
+        ${safeNote ? `<p style="font-style:italic;color:#6b7280;">“${safeNote}”</p>` : ''}
+        <p>Sign up, then enter your invite code below when prompted to get credit for the invite and jump straight in:</p>
+        ${otpBlock(code)}
+      `,
+      highlightHtml:
+        '<strong>Along the way:</strong><p>Earn badges, build a streak, and work toward real, shareable credentials as you go.</p>',
+      ctaLabel: 'Accept invite & sign up',
+      ctaUrl: '{{FRONTEND_URL}}/authentication/register',
+    }),
+  };
+}
+
 export interface EmailTemplate {
   subject: string;
   html: string;

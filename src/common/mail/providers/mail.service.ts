@@ -24,6 +24,7 @@ import {
   roleEnrolledTemplate,
   streakMilestoneTemplate,
   dailyEngagementTemplate,
+  inviteTemplate,
   EmailTemplate,
 } from '../templates/mail-templates';
 
@@ -302,6 +303,16 @@ export class MailService {
     levelTitle: string,
   ): Promise<void> {
     await this.dispatch(to, levelUpTemplate(name, level, levelTitle));
+  }
+
+  async sendInviteEmail(
+    to: string,
+    inviterName: string,
+    code: string,
+    targetLabel?: string,
+    note?: string,
+  ): Promise<void> {
+    await this.dispatch(to, inviteTemplate(inviterName, code, targetLabel, note));
   }
 
   async sendDailyEngagementEmail(
