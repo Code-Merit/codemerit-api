@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { Invite } from 'src/common/typeorm/entities/invite.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
@@ -22,6 +22,14 @@ import {
 export interface InviteStats {
   myInviteCount: number;
   myAcceptedCount: number;
+  // Still redeemable right now — PENDING and not past expiresAt. Distinct from a plain
+  // `status = PENDING` count: expiry is only flipped to EXPIRED lazily, the moment
+  // someone actually tries to redeem a lapsed code (see redeem()) — there's no sweep
+  // job — so a stored-status-only count would overstate "still pending."
+  myPendingCount: number;
+  // EXPIRED by stored status, OR still PENDING but past expiresAt (not yet lazily
+  // flipped) — the honest "no longer usable, never redeemed" count for the same reason.
+  myExpiredCount: number;
   topInviters: { userId: number; name: string; acceptedCount: number }[];
 }
 
@@ -210,9 +218,19 @@ export class InvitesService {
    * leaderboard, computed live (same style as MeritService's XP leaderboard) rather than
    * a stored table, and respecting the same UserPreference.showOnLeaderboard opt-out. */
   async getStats(userId: number): Promise<InviteStats> {
-    const [myInviteCount, myAcceptedCount] = await Promise.all([
+    const now = new Date();
+    const [myInviteCount, myAcceptedCount, myPendingCount, myExpiredCount] = await Promise.all([
       this.inviteRepo.count({ where: { inviterId: userId } }),
       this.inviteRepo.count({ where: { inviterId: userId, status: InviteStatusEnum.ACCEPTED } }),
+      this.inviteRepo.count({
+        where: { inviterId: userId, status: InviteStatusEnum.PENDING, expiresAt: MoreThan(now) },
+      }),
+      this.inviteRepo.count({
+        where: [
+          { inviterId: userId, status: InviteStatusEnum.EXPIRED },
+          { inviterId: userId, status: InviteStatusEnum.PENDING, expiresAt: LessThanOrEqual(now) },
+        ],
+      }),
     ]);
 
     const rows = await this.inviteRepo.manager
@@ -238,7 +256,7 @@ export class InvitesService {
       acceptedCount: +r.acceptedCount,
     }));
 
-    return { myInviteCount, myAcceptedCount, topInviters };
+    return { myInviteCount, myAcceptedCount, myPendingCount, myExpiredCount, topInviters };
   }
 
   private async markPrompted(userId: number): Promise<void> {

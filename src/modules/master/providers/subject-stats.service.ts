@@ -689,25 +689,25 @@ export class SubjectStatsService {
         const totalQuestions = subjectTracks.reduce((sum: number, st: any) => sum + st.totalQuestions, 0);
         const questionsAttempted = subjectTracks.reduce((sum: number, st: any) => sum + st.attempted, 0);
         const questionsCorrect = subjectTracks.reduce((sum: number, st: any) => sum + st.correct, 0);
-        // Averaging each subject-track's own (already fine-grained, coverage-based)
-        // progressPercent — not counting only fully-completed tracks — so real partial
-        // progress inside a not-yet-finished track actually moves this number. The old
-        // completed/total formula floored at 0% until an entire subject-track was finished,
-        // even with real attempts logged (e.g. "7 of 115 questions attempted" still showed
-        // 0% overall) — a completed track's own progressPercent is already 100, so this is a
-        // strict generalization of the old formula, not a behavior change for finished certs.
-        // Math.round() of an average of several small-but-real percentages can still land back
-        // on a flat 0 (e.g. one barely-started track averaged against two untouched ones) —
-        // floor any real activity at 1% so it's never indistinguishable from "hasn't started."
-        const rawProgressPercent = total > 0
-          ? subjectTracks.reduce((sum: number, st: any) => sum + (st.progressPercent || 0), 0) / total
+        // Weighted by actual question volume across the whole cert — questionsAttempted /
+        // totalQuestions — not an unweighted average of each subject-track's own percentage
+        // (the previous pass here) and not completed/total subject tracks (the original bug,
+        // which floored at 0% until an entire subject-track finished even with real attempts
+        // logged, e.g. "7 of 115 questions attempted" still showed 0% overall). Averaging
+        // percentages let a 500-question track and a 10-question track pull the number
+        // equally even though they're wildly different amounts of real work; this is the same
+        // coverage-based convention subject-track/topic progress bars already use (attempted/
+        // total, correctness reported separately), just rolled up one level. Floored at 1% so
+        // real-but-tiny attempted volume never rounds back to indistinguishable-from-zero.
+        const progressPercent = totalQuestions > 0 && questionsAttempted > 0
+          ? Math.max(1, Math.round((questionsAttempted / totalQuestions) * 100))
           : 0;
-        const progressPercent = questionsAttempted > 0 ? Math.max(1, Math.round(rawProgressPercent)) : 0;
 
         const card: any = {
           id: track.id,
           title: track.title,
           slug: track.slug,
+          note: track.note,
           description: track.description,
           content: track.content,
           sortOrder: track.id,

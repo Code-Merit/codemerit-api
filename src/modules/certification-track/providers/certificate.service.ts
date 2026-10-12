@@ -359,17 +359,17 @@ export class CertificateService {
       const totalQuestions = subjectTracks.reduce((sum, st) => sum + st.totalQuestions, 0);
       const questionsAttempted = subjectTracks.reduce((sum, st) => sum + st.attempted, 0);
       const questionsCorrect = subjectTracks.reduce((sum, st) => sum + st.correct, 0);
-      // Same fix subject-stats.service.ts's getCertificationTracksForSubject already carries
-      // (see its own comment) — this sibling producer of the identical CertificateExplorerTrack
-      // shape had the OLD completed/total formula, which floors at 0% until an entire subject
-      // track finishes, hiding real partial progress (confirmed live: a user with 116 real
-      // question attempts and one track 67% through still read as "0%" via this endpoint).
-      // Average each subject-track's own fine-grained progressPercent instead, floored at 1%
-      // so real-but-tiny activity never rounds back down to indistinguishable-from-zero.
-      const rawProgressPercent = total > 0
-        ? subjectTracks.reduce((sum, st) => sum + (st.progressPercent || 0), 0) / total
+      // Weighted by actual question volume across the whole cert — questionsAttempted /
+      // totalQuestions — not an unweighted average of each subject-track's own percentage
+      // (the previous pass here) and not completed/total subject tracks (the original bug).
+      // Averaging percentages let a 500-question track and a 10-question track pull the
+      // overall number equally even though they represent wildly different amounts of real
+      // work; this is the same coverage-based convention subject-track/topic progress bars
+      // already use (attempted/total, correctness reported separately), just rolled up one
+      // level. Floored at 1% so real-but-tiny attempted volume never rounds back to 0.
+      const progressPercent = totalQuestions > 0 && questionsAttempted > 0
+        ? Math.max(1, Math.round((questionsAttempted / totalQuestions) * 100))
         : 0;
-      const progressPercent = questionsAttempted > 0 ? Math.max(1, Math.round(rawProgressPercent)) : 0;
 
       const cert = myCertByTrack.get(track.id);
       const myCertificate: CertExplorerMyCertificateDto | null = cert

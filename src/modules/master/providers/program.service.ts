@@ -361,6 +361,8 @@ export class ProgramService {
       .createQueryBuilder()
       .select('ct.id', 'ctId')
       .addSelect('ct.title', 'ctTitle')
+      .addSelect('ct.slug', 'ctSlug')
+      .addSelect('ct.note', 'ctNote')
       .addSelect('COALESCE(ctjr.descriptionOverride, ct.description)', 'ctDesc')
       .addSelect('ctjr.sortOrder', 'ctSortOrder')
       .addSelect('ctjr.jobRoleId', 'ctJobRoleId')
@@ -698,7 +700,7 @@ export class ProgramService {
       const certMap = certByJobRole.get(jrId)!;
       if (!certMap.has(+row.ctId)) {
         certMap.set(+row.ctId, {
-          meta: { id: +row.ctId, title: row.ctTitle, description: row.ctDesc, sortOrder: +row.ctSortOrder },
+          meta: { id: +row.ctId, title: row.ctTitle, slug: row.ctSlug, note: row.ctNote, description: row.ctDesc, sortOrder: +row.ctSortOrder },
           stIds: [],
         });
       }
@@ -776,7 +778,15 @@ export class ProgramService {
         const subjectTracks = [...new Set(stIds)].map((stId) => stMap.get(stId)).filter(Boolean);
         const total = subjectTracks.length;
         const completed = subjectTracks.filter((st: any) => st.isCompleted).length;
-        const progressPercent = total > 0 ? +((completed / total) * 100).toFixed(0) : 0;
+        // Weighted by actual question volume, not completed/total subject tracks — see the
+        // identical fix (and its full rationale) in certificate.service.ts's toDto() and
+        // subject-stats.service.ts's getCertificationTracksForSubject. The old formula here
+        // floored at 0% until an entire subject track finished, even with real attempts logged.
+        const totalQuestions = subjectTracks.reduce((sum: number, st: any) => sum + (st.numTrivia || 0), 0);
+        const questionsAttempted = subjectTracks.reduce((sum: number, st: any) => sum + (st.attempted || 0), 0);
+        const progressPercent = totalQuestions > 0 && questionsAttempted > 0
+          ? Math.max(1, Math.round((questionsAttempted / totalQuestions) * 100))
+          : 0;
         const isAchieved = progressPercent >= CERT_ACHIEVED;
 
         totalCerts++;
@@ -897,7 +907,7 @@ export class ProgramService {
       const certMap = certByJobRole.get(jrId)!;
       if (!certMap.has(+row.ctId)) {
         certMap.set(+row.ctId, {
-          meta: { id: +row.ctId, title: row.ctTitle, description: row.ctDesc, sortOrder: +row.ctSortOrder },
+          meta: { id: +row.ctId, title: row.ctTitle, slug: row.ctSlug, note: row.ctNote, description: row.ctDesc, sortOrder: +row.ctSortOrder },
           stIds: [],
         });
       }
@@ -1028,7 +1038,16 @@ export class ProgramService {
 
         const total = subjectTracks.length;
         const completed = subjectTracks.filter((st: any) => st.isCompleted).length;
-        const progressPercent = total > 0 ? +((completed / total) * 100).toFixed(0) : 0;
+        // Weighted by actual question volume, not completed/total subject tracks — see the
+        // identical fix (and its full rationale) in certificate.service.ts's toDto(). Pulled
+        // from the full stMap entries (numTrivia/attempted), not the light `subjectTracks`
+        // above, which deliberately drops those fields to keep this dashboard shape lean.
+        const uniqueStIds = [...new Set(stIds)];
+        const totalQuestions = uniqueStIds.reduce((sum: number, stId: number) => sum + (stMap.get(stId)?.numTrivia || 0), 0);
+        const questionsAttempted = uniqueStIds.reduce((sum: number, stId: number) => sum + (stMap.get(stId)?.attempted || 0), 0);
+        const progressPercent = totalQuestions > 0 && questionsAttempted > 0
+          ? Math.max(1, Math.round((questionsAttempted / totalQuestions) * 100))
+          : 0;
         const isAchieved = progressPercent >= CERT_ACHIEVED;
 
         totalCertTracks++;
@@ -1320,7 +1339,7 @@ export class ProgramService {
     for (const row of certRows) {
       if (!certIndex.has(+row.ctId)) {
         certIndex.set(+row.ctId, {
-          meta: { id: +row.ctId, title: row.ctTitle, description: row.ctDesc, sortOrder: +row.ctSortOrder },
+          meta: { id: +row.ctId, title: row.ctTitle, slug: row.ctSlug, note: row.ctNote, description: row.ctDesc, sortOrder: +row.ctSortOrder },
           stIds: [],
         });
       }
@@ -1348,7 +1367,18 @@ export class ProgramService {
 
         const total = subjectTracks.length;
         const completed = userId ? subjectTracks.filter((st: any) => st.isCompleted).length : 0;
-        const progressPercent = total > 0 ? +((completed / total) * 100).toFixed(0) : 0;
+        // Weighted by actual question volume, not completed/total subject tracks — see the
+        // identical fix (and its full rationale) in certificate.service.ts's toDto(). Pulled
+        // from the full stMap entries (numTrivia/attempted), not the light `subjectTracks`
+        // above, which deliberately drops those fields to keep this card shape lean.
+        const uniqueStIds = [...new Set(stIds)];
+        const totalQuestions = uniqueStIds.reduce((sum: number, stId: number) => sum + (stMap.get(stId)?.numTrivia || 0), 0);
+        const questionsAttempted = userId
+          ? uniqueStIds.reduce((sum: number, stId: number) => sum + (stMap.get(stId)?.attempted || 0), 0)
+          : 0;
+        const progressPercent = totalQuestions > 0 && questionsAttempted > 0
+          ? Math.max(1, Math.round((questionsAttempted / totalQuestions) * 100))
+          : 0;
         const isAchieved = progressPercent >= CERT_ACHIEVED;
 
         const certCard: any = { ...meta, totalSubjectTracks: total, subjectTracks };

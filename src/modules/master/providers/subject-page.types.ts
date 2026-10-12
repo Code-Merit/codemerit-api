@@ -139,6 +139,9 @@ export interface SubjectPageCertificationTrack {
   // Only ever set (even to null) for authenticated requests — see getCertificationTracksForSubject.
   myCertificate?: { certificateNumber: string; status: string; issuedAt: Date; pdfUrl: string; content?: string | null } | null;
   isAchieved: boolean;
+  // Free-text, admin-authored note — see CertificationTrack.note's own comment. Drives the
+  // detail modal's second right-column card.
+  note: string | null;
 }
 
 export interface SubjectPageRelatedJobRole {

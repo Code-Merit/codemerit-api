@@ -22,6 +22,9 @@ export interface BadgeDetailDto {
   // Subject.slug directly, or a Topic-scoped badge's parent subject's slug — same resolution as
   // RelevantBadgeDto.scopeSlug, for the "View Subject" CTA. Null for Global/JobRole.
   scopeSlug: string | null;
+  // The subject's own catalog image (same icon shown everywhere else for that subject) — null
+  // for Global/JobRole-scoped badges, same resolution as scopeSlug.
+  scopeImage: string | null;
   earnedAt: Date | null;
   source: BadgeSourceEnum | null;
   unlocked: boolean;
@@ -32,6 +35,14 @@ export interface BadgeDetailDto {
   // Null when there's no rule, or the caller is anonymous, or the caller has zero attempts in
   // scope yet (see computeRuleProgress) — never read null as 0%.
   progressPercent: number | null;
+  // Raw "how much of the question bank have you worked through" counts behind progressPercent —
+  // see AchievementService#computeRuleQuestionStats. A plain sum across the badge's scope, same
+  // "X of Y questions attempted, Z% correct" convention the certification pages already use;
+  // null under the same conditions as progressPercent (no rule, anonymous, zero attempts yet).
+  // Independent of `unlocked` — stays populated for an already-earned badge too.
+  totalQuestions: number | null;
+  questionsAttempted: number | null;
+  questionsCorrect: number | null;
   // Whether the caller is enrolled in this badge's subject (Topic-scoped resolves to its parent
   // subject). Null for Global/JobRole (no enrollment concept) or an anonymous caller.
   isEnrolled: boolean | null;

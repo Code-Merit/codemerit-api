@@ -544,6 +544,62 @@ export class AchievementService {
   }
 
   /**
+   * Raw "how much of the question bank have you actually worked through" counts behind a rule —
+   * distinct from computeRuleProgress()'s percentage (which, with no difficulty filter, reports
+   * the WEAKEST topic's correctCoverage, not a volume figure). This is a plain sum across every
+   * topic in scope, the same convention the certification-track pages already show
+   * ("X of Y questions attempted, Z% correct") — here purely as supporting context alongside the
+   * real gating percentage, never a substitute for it. Null when there's no rule or no attempts
+   * yet in scope, same contract as computeRuleProgress.
+   */
+  private async computeRuleQuestionStats(
+    userId: number,
+    badge: Badge,
+    rule: BadgeRule,
+  ): Promise<{ totalQuestions: number; questionsAttempted: number; questionsCorrect: number } | null> {
+    let topics: any[];
+    if (rule.metric === BadgeRuleMetricEnum.SUBJECT_CORRECT_COVERAGE) {
+      topics = (await this.topicAnalyzer.getTopicStatsBySubject(badge.scopeId, userId)).filter(
+        (t: any) => (+t.numTrivia || 0) > 0,
+      );
+    } else if (rule.metric === BadgeRuleMetricEnum.TOPIC_CORRECT_COVERAGE) {
+      const [topic] = await this.topicAnalyzer.getTopicStatsByIds([badge.scopeId], userId);
+      topics = topic && (+topic.numTrivia || 0) > 0 ? [topic] : [];
+    } else {
+      return null;
+    }
+    if (!topics.length) return null;
+
+    if (rule.difficultyLevel) {
+      const [totalKey, attemptedKey, correctKey] =
+        rule.difficultyLevel === DifficultyLevelEnum.Easy
+          ? ['numBasicTrivia', 'attemptedEasy', 'correctEasy']
+          : rule.difficultyLevel === DifficultyLevelEnum.Intermediate
+            ? ['numIntTrivia', 'attemptedMedium', 'correctMedium']
+            : ['numAdvTrivia', 'attemptedHard', 'correctHard'];
+      const totals = topics.reduce(
+        (acc, t) => ({
+          totalQuestions: acc.totalQuestions + (+t[totalKey] || 0),
+          questionsAttempted: acc.questionsAttempted + (+t[attemptedKey] || 0),
+          questionsCorrect: acc.questionsCorrect + (+t[correctKey] || 0),
+        }),
+        { totalQuestions: 0, questionsAttempted: 0, questionsCorrect: 0 },
+      );
+      return totals.totalQuestions > 0 ? totals : null;
+    }
+
+    const totals = topics.reduce(
+      (acc, t) => ({
+        totalQuestions: acc.totalQuestions + (+t.numTrivia || 0),
+        questionsAttempted: acc.questionsAttempted + (+t.attempted || 0),
+        questionsCorrect: acc.questionsCorrect + (+t.correct || 0),
+      }),
+      { totalQuestions: 0, questionsAttempted: 0, questionsCorrect: 0 },
+    );
+    return totals.totalQuestions > 0 ? totals : null;
+  }
+
+  /**
    * Resolves candidate CertificationTracks touching the given subjects, checks each
    * one's completion via SubjectTrackAnalysisService.buildSubjectTrackMap() (the
    * same completion math the dashboards use — not re-derived here), and issues a
@@ -813,6 +869,7 @@ export class AchievementService {
     topicSubjectById: Map<number, number>;
     subjectSlugById: Map<number, string>;
     subjectTitleById: Map<number, string>;
+    subjectImageById: Map<number, string>;
   }> {
     const idsFor = (scopeType: BadgeScopeEnum) =>
       [...new Set(items.filter((d) => d.scopeType === scopeType && d.scopeId != null).map((d) => d.scopeId!))];
@@ -830,6 +887,7 @@ export class AchievementService {
     const topicTitleById = new Map(topics.map((t) => [t.id, t.title]));
     const topicSubjectById = new Map(topics.map((t) => [t.id, t.subjectId]));
     const subjectSlugById = new Map(subjects.map((s) => [s.id, s.slug]));
+    const subjectImageById = new Map(subjects.map((s) => [s.id, s.image]));
 
     const resolveTitle = (item: { scopeType: BadgeScopeEnum; scopeId: number | null }): string | null => {
       switch (item.scopeType) {
@@ -839,7 +897,7 @@ export class AchievementService {
         default: return null; // Global has no scoped title
       }
     };
-    return { resolveTitle, topicSubjectById, subjectSlugById, subjectTitleById };
+    return { resolveTitle, topicSubjectById, subjectSlugById, subjectTitleById, subjectImageById };
   }
 
   // Enriches an arbitrary badge list (e.g. user-profile-aggregator.service.ts's earned-badges
@@ -978,7 +1036,7 @@ export class AchievementService {
       this.userBadgeRepo.count({ where: { badgeId: badge.id } }),
     ]);
 
-    const { resolveTitle, topicSubjectById, subjectSlugById } = await this.buildScopeTitleResolver([badge]);
+    const { resolveTitle, topicSubjectById, subjectSlugById, subjectImageById } = await this.buildScopeTitleResolver([badge]);
     const scopeTitle = resolveTitle(badge);
     // Same "resolve a Topic-scoped badge to its parent SUBJECT" rule getBadgeExplorer's `relevant`
     // computation uses — the CTA/enrollment check always mean "this subject's dashboard."
@@ -987,8 +1045,17 @@ export class AchievementService {
         : badge.scopeType === BadgeScopeEnum.TOPIC ? topicSubjectById.get(badge.scopeId!) ?? null
         : null;
     const scopeSlug = parentSubjectId != null ? subjectSlugById.get(parentSubjectId) ?? null : null;
+    // The subject's own catalog image — gives the badge a recognizable visual anchor (same icon
+    // the subject shows everywhere else) instead of just a generic trophy glyph. Null for
+    // Global/JobRole-scoped badges, same as scopeSlug.
+    const scopeImage = parentSubjectId != null ? subjectImageById.get(parentSubjectId) ?? null : null;
 
     const progressPercent = userId && rule ? await this.computeRuleProgress(userId, badge, rule) : null;
+    // Supporting "how much did you actually work through" context (see the method's own
+    // comment) — shown on both the locked-badge detail modal and, for an already-earned badge,
+    // the reveal card's retrospective stats. Independent of unlocked/isAchieved: still worth
+    // showing after the badge is earned, same way a certificate's question counts stay visible.
+    const questionStats = userId && rule ? await this.computeRuleQuestionStats(userId, badge, rule) : null;
 
     let isEnrolled: boolean | null = null;
     if (userId && parentSubjectId != null) {
@@ -1007,6 +1074,7 @@ export class AchievementService {
       scopeId: badge.scopeId,
       scopeTitle,
       scopeSlug,
+      scopeImage,
       earnedAt: ub?.earnedAt ?? null,
       source: ub?.source ?? null,
       unlocked: !!ub,
@@ -1014,6 +1082,9 @@ export class AchievementService {
       threshold: rule?.threshold ?? null,
       difficultyLevel: rule?.difficultyLevel ?? null,
       progressPercent,
+      totalQuestions: questionStats?.totalQuestions ?? null,
+      questionsAttempted: questionStats?.questionsAttempted ?? null,
+      questionsCorrect: questionStats?.questionsCorrect ?? null,
       isEnrolled,
       earnedCount,
     };
