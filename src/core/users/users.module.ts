@@ -26,6 +26,7 @@ import { AchievementModule } from 'src/modules/achievement/achievement.module';
 import { BadgeQueryModule } from 'src/modules/achievement/badge-query.module';
 import { LinkedInOAuthModule } from 'src/core/auth/linkedin-oauth.module';
 import { LinkedinShareService } from './providers/linkedin-share.service';
+import { SkillRatingModule } from 'src/modules/skill-rating/skill-rating.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { LinkedinShareService } from './providers/linkedin-share.service';
     AchievementModule,
     BadgeQueryModule,
     LinkedInOAuthModule,
+    SkillRatingModule,
   ],
   providers: [
     UserService,

@@ -452,7 +452,7 @@ export class SubjectStatsService {
    * (retries included), mirroring ProgramService.fetchTimeInvestedByJobRole's SUM(qa.timeTaken)
    * query but scoped to one subject via question.subjectId directly instead of grouping across
    * a role's job_role_subject rows. */
-  private async fetchSubjectTimeSpentMinutes(subjectId: number, userId: number): Promise<number> {
+  async fetchSubjectTimeSpentMinutes(subjectId: number, userId: number): Promise<number> {
     const row = await this.dataSource
       .createQueryBuilder()
       .select('COALESCE(SUM(qa.timeTaken), 0)', 'totalSeconds')

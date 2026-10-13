@@ -15,5 +15,6 @@ import { TopicsModule } from '../topics/topics.module';
   ],
   providers: [SkillRatingService],
   controllers: [SkillRatingController],
+  exports: [SkillRatingService],
 })
 export class SkillRatingModule {}

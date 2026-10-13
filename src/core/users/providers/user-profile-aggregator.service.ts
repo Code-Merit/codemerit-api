@@ -23,6 +23,7 @@ import { computeLevel } from 'src/modules/achievement/constants/gamification.con
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { UserService } from './user.service';
+import { SkillRatingService } from 'src/modules/skill-rating/providers/skill-rating.service';
 
 // Who's asking — drives the PII gate below. Anonymous callers never reach getFullProfile at all
 // (see getPublicProfile / users.controller.ts's separate, unguarded route for that case); this
@@ -45,6 +46,7 @@ export class UserProfileAggregatorService {
     private readonly achievementService: AchievementService,
     private readonly badgeQueryService: BadgeQueryService,
     private readonly activityService: ActivityService,
+    private readonly skillRatingService: SkillRatingService,
     @InjectRepository(UserStreak)
     private readonly userStreakRepository: Repository<UserStreak>,
     @InjectRepository(UserPreference)
@@ -222,6 +224,7 @@ export class UserProfileAggregatorService {
       streak,
       completedGeneralQuestions,
       attemptsSummary,
+      selfRatedMetrics,
     ] = await Promise.all([
       this.getCourseStats(user.id),
       this.userPermissionService.getPermissionsForProfile(user.id),
@@ -235,6 +238,7 @@ export class UserProfileAggregatorService {
       this.userStreakRepository.findOne({ where: { userId: user.id } }),
       this.getCompletedGeneralQuestionsCount(user.id),
       this.getAttemptsSummary(user.id),
+      this.skillRatingService.getSelfRatedMetrics(user.id),
     ]);
 
     // Scope title resolution needs badgeData.earned's actual contents, so it can't join the
@@ -242,6 +246,14 @@ export class UserProfileAggregatorService {
     // no title, only scopeType/scopeId numbers), which is exactly why Platform Achievements
     // couldn't show a real scope label for anything beyond the hardcoded Global badges.
     const earnedBadges = await this.achievementService.enrichWithScopeTitles(badgeData.earned);
+
+    // Per-subject self-rating rollup needs courseStats' own subject list (id/title/slug/image),
+    // so it can't join the Promise.all above either — same "depends on another batch member"
+    // shape as earnedBadges just above.
+    const selfRatedSubjects = await this.skillRatingService.getSelfRatedSubjects(
+      user.id,
+      courseStats.map((s: any) => ({ id: s.id, title: s.title, slug: s.slug, image: s.image })),
+    );
 
     // Reviewer performance is staff-evaluation data, not a general learning stat — gated the
     // same as email/mobile above, not the open tier courseStats/quizzes sit in. Depends on
@@ -269,6 +281,10 @@ export class UserProfileAggregatorService {
       },
       self_assessments: assessmentData.self_assessments,
       external_assessments: assessmentData.external_assessments,
+      skillSelfRating: {
+        metrics: selfRatedMetrics,
+        subjects: selfRatedSubjects,
+      },
       certificates,
       // Earned-only, every scope mixed together — each now carries scopeType/scopeId/scopeLabel
       // (see enrichWithScopeTitles above), so the profile's Platform Achievements widget can

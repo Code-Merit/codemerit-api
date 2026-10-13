@@ -12,9 +12,14 @@ import { validate } from 'class-validator';
 import { CreateAssessmentSessionDto } from '../dtos/create-assessment-session.dto';
 import { AssessmentSessionResponseDto } from '../dtos/assessment-session-response';
 import { SkillTypeEnum } from 'src/common/enum/skill-type.enum';
+import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
 import { TopicsService } from 'src/modules/topics/providers/topics.service';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { SkillMetric } from 'src/common/typeorm/entities/skill-metric.entity';
+import {
+  SelfRatedMetricDto,
+  SelfRatedSubjectDto,
+} from '../dtos/self-rated-overview.dto';
 
 @Injectable()
 export class SkillRatingService {
@@ -201,6 +206,153 @@ export class SkillRatingService {
         };
       }),
     };
+  }
+
+  // One row per skillId, holding only that skill's most-recent SELF rating — the dedupe-to-
+  // latest-per-skill pattern, generalized so it works for SKILL_METRIC, TOPIC, and SUBJECT alike
+  // instead of being written inline once per scope. Every SELF submission is an unconditional
+  // insert (see create() above — no unique constraint, full history by design), so "current
+  // rating" is always "most recent row", never an update.
+  private async getLatestSelfRatings(
+    userId: number,
+    skillType: SkillTypeEnum,
+    skillIds?: number[],
+  ): Promise<Map<number, { rating: number; ratedAt: Date }>> {
+    const qb = this.dataSource
+      .createQueryBuilder()
+      .select('sr.skillId', 'skillId')
+      .addSelect('sr.rating', 'rating')
+      .addSelect('ases.createdAt', 'ratedAt')
+      .from(SkillRating, 'sr')
+      .innerJoin(AssessmentSession, 'ases', 'ases.id = sr.assessmentSessionId')
+      .where('ases.userId = :userId', { userId })
+      .andWhere('ases.ratingType = :ratingType', { ratingType: RatingTypeEnum.SELF })
+      .andWhere('sr.skillType = :skillType', { skillType })
+      .orderBy('ases.createdAt', 'DESC');
+    if (skillIds?.length) {
+      qb.andWhere('sr.skillId IN (:...skillIds)', { skillIds });
+    }
+    const rows = await qb.getRawMany();
+    const latest = new Map<number, { rating: number; ratedAt: Date }>();
+    for (const row of rows) {
+      const skillId = +row.skillId;
+      if (!latest.has(skillId)) {
+        latest.set(skillId, { rating: +row.rating, ratedAt: row.ratedAt });
+      }
+    }
+    return latest;
+  }
+
+  // Full SkillMetric catalog, each joined with the caller's own latest self-rating (if any) —
+  // backs the "Extra Skill Areas" widget, which needs to show and let the user re-rate every
+  // metric (rated or not) without a second call to GET skill-metrics.
+  async getSelfRatedMetrics(userId: number): Promise<SelfRatedMetricDto[]> {
+    const [metrics, latest] = await Promise.all([
+      this.findActiveSkillMetrics(),
+      this.getLatestSelfRatings(userId, SkillTypeEnum.SKILL_METRIC),
+    ]);
+    return metrics.map((m) => {
+      const hit = latest.get(m.id);
+      return {
+        id: m.id,
+        title: m.title,
+        description: m.description ?? null,
+        category: m.category ?? null,
+        maxScore: m.maxScore,
+        currentRating: hit?.rating ?? null,
+        ratedAt: hit?.ratedAt ?? null,
+      };
+    });
+  }
+
+  // Per-subject self-rating rollup for the "By Subject" widget. Two pools can back a subject's
+  // number — per-topic ratings from the Subject Dashboard wizard (TOPIC), or a single direct
+  // rating from the job-role wizard (SUBJECT) — reconciled here so the frontend never has to know
+  // both exist: prefer TOPIC whenever any topic has been rated (finer-grained signal), fall back
+  // to the direct SUBJECT rating, otherwise `source: 'none'`. `subjects` is passed in by the
+  // caller (already fetched for courseStats) rather than re-queried here.
+  async getSelfRatedSubjects(
+    userId: number,
+    subjects: { id: number; title: string; slug: string; image?: string | null }[],
+  ): Promise<SelfRatedSubjectDto[]> {
+    if (!subjects.length) return [];
+    const subjectIds = subjects.map((s) => s.id);
+
+    const topicRows = await this.dataSource
+      .createQueryBuilder()
+      .select('t.id', 'id')
+      .addSelect('t.subjectId', 'subjectId')
+      .from('topic', 't')
+      .where('t.subjectId IN (:...subjectIds)', { subjectIds })
+      .andWhere('t.isPublished = 1')
+      .getRawMany();
+
+    const topicIdsBySubject = new Map<number, number[]>();
+    for (const row of topicRows) {
+      const sId = +row.subjectId;
+      const list = topicIdsBySubject.get(sId) ?? [];
+      list.push(+row.id);
+      topicIdsBySubject.set(sId, list);
+    }
+    const allTopicIds = topicRows.map((r) => +r.id);
+
+    const [topicRatings, subjectRatings] = await Promise.all([
+      this.getLatestSelfRatings(userId, SkillTypeEnum.TOPIC, allTopicIds),
+      this.getLatestSelfRatings(userId, SkillTypeEnum.SUBJECT, subjectIds),
+    ]);
+
+    return subjects.map((s) => {
+      const topicIds = topicIdsBySubject.get(s.id) ?? [];
+      const ratedTopicEntries = topicIds
+        .map((tid) => topicRatings.get(tid))
+        .filter((v): v is { rating: number; ratedAt: Date } => !!v);
+
+      if (ratedTopicEntries.length > 0) {
+        const avg = ratedTopicEntries.reduce((sum, r) => sum + r.rating, 0) / ratedTopicEntries.length;
+        const lastRatedAt = ratedTopicEntries.reduce(
+          (max, r) => (r.ratedAt > max ? r.ratedAt : max),
+          ratedTopicEntries[0].ratedAt,
+        );
+        return {
+          subjectId: s.id,
+          title: s.title,
+          slug: s.slug,
+          image: s.image ?? null,
+          totalTopics: topicIds.length,
+          ratedTopics: ratedTopicEntries.length,
+          averageRating: Math.round(avg * 10) / 10,
+          lastRatedAt,
+          source: 'topic' as const,
+        };
+      }
+
+      const subjectHit = subjectRatings.get(s.id);
+      if (subjectHit) {
+        return {
+          subjectId: s.id,
+          title: s.title,
+          slug: s.slug,
+          image: s.image ?? null,
+          totalTopics: topicIds.length,
+          ratedTopics: 0,
+          averageRating: subjectHit.rating,
+          lastRatedAt: subjectHit.ratedAt,
+          source: 'subject' as const,
+        };
+      }
+
+      return {
+        subjectId: s.id,
+        title: s.title,
+        slug: s.slug,
+        image: s.image ?? null,
+        totalTopics: topicIds.length,
+        ratedTopics: 0,
+        averageRating: null,
+        lastRatedAt: null,
+        source: 'none' as const,
+      };
+    });
   }
 
   async findByUserId(userId: number): Promise<AssessmentSessionResponseDto[]> {

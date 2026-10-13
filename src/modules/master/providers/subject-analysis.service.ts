@@ -278,10 +278,11 @@ export class SubjectAnalysisService {
       // function's return shape before Lessons/General questions existed as tracked dimensions.
       lessons: null as SubjectPageLessons | null,
       generalQuestions: null as SubjectPageGeneralQuestions | null,
+      timeSpentMinutes: 0,
     };
 
     if (includeExtras) {
-      [dashboard.lessons, dashboard.generalQuestions] = await Promise.all([
+      [dashboard.lessons, dashboard.generalQuestions, dashboard.timeSpentMinutes] = await Promise.all([
         this.subjectStatsService.getSubjectLessons(subjectId, userId).catch(() => ({
           total: 0, completed: 0, inProgress: 0, totalViews: 0,
           lastActivityAt: null, learningCompleteness: 0, list: [],
@@ -289,6 +290,8 @@ export class SubjectAnalysisService {
         this.subjectStatsService.getSubjectGeneralQuestions(subjectId, userId).catch(() => ({
           total: 0, completed: 0, completionPercent: 0,
         } as SubjectPageGeneralQuestions)),
+        (userId ? this.subjectStatsService.fetchSubjectTimeSpentMinutes(subjectId, userId) : Promise.resolve(0))
+          .catch(() => 0),
       ]);
     }
 
