@@ -16,6 +16,10 @@ export class CertExplorerSubjectTrackDto {
   totalQuestions: number;
   attempted: number;
   correct: number;
+  // Sum of Question.timeAllowed (seconds) across this subject track's Trivia bank — "how long
+  // would it take to answer every question here." See SubjectTrackAnalysisService's
+  // totalTimeAllowedSeconds for the source computation.
+  estimatedTimeSeconds: number;
   // Topic titles within this subject track — backs the public "/certification/:slug" invite
   // page's "Your Path" section, which names exactly what's covered rather than just a count.
   topicTitles: string[];
@@ -65,6 +69,10 @@ export class CertificateExplorerTrackDto {
   totalQuestions: number;
   questionsAttempted: number;
   questionsCorrect: number;
+  // Rolled up across subjectTracks' own estimatedTimeSeconds — "how long to complete this
+  // certification," based on each question's allotted time (Question.timeAllowed), not
+  // actual attempt time. The UI rounds this to minutes.
+  estimatedTimeSeconds: number;
   // Authoritative from an actual issued Certificate row — never re-derived from progressPercent
   // vs. achievementThreshold, since issuance is the real event and progress can drift afterwards.
   isAchieved: boolean;

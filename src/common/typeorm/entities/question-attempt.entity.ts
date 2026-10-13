@@ -99,7 +99,7 @@ export class QuestionAttempt extends AbstractEntity implements IQuestionAttempt 
   })
   isCorrect: boolean;
 
-  @Column({ type: 'varchar', length: 100, nullable: true, default: null })
+  @Column({ type: 'varchar', length: 255, nullable: true, default: null })
   answer?: string;
 
   @CreateDateColumn({ name: 'createdAt' })

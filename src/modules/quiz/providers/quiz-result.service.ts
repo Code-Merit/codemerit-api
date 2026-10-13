@@ -13,7 +13,11 @@ export class QuizResultService {
   constructor(
     private readonly dataSource: DataSource
   ) { }
-  async getQuizResultByCode(resultCode: string) {
+  /** Public (shareable) view of one result — anyone with the code can open it, so the
+   * response carries only what a share card needs: display name/username/avatar, never
+   * internal user ids, email, IP, device or client. `isOwner` lets the frontend tell
+   * "my result" apart without needing the owner's id. */
+  async getQuizResultByCode(resultCode: string, viewerId?: number) {
     // 1. Fetch base quiz + user + quiz result. QuizResult's quizId/userQuizId are
     // now mutually exclusive (Standard/UserQuiz split) — LEFT JOIN both possible
     // parents and COALESCE the fields, since only one will ever match.
@@ -34,7 +38,6 @@ export class QuizResultService {
         'r.remarks',
         'r.feedback',
         'r.createdAt',
-        'u.id',
         'u.firstName',
         'u.lastName',
         'u.username',
@@ -251,8 +254,8 @@ export class QuizResultService {
       remarks: base.r_remarks ?? '',
       feedback: base.r_feedback ?? '',
       createdAt: base.r_createdAt,
+      isOwner: viewerId != null && Number(viewerId) === Number(userId),
       user: {
-        id: base.u_id,
         firstName: base.u_firstName,
         lastName: base.u_lastName,
         username: base.u_username,

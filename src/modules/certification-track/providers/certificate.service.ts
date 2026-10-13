@@ -135,6 +135,7 @@ export class CertificateService {
       totalQuestions: 0,
       questionsAttempted: 0,
       questionsCorrect: 0,
+      estimatedTimeSeconds: 0,
       isAchieved: false,
       subjectTracks: [],
       myCertificate: null,
@@ -352,6 +353,7 @@ export class CertificateService {
           totalQuestions: st.numTrivia ?? 0,
           attempted: st.attempted ?? 0,
           correct: st.correct ?? 0,
+          estimatedTimeSeconds: st.totalTimeAllowedSeconds ?? 0,
           topicTitles: ((st.topics ?? []) as any[]).map((t) => t.title).filter(Boolean),
         }));
       const total = subjectTracks.length;
@@ -359,6 +361,11 @@ export class CertificateService {
       const totalQuestions = subjectTracks.reduce((sum, st) => sum + st.totalQuestions, 0);
       const questionsAttempted = subjectTracks.reduce((sum, st) => sum + st.attempted, 0);
       const questionsCorrect = subjectTracks.reduce((sum, st) => sum + st.correct, 0);
+      // "How long would it take to answer every Trivia question in this certification" —
+      // sum of Question.timeAllowed (seconds) across every subject track, surfaced to the UI
+      // as a rounded minute estimate. Based on the per-question time budget, not actual
+      // attempt time, so it's available even for a track no one has started yet.
+      const estimatedTimeSeconds = subjectTracks.reduce((sum, st) => sum + st.estimatedTimeSeconds, 0);
       // Weighted by actual question volume across the whole cert — questionsAttempted /
       // totalQuestions — not an unweighted average of each subject-track's own percentage
       // (the previous pass here) and not completed/total subject tracks (the original bug).
@@ -402,6 +409,7 @@ export class CertificateService {
         totalQuestions,
         questionsAttempted,
         questionsCorrect,
+        estimatedTimeSeconds,
         // Authoritative from an actual issued row — never re-derived from progressPercent vs.
         // achievementThreshold (see certification-tracks.component.ts's own comment on why).
         isAchieved: !!myCertificate,

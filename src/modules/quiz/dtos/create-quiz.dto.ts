@@ -21,9 +21,12 @@ import { QuizSettingsDto } from './quiz-settings.dto';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 
 export class CreateQuizDto {
-  @ApiProperty()
+  // Ignored on the API route — the controller always overwrites it with the JWT's user
+  // id. Optional so existing clients that still send it keep validating.
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsNumber()
-  userId: number;
+  userId?: number;
 
   @ApiPropertyOptional({
     description: 'Title of the topic',

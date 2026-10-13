@@ -119,6 +119,7 @@ export class SubjectTrackAnalysisService {
         const ts = topicStatsMap.get(tid) ?? {};
         const numTrivia = +ts.numTrivia || 0;
         const numGeneral = +ts.numGeneral || 0;
+        const totalTimeAllowedSeconds = +ts.totalTimeAllowedSeconds || 0;
         const attempted = +ts.attempted || 0;
         const allAttempts = +ts.journeyAttempts || 0;
         const correct = +ts.correct || 0;
@@ -152,6 +153,7 @@ export class SubjectTrackAnalysisService {
           goal: ts.goal,
           numTrivia,
           numGeneral,
+          totalTimeAllowedSeconds,
           attempted,
           journeyAttempts: allAttempts,
           correct,
@@ -175,6 +177,9 @@ export class SubjectTrackAnalysisService {
       // (free-text) count, never shown to a regular learner; see TopicAnalysisService's
       // numGeneral for where this originates.
       const stNumGeneral = topics.reduce((s: number, t: any) => s + (t.numGeneral || 0), 0);
+      // "How long would this track take" — sum of each topic's own Trivia timeAllowed budget.
+      // Not gated by numTrivia>0 checks; a topic with zero Trivia just contributes 0.
+      const stTotalTimeAllowedSeconds = topics.reduce((s: number, t: any) => s + (t.totalTimeAllowedSeconds || 0), 0);
       const stAttempted = topics.reduce((s: number, t: any) => s + (t.attempted || 0), 0);
       const stAllAttempts = topicIds.reduce(
         (s: number, tid: number) => s + (+(topicStatsMap.get(tid)?.journeyAttempts) || 0),
@@ -229,6 +234,7 @@ export class SubjectTrackAnalysisService {
         totalTopics,
         numTrivia: stNumTrivia,
         numGeneral: stNumGeneral,
+        totalTimeAllowedSeconds: stTotalTimeAllowedSeconds,
         attempted: stAttempted,
         journeyAttempts: stAllAttempts,
         correct: stCorrect,

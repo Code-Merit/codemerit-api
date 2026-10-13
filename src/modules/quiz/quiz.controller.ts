@@ -23,6 +23,8 @@ import { ApiOperation } from '@nestjs/swagger';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { PublishedQuizFilterDto } from './dtos/published-quiz.dto';
 import { OptionalJwtAuthGuard } from 'src/core/auth/jwt/optional-jwt-auth-guard';
+import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
+import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 
 @Controller('apis/quiz')
 export class QuizController {
@@ -36,9 +38,13 @@ export class QuizController {
     summary: 'Fetch one quiz by slug',
     description: 'Fetches a quiz detail and asked quiz questions ',
   })
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('fetch/:slug')
-  async findOne(@Param('slug') slug: string): Promise<ApiResponse<any>> {
-    const result = await this.quizService.fetchQuizBySlug(slug);
+  async findOne(
+    @Param('slug') slug: string,
+    @Request() req: any,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.quizService.fetchQuizBySlug(slug, req.user?.id);
     return new ApiResponse('Question Found', result);
   }
 
@@ -50,13 +56,28 @@ export class QuizController {
   @Post('create')
   async create(
     @Body() createQuizDto: CreateQuizDto,
+    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    // Use the validated DTO instance directly
+    // Standard quizzes land in the curated public `quiz` catalog (and can be created
+    // already-published) — staff only. Checked here rather than via @Roles because the
+    // same route also serves every learner's self-directed UserQuiz.
+    if (
+      createQuizDto.quizType === QuizTypeEnum.Standard &&
+      ![UserRoleEnum.ADMIN, UserRoleEnum.MODERATOR].includes(req.user?.role)
+    ) {
+      throw new AppCustomException(
+        HttpStatus.FORBIDDEN,
+        'Only admins can create Standard quizzes.',
+      );
+    }
+
+    // Never trust a client-supplied userId — it drives both quiz ownership and the
+    // enrollment/daily-cap gate, so a forged one would let any user borrow another
+    // user's (e.g. Pro) entitlements. Always attribute to the authenticated caller.
     const result: any = await this.quizService.createQuiz(
-      createQuizDto,
-      createQuizDto.userId,
+      { ...createQuizDto, userId: req.user.id },
+      req.user.id,
     );
-    console.log('QuizCreateAPI #1 result', result);
     return new ApiResponse(`${result?.message}`, result?.quiz);
   }
 
@@ -83,7 +104,8 @@ export class QuizController {
     const result = await this.quizService.submitQuiz({
       ...submitQuizDto,
       userId: req.user.id,
-      ipAddress: submitQuizDto.ipAddress ?? req.ip,
+      // Server-observed only — a client-reported IP is unverifiable by definition.
+      ipAddress: req.ip,
     });
     return new ApiResponse(`Quiz submitted successfully.`, result);
   }
@@ -93,11 +115,13 @@ export class QuizController {
     description: 'Retrieves the quiz result by a result code.',
   })
   @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('result/:resultCode')
   async getQuizResultByCode(
     @Param('resultCode') resultCode: string,
+    @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.quizResultService.getQuizResultByCode(resultCode);
+    const result = await this.quizResultService.getQuizResultByCode(resultCode, req.user?.id);
     return new ApiResponse('Quiz Result Found', result);
   }
 

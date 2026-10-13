@@ -8,6 +8,7 @@ import {
   Min,
   IsArray,
   ArrayNotEmpty,
+  ArrayMaxSize,
   ValidateNested,
   IsOptional,
 } from 'class-validator';
@@ -19,15 +20,22 @@ export class AttemptDto {
   @IsInt()
   questionId: number;
 
-  @ApiProperty({ example: 1 })
+  // null for a skipped/timed-out question — nothing was picked.
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
   @IsInt()
-  selectedOption: number;
+  selectedOption: number | null;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
+  @IsNumber()
+  @Min(0)
   timeTaken: number;
 
-  @ApiProperty({ example: 'B' })
+  // Display copy of the chosen option's text; '' when skipped. Clamped to the column
+  // width in submitQuiz() rather than rejected here.
+  @ApiPropertyOptional({ example: 'B' })
+  @IsOptional()
   @IsString()
   answer: string;
 
@@ -65,42 +73,57 @@ export class SubmitQuizDto {
   @IsEnum(QuizTypeEnum)
   quizType?: QuizTypeEnum;
 
-  @ApiProperty({ example: 10 })
+  // Ignored — the controller always overwrites this with the JWT's user id. Optional
+  // only so existing clients that still send it keep validating.
+  @ApiPropertyOptional({ example: 10 })
+  @IsOptional()
   @IsInt()
-  @Min(1)
   userId: number;
 
-  @ApiProperty({ example: 20 })
+  // total/correct/wrong/unanswered/score are ignored — submitQuiz() recomputes all of
+  // them server-side from `attempts`. Optional so clients can stop sending them.
+  @ApiPropertyOptional({ example: 20 })
+  @IsOptional()
   @IsInt()
   @Min(0)
-  total: number;
+  total?: number;
 
-  @ApiProperty({ example: 15 })
+  @ApiPropertyOptional({ example: 15 })
+  @IsOptional()
   @IsInt()
   @Min(0)
-  correct: number;
+  correct?: number;
 
-  @ApiProperty({ example: 3 })
+  @ApiPropertyOptional({ example: 3 })
+  @IsOptional()
   @IsInt()
   @Min(0)
-  wrong: number;
+  wrong?: number;
 
-  @ApiProperty({ example: 2 })
+  @ApiPropertyOptional({ example: 2 })
+  @IsOptional()
   @IsInt()
   @Min(0)
-  unanswered: number;
+  unanswered?: number;
 
-  @ApiProperty({ example: 75 })
+  @ApiPropertyOptional({ example: 75 })
+  @IsOptional()
   @IsNumber()
-  score: number;
+  score?: number;
 
   @ApiProperty({ example: 5 })
   @IsNumber()
+  @Min(0)
   timeSpent: number;
 
   @ApiProperty({ type: [AttemptDto], example: [{ questionId: 101, selectedOption: 1, answer: 'B', isCorrect: true, hintUsed: false, isSkipped: true,timeTaken:5  }] })
   @IsArray()
   @ArrayNotEmpty()
+  // Sanity ceiling only (Standard quizzes aren't bound by MAX_QUIZ_LENGTH) — the real
+  // check is submitQuiz() dropping attempts for questions not in this quiz.
+  @ArrayMaxSize(200)
+  // Without this, none of AttemptDto's own validators ever ran — any shape was accepted.
+  @ValidateNested({ each: true })
   @Type(() => AttemptDto)
   attempts: AttemptDto[];
 

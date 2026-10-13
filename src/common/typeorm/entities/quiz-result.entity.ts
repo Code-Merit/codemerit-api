@@ -2,6 +2,7 @@ import {
     Column,
     CreateDateColumn,
     Entity,
+    Index,
     JoinColumn,
     ManyToOne,
     OneToMany,
@@ -15,6 +16,11 @@ import { QuestionAttempt } from './question-attempt.entity';
 import { QuizStatusEnum } from 'src/common/enum/quiz-status.enum';
 import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 
+// A user can take any given quiz only once — see QuizService.submitQuiz. Each index
+// covers one quiz type: the other type's rows have that column NULL, which MySQL
+// never treats as a duplicate.
+@Index("UQ_quiz_result_quizId_userId", ["quizId", "userId"], { unique: true })
+@Index("UQ_quiz_result_userQuizId_userId", ["userQuizId", "userId"], { unique: true })
 @Entity()
 export class QuizResult extends AbstractEntity implements IQuizResult {
     @Column({

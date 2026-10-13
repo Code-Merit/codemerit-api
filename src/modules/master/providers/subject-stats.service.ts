@@ -676,6 +676,7 @@ export class SubjectStatsService {
             totalQuestions: st.numTrivia ?? 0,
             attempted: st.attempted ?? 0,
             correct: st.correct ?? 0,
+            estimatedTimeSeconds: st.totalTimeAllowedSeconds ?? 0,
           }));
 
         const roleTitles = roleTitlesByCt.get(track.id);
@@ -689,6 +690,7 @@ export class SubjectStatsService {
         const totalQuestions = subjectTracks.reduce((sum: number, st: any) => sum + st.totalQuestions, 0);
         const questionsAttempted = subjectTracks.reduce((sum: number, st: any) => sum + st.attempted, 0);
         const questionsCorrect = subjectTracks.reduce((sum: number, st: any) => sum + st.correct, 0);
+        const estimatedTimeSeconds = subjectTracks.reduce((sum: number, st: any) => sum + (st.estimatedTimeSeconds || 0), 0);
         // Weighted by actual question volume across the whole cert — questionsAttempted /
         // totalQuestions — not an unweighted average of each subject-track's own percentage
         // (the previous pass here) and not completed/total subject tracks (the original bug,
@@ -718,6 +720,7 @@ export class SubjectStatsService {
           totalQuestions,
           questionsAttempted,
           questionsCorrect,
+          estimatedTimeSeconds,
           subjectTracks,
           // Matches DisplayCertificationTrack's roleTitles contract (certification-tracks
           // component + Browse Certificates explorer) — undefined, not [], when there's no

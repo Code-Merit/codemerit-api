@@ -112,6 +112,8 @@ export interface SubjectPageCertSubjectTrack {
   totalQuestions: number;
   attempted: number;
   correct: number;
+  // Sum of Question.timeAllowed (seconds) across this subject track's Trivia bank.
+  estimatedTimeSeconds: number;
 }
 
 export interface SubjectPageCertificationTrack {
@@ -132,6 +134,9 @@ export interface SubjectPageCertificationTrack {
   totalQuestions: number;
   questionsAttempted: number;
   questionsCorrect: number;
+  // Rolled up across subjectTracks' own estimatedTimeSeconds — see
+  // SubjectTrackAnalysisService.buildSubjectTrackMap's totalTimeAllowedSeconds.
+  estimatedTimeSeconds: number;
   subjectTracks: SubjectPageCertSubjectTrack[];
   // undefined (not []) when there's no published job role at all — see this field's own
   // comment in getCertificationTracksForSubject for why the frontend template depends on that.

@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { EnrollmentTierEnum, isTierAtLeast } from 'src/common/enum/enrollment-tier.enum';
 import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
+import { QuizStatusEnum } from 'src/common/enum/quiz-status.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { MailService } from 'src/common/mail/providers/mail.service';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
@@ -81,7 +82,10 @@ export class QuizService {
     private readonly dataSource: DataSource,
   ) { }
 
-  async fetchQuizBySlug(slug: string): Promise<any> {
+  /** `viewerId` (optional — the route is public) lets the response carry the
+   * viewer's own `myResultCode` when they've already taken it, so the client can send
+   * them to their result instead of letting them play a quiz submitQuiz will reject. */
+  async fetchQuizBySlug(slug: string, viewerId?: number): Promise<any> {
     // Slugs stay globally unique across both tables (enforced at creation time in
     // createQuiz()) — Standard is checked first since `quiz` is the smaller,
     // curated table.
@@ -136,10 +140,23 @@ export class QuizService {
       questions = shuffleArray(questions).sort((a: any, b: any) => a.level - b.level);
     }
 
+    let myResultCode: string | null = null;
+    if (viewerId) {
+      const isUserQuiz = (quiz as any).quizType === QuizTypeEnum.UserQuiz;
+      const prior = await this.quizResultRepository.findOne({
+        where: isUserQuiz
+          ? { userQuizId: quiz.id, userId: viewerId }
+          : { quizId: quiz.id, userId: viewerId },
+        select: ['resultCode'],
+      });
+      myResultCode = prior?.resultCode ?? null;
+    }
+
     // Step 3: Return quiz with questions
     return {
       ...quiz,
       questions,
+      myResultCode,
     };
   }
 
@@ -147,8 +164,6 @@ export class QuizService {
     createQuizDto: CreateQuizDto,
     userId: number,
   ): Promise<Quiz> {
-    console.log('quiz service called');
-    console.log('QuizBuilder @createQuiz called:', createQuizDto);
     if (
       !createQuizDto?.subjectIds?.length &&
       !createQuizDto?.topicIds?.length &&
@@ -170,7 +185,6 @@ export class QuizService {
       );
     }
 
-    console.log('QuizBuilder @createQuiz Start:', createQuizDto?.subjectIds);
     let topicIds: number[] = [];
     let subjectIds: number[] = [];
     let subjectTrackIds: number[] = [];
@@ -245,7 +259,6 @@ export class QuizService {
       ids.numQuestions = 20;
     }
 
-    console.log('QuizBuilder @Input:', ids);
     let questionObj: any = null;
     let questions: any[] = [];
     let requestedCount: number | undefined;
@@ -358,7 +371,6 @@ export class QuizService {
       quiz.slug = slug;
       quiz.createdBy = userId;
       quiz.level = createQuizDto.level ?? DifficultyLevelEnum.Easy;
-      console.log('QuizBuilder #4: QuizToSave', quiz);
       return this.dataSource.transaction(async (manager) => {
         const savedQuizzes = isStandard
           ? await manager.save(Quiz, quiz as Quiz)
@@ -371,7 +383,6 @@ export class QuizService {
           (savedQuizzes as any).requestedCount = requestedCount;
           (savedQuizzes as any).actualCount = actualCount;
         }
-        console.log('QuizBuilder #5: savedQuizzes', savedQuizzes);
         // Every hanger row gets exactly one of quizId/userQuizId set, plus the
         // denormalized quizType — see the entity comments for why both are kept.
         const anchor = isStandard
@@ -768,7 +779,7 @@ export class QuizService {
   private async resolveQuizAnchor(
     quizId: number,
     quizType?: QuizTypeEnum,
-  ): Promise<{ quizType: QuizTypeEnum; title: string }> {
+  ): Promise<{ quizType: QuizTypeEnum; title: string; questionIds: Set<number> }> {
     if (!quizType) {
       throw new AppCustomException(
         HttpStatus.BAD_REQUEST,
@@ -778,17 +789,49 @@ export class QuizService {
     if (quizType === QuizTypeEnum.Standard) {
       const standard = await this.quizRepository.findOne({ where: { id: quizId }, select: ['id', 'title'] });
       if (!standard) throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz with ID ${quizId} not found.`);
-      return { quizType: QuizTypeEnum.Standard, title: standard.title };
+      const rows = await this.quizQuestionRepo.find({ where: { quizId }, select: ['questionId'] });
+      return {
+        quizType: QuizTypeEnum.Standard,
+        title: standard.title,
+        questionIds: new Set(rows.map((r) => r.questionId)),
+      };
     }
-    const userQuiz = await this.userQuizRepository.findOne({ where: { id: quizId }, select: ['id', 'title'] });
+    const userQuiz = await this.userQuizRepository.findOne({
+      where: { id: quizId },
+      select: ['id', 'title', 'questionIds'],
+    });
     if (!userQuiz) throw new AppCustomException(HttpStatus.NOT_FOUND, `Quiz with ID ${quizId} not found.`);
-    return { quizType: QuizTypeEnum.UserQuiz, title: userQuiz.title };
+    return {
+      quizType: QuizTypeEnum.UserQuiz,
+      title: userQuiz.title,
+      questionIds: new Set(userQuiz.questionIds ?? []),
+    };
+  }
+
+  private quizAlreadyTakenException(): AppCustomException {
+    return new AppCustomException(
+      HttpStatus.CONFLICT,
+      "You've already taken this quiz. Each quiz can be attempted once.",
+      'QUIZ_ALREADY_TAKEN',
+    );
+  }
+
+  /** Keeps only attempts for questions that actually belong to this quiz, at most one
+   * per question (first wins). Without this, a client could pad a submission with
+   * unrelated or repeated questionIds to inflate its score, XP and badge progress. */
+  private filterAttemptsToQuiz(attempts: AttemptDto[], quizQuestionIds: Set<number>): AttemptDto[] {
+    const seen = new Set<number>();
+    return attempts.filter((a) => {
+      if (!quizQuestionIds.has(a.questionId) || seen.has(a.questionId)) return false;
+      seen.add(a.questionId);
+      return true;
+    });
   }
 
   async submitQuiz(
     submitQuizDto: SubmitQuizDto,
   ): Promise<QuizResult & { newlyEarned?: NewlyEarnedDto | null }> {
-    const { quizType, title: quizTitle } = await this.resolveQuizAnchor(
+    const { quizType, title: quizTitle, questionIds: quizQuestionIds } = await this.resolveQuizAnchor(
       submitQuizDto?.quizId,
       submitQuizDto?.quizType,
     );
@@ -797,31 +840,33 @@ export class QuizService {
       ? { quizId: submitQuizDto.quizId, userQuizId: null as number | null }
       : { quizId: null as number | null, userQuizId: submitQuizDto.quizId };
 
-    // Enforce QuizSettings.maxAttempts (stored but previously never checked anywhere) —
-    // without this, XP/leaderboard rank can be farmed for free by simply resubmitting
-    // the same quiz. Quizzes without a settings row are left unrestricted (unchanged
-    // behavior for legacy/ad-hoc quizzes that predate QuizSettings).
     const settings = await this.quizSettingsRepository.findOne({
       where: anchor,
-      select: ['maxAttempts', 'passMarks'],
+      select: ['passMarks'],
     });
-    if (settings?.maxAttempts) {
-      const priorAttempts = await this.quizResultRepository.count({
-        where: { ...anchor, userId: submitQuizDto?.userId },
-      });
-      if (priorAttempts >= settings.maxAttempts) {
-        throw new AppCustomException(
-          HttpStatus.FORBIDDEN,
-          `Maximum attempts (${settings.maxAttempts}) reached for this quiz.`,
-        );
-      }
-    }
+
+    // Any quiz (Standard or a shared UserQuiz) can be taken by many people, but each
+    // person only once — this supersedes QuizSettings.maxAttempts. Also backed by the
+    // UQ_quiz_result_quizId_userId / UQ_quiz_result_userQuizId_userId unique indexes
+    // (see the catch below) so a double-submit race can't slip a second result in.
+    const alreadyTaken = await this.quizResultRepository.exists({
+      where: isStandard
+        ? { quizId: submitQuizDto.quizId, userId: submitQuizDto?.userId }
+        : { userQuizId: submitQuizDto.quizId, userId: submitQuizDto?.userId },
+    });
+    if (alreadyTaken) throw this.quizAlreadyTakenException();
 
     // total/correct/wrong/unanswered/score must never be trusted from the client — they're
     // recomputed here from the submitted attempts using the same generateScore() formula
     // every other scoring surface (subject dashboard, job-role readiness, etc.) uses, so a
     // quiz's own result and the dashboards built from it can never silently diverge again.
-    const rawAttempts = submitQuizDto?.attempts ?? [];
+    const rawAttempts = this.filterAttemptsToQuiz(submitQuizDto?.attempts ?? [], quizQuestionIds);
+    if (rawAttempts.length === 0) {
+      throw new AppCustomException(
+        HttpStatus.BAD_REQUEST,
+        'None of the submitted answers belong to this quiz.',
+      );
+    }
     const attempts = await this.recomputeAttemptCorrectness(rawAttempts);
     const total = attempts.length;
     const correct = attempts.filter((a) => a?.isCorrect === true).length;
@@ -860,23 +905,18 @@ export class QuizService {
           timeSpent: submitQuizDto?.timeSpent,
           score,
           feedback,
-          device: submitQuizDto?.device,
-          client: submitQuizDto?.client,
-          ipAddress: submitQuizDto?.ipAddress,
+          status: QuizStatusEnum.Completed,
+          // Client-reported telemetry — clamped to the column widths so an oversized
+          // value can never fail the whole submission transaction.
+          device: submitQuizDto?.device?.slice(0, 100),
+          client: submitQuizDto?.client?.slice(0, 100),
+          ipAddress: submitQuizDto?.ipAddress?.slice(0, 45),
         });
 
         const savedResult = await manager.save(QuizResult, result);
 
-        await this.notificationService.notifyQuizCompleted(
-          submitQuizDto?.userId,
-          quizTitle ?? 'Quiz',
-          score,
-          submitQuizDto?.quizId,
-        );
-
-        // 3. Save QuestionAttempts
-        for (const attempt of attempts) {
-          const questionAttempt = manager.create(QuestionAttempt, {
+        const questionAttempts = attempts.map((attempt) =>
+          manager.create(QuestionAttempt, {
             ...anchor,
             quizType,
             resultId: savedResult.id,
@@ -887,26 +927,49 @@ export class QuizService {
             isSkipped: attempt?.isSkipped,
             hintUsed: attempt?.hintUsed,
             isCorrect: attempt?.isCorrect,
-            answer: attempt?.answer,
-          });
-          const saved = await manager.save(QuestionAttempt, questionAttempt);
-          savedAttempts.push({
-            id: saved.id,
-            questionId: attempt.questionId,
-            isCorrect: attempt?.isCorrect,
-            isSkipped: attempt?.isSkipped,
-            hintUsed: attempt?.hintUsed,
-          });
-        }
+            // Display-only copy of the chosen option's text — clamped like the above.
+            answer: attempt?.answer?.slice(0, 255),
+          }),
+        );
+        const saved = await manager.save(QuestionAttempt, questionAttempts);
+        savedAttempts = saved.map((s) => ({
+          id: s.id,
+          questionId: s.questionId,
+          isCorrect: s.isCorrect,
+          isSkipped: s.isSkipped,
+          hintUsed: s.hintUsed,
+        }));
 
         return savedResult;
       });
     } catch (error) {
+      // Lost the race against a concurrent submit of the same quiz — the unique
+      // index rejected the second row, so report it like the pre-check above does.
+      if (
+        error?.code === 'ER_DUP_ENTRY' &&
+        /UQ_quiz_result_(quizId|userQuizId)_userId/.test(String(error?.message))
+      ) {
+        throw this.quizAlreadyTakenException();
+      }
       console.log('QuizBuilder #6: Exception', error);
       throw new AppCustomException(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'Failed to submit quiz result.',
       );
+    }
+
+    // Notification runs after commit, not inside the transaction: notificationService
+    // writes through its own repository (not `manager`), so from inside it would persist
+    // a "Quiz Completed" notification even when the result itself rolled back.
+    try {
+      await this.notificationService.notifyQuizCompleted(
+        submitQuizDto?.userId,
+        quizTitle ?? 'Quiz',
+        score,
+        submitQuizDto?.quizId,
+      );
+    } catch (error) {
+      console.log('QuizBuilder #6: Failed to create quiz-completed notification', error);
     }
 
     // Base "Quiz Completed" activity, separate from the XP/streak/badge/certificate

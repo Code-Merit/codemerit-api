@@ -99,6 +99,13 @@ export class TopicAnalysisService {
         `COUNT(DISTINCT CASE WHEN qTr.level = :hard THEN qTr.id END)`,
         'numAdvTrivia',
       )
+      // Sum of Question.timeAllowed (seconds) across this topic's Trivia bank — "how long
+      // would it take to answer every question here," the same per-question budget the
+      // take-quiz timer ring and SkillArena countdown already use. qTr is a 1:1 conditional
+      // join on the same question_topic row as q (not a fan-out join), so this SUM is exact —
+      // never wrap it in DISTINCT, which would silently collapse legitimately-equal values
+      // (e.g. two questions both allotted the 60s default).
+      .addSelect('COALESCE(SUM(qTr.timeAllowed), 0)', 'totalTimeAllowedSeconds')
       .setParameter('easy', DifficultyLevelEnum.Easy)
       .setParameter('medium', DifficultyLevelEnum.Intermediate)
       .setParameter('hard', DifficultyLevelEnum.Advanced);
@@ -223,6 +230,7 @@ export class TopicAnalysisService {
     const numLessons = 0;
     const numTrivia = +raw.numTrivia || 0;
     const numGeneral = +raw.numGeneral || 0;
+    const totalTimeAllowedSeconds = +raw.totalTimeAllowedSeconds || 0;
     const totalAttempts = +raw.totalAttempts || 0;
     const numMyAttempts = +raw.numMyAttempts || 0;
     const journeyCorrect = +raw.journeyCorrect || 0;
@@ -281,6 +289,7 @@ export class TopicAnalysisService {
       numAdvTrivia: +raw?.numAdvTrivia || 0,
       numGeneral,
       numLessons,
+      totalTimeAllowedSeconds,
       totalAttempts,
       // Named to match subject/subjectTrack level exactly (previously myAllAttempts/
       // myUniqueAttempts here specifically) — same two concepts, one name each, everywhere.
