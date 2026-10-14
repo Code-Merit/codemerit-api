@@ -7,6 +7,7 @@ import { Badge } from 'src/common/typeorm/entities/badge.entity';
 import { Permission } from 'src/common/typeorm/entities/permission.entity';
 import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.module';
 import { UserPermissionModule } from '../user-permission/user-permission.module';
+import { ActivityModule } from '../activity/activity.module';
 import { InvitesController } from './invites.controller';
 import { InvitesService } from './providers/invites.service';
 import {
@@ -26,6 +27,7 @@ import { INVITE_ACTION_HANDLERS } from './constants/invites.constants';
     TypeOrmModule.forFeature([Invite, User, Profile, Badge, Permission]),
     SkillEnrollmentModule,
     UserPermissionModule,
+    ActivityModule,
   ],
   controllers: [InvitesController],
   providers: [

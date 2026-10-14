@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThanOrEqual, MoreThan, Repository } from 'typeorm';
+import { In, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { Invite } from 'src/common/typeorm/entities/invite.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
@@ -10,6 +10,7 @@ import { InviteTypeEnum } from 'src/common/enum/invite-type.enum';
 import { InviteStatusEnum } from 'src/common/enum/invite-status.enum';
 import { InviteChannelEnum } from 'src/common/enum/invite-channel.enum';
 import { MailService } from 'src/common/mail/providers/mail.service';
+import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { CreateInviteDto } from '../dtos/create-invite.dto';
 import { RedeemInviteDto } from '../dtos/redeem-invite.dto';
 import { InviteActionHandler } from './invite-action.handler';
@@ -18,6 +19,10 @@ import {
   INVITE_CODE_LENGTH,
   INVITE_EXPIRY_DAYS,
 } from '../constants/invites.constants';
+import { invitePurposePhrase } from '../invite-phrase.util';
+
+// Activity.dataType for every invite-related activity row.
+const INVITE_ACTIVITY_TYPE = 'INVITE';
 
 export interface InviteStats {
   myInviteCount: number;
@@ -56,6 +61,7 @@ export class InvitesService {
     @Inject(INVITE_ACTION_HANDLERS)
     private readonly handlers: Map<InviteTypeEnum, InviteActionHandler>,
     private readonly mailService: MailService,
+    private readonly activityService: ActivityService,
   ) {}
 
   /** Idempotent: re-inviting the same recipient for the same inviter+type+target reuses
@@ -127,6 +133,9 @@ export class InvitesService {
       );
     }
 
+    const { title, message } = this.describeCreated(invite, !!existing);
+    await this.logActivity(inviterId, title, message, invite.id);
+
     return invite;
   }
 
@@ -185,6 +194,7 @@ export class InvitesService {
       await this.inviteRepo.update(invite.id, { completedAt: invite.completedAt });
     }
     await this.markPrompted(userId);
+    await this.logAccepted(invite, userId);
 
     return { invite, skipped: false };
   }
@@ -257,6 +267,74 @@ export class InvitesService {
     }));
 
     return { myInviteCount, myAcceptedCount, myPendingCount, myExpiredCount, topInviters };
+  }
+
+  /** Activity wording for the inviter, by delivery channel and whether an existing pending
+   * invite was renewed rather than created. The feed prefixes "You" / the user's name, so
+   * messages are verb phrases. */
+  private describeCreated(invite: Invite, renewed: boolean): { title: string; message: string } {
+    const purpose = invitePurposePhrase(invite.type, invite.targetLabel);
+    const validFor = `valid for another ${INVITE_EXPIRY_DAYS} days`;
+
+    if (invite.channel === InviteChannelEnum.EMAIL) {
+      return renewed
+        ? { title: 'Invite Resent', message: `resent the invite to ${invite.recipientEmail} to ${purpose} (${validFor}).` }
+        : { title: 'Invite Sent', message: `invited ${invite.recipientEmail} to ${purpose}.` };
+    }
+    if (invite.channel === InviteChannelEnum.PHONE) {
+      // No SMS provider — the inviter shares the code themselves.
+      return renewed
+        ? { title: 'Invite Renewed', message: `renewed the invite for ${invite.recipientPhone} to ${purpose} (${validFor}).` }
+        : { title: 'Invite Created', message: `created an invite for ${invite.recipientPhone} to ${purpose} — share the code with them to deliver it.` };
+    }
+    return renewed
+      ? { title: 'Invite Link Renewed', message: `renewed the shareable invite link to ${purpose} (${validFor}).` }
+      : { title: 'Invite Link Generated', message: `generated a shareable invite link to ${purpose}.` };
+  }
+
+  /** Logs the acceptance on both sides: the invitee's feed and the inviter's. */
+  private async logAccepted(invite: Invite, inviteeId: number): Promise<void> {
+    const users = await this.userRepo.find({
+      where: { id: In([invite.inviterId, inviteeId]) },
+      select: ['id', 'firstName', 'lastName', 'username'],
+    });
+    const nameOf = (id: number, fallback: string) => {
+      const user = users.find((u) => u.id === id);
+      if (!user) return fallback;
+      return `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || user.username || fallback;
+    };
+    const inviterName = nameOf(invite.inviterId, 'a CodeMerit member');
+    const inviteeName = nameOf(inviteeId, 'a new member');
+    const purpose = invitePurposePhrase(invite.type, invite.targetLabel);
+
+    await this.logActivity(
+      inviteeId,
+      'Invite Accepted',
+      `accepted ${inviterName}'s invite to ${purpose}.`,
+      invite.id,
+    );
+    await this.logActivity(
+      invite.inviterId,
+      'Invite Accepted',
+      // Anyone holding the code can redeem it, so the original recipient and the person who
+      // accepted are stated separately rather than assumed to be the same.
+      invite.recipientEmail || invite.recipientPhone
+        ? `invited ${invite.recipientEmail ?? invite.recipientPhone} to ${purpose} — accepted by ${inviteeName}.`
+        : `shared an invite link to ${purpose} — accepted by ${inviteeName}.`,
+      invite.id,
+    );
+  }
+
+  /** Never lets an activity-log failure fail the invite action itself. */
+  private async logActivity(userId: number, title: string, message: string, inviteId: number): Promise<void> {
+    try {
+      await this.activityService.createActivity(userId, title, message, {
+        dataId: String(inviteId),
+        dataType: INVITE_ACTIVITY_TYPE,
+      });
+    } catch (error) {
+      this.logger.error(`Failed to log invite activity "${title}" for userId=${userId}`, error);
+    }
   }
 
   private async markPrompted(userId: number): Promise<void> {
