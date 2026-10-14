@@ -4,6 +4,7 @@ import { DataSource, Repository } from 'typeorm';
 import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
 import { AssessmentSession } from 'src/common/typeorm/entities/assessment-session.entity';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
+import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
@@ -399,6 +400,7 @@ export class UserProfileAggregatorService {
         .addSelect('c.scorePercentage', 'scorePercentage')
         .addSelect('c.skillName', 'skillName')
         .addSelect('c.tierDisplayName', 'tierDisplayName')
+        .addSelect('c.content', 'content')
         .addSelect('ct.id', 'certificationTrackId')
         .addSelect('ct.title', 'certificationTrackTitle')
         .addSelect('jr.id', 'jobRoleId')
@@ -429,6 +431,7 @@ export class UserProfileAggregatorService {
         scorePercentage: number | null;
         skillName: string | null;
         tierDisplayName: string | null;
+        content: string | null;
         certificationTrack: { id: number; title: string };
         jobRoles: Array<{ id: number; title: string; slug: string }>;
       }
@@ -449,6 +452,9 @@ export class UserProfileAggregatorService {
           scorePercentage: r.scorePercentage != null ? +r.scorePercentage : null,
           skillName: r.skillName ?? r.certificationTrackTitle ?? null,
           tierDisplayName: r.tierDisplayName ?? null,
+          // Fully-resolved credential sentence snapshotted at issuance (Certificate.content) —
+          // null only on a certificate issued before this column existed.
+          content: r.content ?? null,
           certificationTrack: { id: +r.certificationTrackId, title: r.certificationTrackTitle },
           jobRoles: [],
         });
@@ -521,21 +527,34 @@ export class UserProfileAggregatorService {
     return { recent, summary };
   }
 
-  private async getQuizSummary(userId: number): Promise<{ totalTaken: number; avgScore: number; totalCorrect: number; totalWrong: number }> {
-    const row = await this.dataSource
-      .createQueryBuilder(QuizResult, 'qr')
-      .select('COUNT(*)', 'totalTaken')
-      .addSelect('AVG(qr.score)', 'avgScore')
-      .addSelect('SUM(qr.correct)', 'totalCorrect')
-      .addSelect('SUM(qr.wrong)', 'totalWrong')
-      .where('qr.userId = :userId', { userId })
-      .getRawOne();
+  private async getQuizSummary(userId: number): Promise<{ totalTaken: number; avgScore: number; totalCorrect: number; totalWrong: number; totalNeverTaken: number }> {
+    const [row, neverTakenRow] = await Promise.all([
+      this.dataSource
+        .createQueryBuilder(QuizResult, 'qr')
+        .select('COUNT(*)', 'totalTaken')
+        .addSelect('AVG(qr.score)', 'avgScore')
+        .addSelect('SUM(qr.correct)', 'totalCorrect')
+        .addSelect('SUM(qr.wrong)', 'totalWrong')
+        .where('qr.userId = :userId', { userId })
+        .getRawOne(),
+      // Practice quizzes this user generated (QuizService.createQuiz) that have zero matching
+      // QuizResult rows — i.e. generated and never submitted. Same LEFT JOIN shape
+      // QuizService.getMyPracticeQuizzes() already uses for "My Quizzes" (apis/quiz/me); kept
+      // as a plain count here since getRecentQuizzes only needs the number, not the list.
+      this.dataSource
+        .createQueryBuilder(UserQuiz, 'uq')
+        .leftJoin(QuizResult, 'qr', 'qr.userQuizId = uq.id')
+        .where('uq.createdBy = :userId', { userId })
+        .andWhere('qr.id IS NULL')
+        .getCount(),
+    ]);
 
     return {
       totalTaken: Number(row?.totalTaken) || 0,
       avgScore: row?.avgScore != null ? +Number(row.avgScore).toFixed(1) : 0,
       totalCorrect: Number(row?.totalCorrect) || 0,
       totalWrong: Number(row?.totalWrong) || 0,
+      totalNeverTaken: neverTakenRow,
     };
   }
 

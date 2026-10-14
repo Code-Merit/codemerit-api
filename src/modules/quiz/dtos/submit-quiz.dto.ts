@@ -32,18 +32,14 @@ export class AttemptDto {
   @Min(0)
   timeTaken: number;
 
-  // Display copy of the chosen option's text; '' when skipped. Clamped to the column
-  // width in submitQuiz() rather than rejected here.
+  // Display copy of the chosen option's text; '' when skipped.
   @ApiPropertyOptional({ example: 'B' })
   @IsOptional()
   @IsString()
   answer: string;
 
-  // Advisory only for gradable (option-based) questions — the server re-derives the
-  // real value from QuestionOption.correct in quiz.service.ts#recomputeAttemptCorrectness
-  // rather than trusting this field, so a client-side scoring bug can never permanently
-  // misfile a question as wrong. Still authoritative for free-text questions with no
-  // QuestionOption rows, since the server has no ground truth to check those against.
+  // Re-derived server-side for option-based questions (recomputeAttemptCorrectness);
+  // only trusted for free-text questions.
   @ApiProperty({ example: true })
   @IsBoolean()
   isCorrect: boolean;
@@ -63,25 +59,20 @@ export class SubmitQuizDto {
   @Min(1)
   quizId: number;
 
-  // Required in practice: quizId alone is ambiguous (it could be a `quiz.id` or a
-  // `user_quiz.id` in two independent id spaces) since the Standard/UserQuiz split —
-  // resolveQuizAnchor() rejects a submission that omits this. Kept @IsOptional() here
-  // at the DTO/validator level only so a request missing it still reaches the service
-  // and gets that clearer domain-specific error, instead of a generic validator 400.
+  // Required in practice (quizId alone is ambiguous between the two tables). Optional
+  // here so the service can return a clearer error than the validator would.
   @ApiPropertyOptional({ enum: QuizTypeEnum, example: QuizTypeEnum.UserQuiz })
   @IsOptional()
   @IsEnum(QuizTypeEnum)
   quizType?: QuizTypeEnum;
 
-  // Ignored — the controller always overwrites this with the JWT's user id. Optional
-  // only so existing clients that still send it keep validating.
+  // Ignored; the controller sets it from the JWT.
   @ApiPropertyOptional({ example: 10 })
   @IsOptional()
   @IsInt()
   userId: number;
 
-  // total/correct/wrong/unanswered/score are ignored — submitQuiz() recomputes all of
-  // them server-side from `attempts`. Optional so clients can stop sending them.
+  // total/correct/wrong/unanswered/score are ignored; submitQuiz() recomputes them.
   @ApiPropertyOptional({ example: 20 })
   @IsOptional()
   @IsInt()
@@ -119,10 +110,8 @@ export class SubmitQuizDto {
   @ApiProperty({ type: [AttemptDto], example: [{ questionId: 101, selectedOption: 1, answer: 'B', isCorrect: true, hintUsed: false, isSkipped: true,timeTaken:5  }] })
   @IsArray()
   @ArrayNotEmpty()
-  // Sanity ceiling only (Standard quizzes aren't bound by MAX_QUIZ_LENGTH) — the real
-  // check is submitQuiz() dropping attempts for questions not in this quiz.
+  // Sanity ceiling; submitQuiz() also drops attempts for questions not in the quiz.
   @ArrayMaxSize(200)
-  // Without this, none of AttemptDto's own validators ever ran — any shape was accepted.
   @ValidateNested({ each: true })
   @Type(() => AttemptDto)
   attempts: AttemptDto[];

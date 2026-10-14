@@ -13,14 +13,10 @@ export class QuizResultService {
   constructor(
     private readonly dataSource: DataSource
   ) { }
-  /** Public (shareable) view of one result — anyone with the code can open it, so the
-   * response carries only what a share card needs: display name/username/avatar, never
-   * internal user ids, email, IP, device or client. `isOwner` lets the frontend tell
-   * "my result" apart without needing the owner's id. */
+  /** Public, shareable view of one result: exposes display name/username/avatar only —
+   * never user ids, email, IP, device or client. `isOwner` flags the viewer's own result. */
   async getQuizResultByCode(resultCode: string, viewerId?: number) {
-    // 1. Fetch base quiz + user + quiz result. QuizResult's quizId/userQuizId are
-    // now mutually exclusive (Standard/UserQuiz split) — LEFT JOIN both possible
-    // parents and COALESCE the fields, since only one will ever match.
+    // Exactly one of quiz/userQuiz matches; COALESCE picks it.
     const base = await this.dataSource
       .createQueryBuilder(QuizResult, 'r')
       .select([
@@ -57,9 +53,6 @@ export class QuizResultService {
     }
 
     const userId = base.r_userId;
-    // Whichever of quizId/userQuizId is populated identifies the anchor; the
-    // hanger-table column to join on for the attempt/question query below
-    // depends on which table this result's quiz actually lives in.
     const isStandard = base.r_quizType === QuizTypeEnum.Standard;
     const quizId = isStandard ? base.r_quizId : base.r_userQuizId;
     const quizIdColumn = isStandard ? 'quizId' : 'userQuizId';
@@ -88,12 +81,8 @@ export class QuizResultService {
         .leftJoin('q.questionTopics', 'qt')
         .leftJoin('qt.topic', 't');
 
-    // 2. Fetch QuestionAttempts for this specific submission. Primary scope is
-    // qa.resultId — stamped once at submit time, so it can never merge in
-    // attempts from a different submission of the same quiz (unlike the old
-    // userId+quizId scoping, which did exactly that on a retake). Pre-migration
-    // rows may not have resultId backfilled, so fall back to the legacy scoping
-    // for those specifically (resultId IS NULL), never mixing the two.
+    // Attempts are scoped by resultId. Older rows without a resultId fall back to
+    // userId + quiz scoping.
     let questionRows = await attemptSelect(
       this.dataSource.createQueryBuilder(QuestionAttempt, 'qa'),
     )
@@ -110,67 +99,71 @@ export class QuizResultService {
         .getRawMany();
     }
 
-    // 3. Build questions array with options
+    // The topic join yields one row per (question, topic). Per-question figures —
+    // questions, timeSpent, subject stats — must use one row per question.
     const uniqueQuestionRows = new Map<number, any>();
     questionRows.forEach((r) => {
       if (!uniqueQuestionRows.has(r.questionId)) {
         uniqueQuestionRows.set(r.questionId, r);
       }
     });
+    const questionList = Array.from(uniqueQuestionRows.values());
 
-    // Sum from uniqueQuestionRows, not the raw questionRows — a question
-    // tagged with multiple topics produces one row per topic (the
-    // questionTopics left join fans out), so summing the raw rows would
-    // double/triple-count that question's timeTaken. This was previously
-    // omitted entirely from the response, which is why "Time Efficiency"
-    // never rendered on any of the result-card designs (it's null-gated on
-    // the frontend whenever timeSpent is missing).
-    const timeSpent = Array.from(uniqueQuestionRows.values())
-      .reduce((sum, r) => sum + (Number(r.timeTaken) || 0), 0);
+    const timeSpent = questionList.reduce((sum, r) => sum + (Number(r.timeTaken) || 0), 0);
 
     const levelLabelMap: Record<number, string> = {
       [DifficultyLevelEnum.Easy]: 'Easy',
       [DifficultyLevelEnum.Intermediate]: 'Intermediate',
       [DifficultyLevelEnum.Advanced]: 'Advanced',
     };
-    
-    const questions = await Promise.all(
-      Array.from(uniqueQuestionRows.values()).map(async (r) => {
-        const options = await this.dataSource
+
+    const options = questionList.length
+      ? await this.dataSource
           .createQueryBuilder(QuestionOption, 'qo')
-          .select(['qo.id AS id', 'qo.option AS text', 'qo.correct AS correct'])
-          .where('qo.questionId = :questionId', { questionId: r.questionId })
-          .getRawMany();
+          .select([
+            'qo.id AS id',
+            'qo.questionId AS questionId',
+            'qo.option AS text',
+            'qo.correct AS correct',
+          ])
+          .where('qo.questionId IN (:...questionIds)', {
+            questionIds: questionList.map((r) => r.questionId),
+          })
+          .getRawMany()
+      : [];
+    const optionsByQuestion = new Map<number, any[]>();
+    for (const o of options) {
+      const key = Number(o.questionId);
+      if (!optionsByQuestion.has(key)) optionsByQuestion.set(key, []);
+      optionsByQuestion.get(key).push(o);
+    }
 
+    const questions = questionList.map((r) => {
+      const selectedOptionId = r.selectedOptionId != null ? Number(r.selectedOptionId) : null;
+      return {
+        id: r.questionId,
+        text: r.text,
+        options: (optionsByQuestion.get(Number(r.questionId)) ?? []).map((o) => ({
+          id: Number(o.id),
+          text: o.text,
+          correct: Boolean(o.correct),
+          selected: Number(o.id) === selectedOptionId,
+        })),
+        selectedOptionId,
+        isSkipped: r.isSkipped ?? false,
+        isCorrect: r.isCorrect ?? false,
+        subjectId: r.subjectId,
+        topicId: r.topicId,
+        timeTaken: Number(r.timeTaken) || 0,
+        answer: r.answer ?? null,
+        levelLabel: r.level ? levelLabelMap[Number(r.level)] ?? null : null,
+        level: r.level ?? null,
+      };
+    });
 
-          const formattedOptions = options.map((o) => ({
-  id: Number(o.id),
-  text: o.text,
-  correct: Boolean(o.correct),
-  selected:
-    Number(o.id) === Number(r.selectedOptionId),
-}));
-
-        return {
-          id: r.questionId,
-          text: r.text,
-          options: formattedOptions,
-          selectedOptionId: Number(r.selectedOptionId) ?? null,
-          isSkipped: r.isSkipped ?? false,
-          isCorrect: r.isCorrect ?? false,
-          subjectId: r.subjectId,
-          topicId: r.topicId,
-          timeTaken: Number(r.timeTaken) ?? 0,
-          answer: r.answer ?? null,
-          levelLabel: r.level ? levelLabelMap[Number(r.level)] ?? null : null,
-          level: r.level ?? null
-        };
-      })
-    );
-
-    // 4. Aggregate subjects
+    // Raw rows carry MySQL TINYINT 0/1 for booleans, hence Number(...) comparisons below.
     const subjectsMap = new Map<number, any>();
-    questionRows.forEach((r) => {
+    questionList.forEach((r) => {
       if (!subjectsMap.has(r.subjectId)) {
         subjectsMap.set(r.subjectId, {
           id: r.subjectId,
@@ -185,12 +178,6 @@ export class QuizResultService {
       }
       const sub = subjectsMap.get(r.subjectId);
       sub.asked += 1;
-      // .getRawMany() returns raw driver values, not entity-hydrated ones —
-      // isSkipped/isCorrect are `boolean` columns but MySQL has no native
-      // boolean (TypeORM maps it to TINYINT), so raw rows carry 0/1, not
-      // true/false. `=== false`/`=== true` against that never matched,
-      // silently leaving answered/correct/wrong at 0 for every subject.
-      // Number(...) normalizes 0/1/boolean/"0"/"1" uniformly.
       if (Number(r.isSkipped) === 0) sub.answered += 1;
       if (Number(r.isCorrect) === 1) {
         sub.correct += 1;
@@ -199,9 +186,7 @@ export class QuizResultService {
       }
     });
 
-    // score/accuracy use generateScore()/the same "correct over asked" formula every other
-    // scoring surface uses — denominator is `asked` (not `answered`), since a skipped
-    // question is still a recorded attempt, matching computeAttemptMetrics's currentAccuracy.
+    // Accuracy is correct / asked (skips count), matching the other scoring surfaces.
     const subjects = Array.from(subjectsMap.values()).map((s) => ({
       ...s,
       score: generateScore(s.asked, s.correct, s.wrong),
@@ -209,10 +194,11 @@ export class QuizResultService {
       accuracy: s.asked ? +((s.correct / s.asked) * 100).toFixed(1) : 0,
     }));
 
-    // 5. Aggregate topics
+    // Topic stats use every (question, topic) row: a multi-topic question counts once
+    // per topic.
     const topicsMap = new Map<number, any>();
     questionRows.forEach((r) => {
-      if (!r.topicId) return; // some questions may not have a topic
+      if (!r.topicId) return;
       if (!topicsMap.has(r.topicId)) {
         topicsMap.set(r.topicId, {
           id: r.topicId,
@@ -225,7 +211,6 @@ export class QuizResultService {
       }
       const t = topicsMap.get(r.topicId);
       t.asked += 1;
-      // Same raw-value fix as the subjects loop above — see that comment.
       if (Number(r.isSkipped) === 0) t.answered += 1;
       if (Number(r.isCorrect) === 1) {
         t.correct += 1;
@@ -241,7 +226,6 @@ export class QuizResultService {
       accuracy: t.asked ? +((t.correct / t.asked) * 100).toFixed(1) : 0,
     }));
 
-    // 6. Final response
     return {
       resultCode: base.r_resultCode,
       score: Number(base.r_score) || 0,
@@ -274,18 +258,7 @@ export class QuizResultService {
     };
   }
 
-  /**
-   * Returns an array of quiz IDs that the user has taken.
-   */
-  async findQuizIdsTakenByUser(userId: number): Promise<number[]> {
-    const rows = await this.dataSource
-      .createQueryBuilder(QuizResult, 'qr')
-      .select('qr.quizId', 'quizId')
-      .where('qr.userId = :userId', { userId })
-      .getRawMany();
-    return rows.map((row) => row.quizId);
-  }
-
+  /** The user's result codes per Standard quiz, newest first. */
   async findAllResultCodesByUserAndQuizIds(
     userId: number,
     quizIds: number[],

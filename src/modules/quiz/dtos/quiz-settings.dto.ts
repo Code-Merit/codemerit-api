@@ -51,7 +51,7 @@ export class QuizSettingsDto {
   @IsBoolean()
   enableCertificate?: boolean = false;
 
-  @ApiPropertyOptional({ description: 'Pass marks', default: 0 })
+  @ApiPropertyOptional({ description: 'Pass marks', default: 60 })
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

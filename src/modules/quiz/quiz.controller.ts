@@ -17,7 +17,7 @@ import { Public } from 'src/core/auth/decorators/public.decorator';
 import { CreateQuizDto } from './dtos/create-quiz.dto';
 import { UpdateQuizDto } from './dtos/update-quiz.dto';
 import { SubmitQuizDto } from './dtos/submit-quiz.dto';
-import { QuizService } from './providers/quiz.service';
+import { INITIAL_ASSESSMENT_TAG, QuizService } from './providers/quiz.service';
 import { QuizResultService } from './providers/quiz-result.service';
 import { ApiOperation } from '@nestjs/swagger';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
@@ -36,7 +36,7 @@ export class QuizController {
   @Public()
   @ApiOperation({
     summary: 'Fetch one quiz by slug',
-    description: 'Fetches a quiz detail and asked quiz questions ',
+    description: 'Quiz details with its questions.',
   })
   @UseGuards(OptionalJwtAuthGuard)
   @Get('fetch/:slug')
@@ -58,9 +58,8 @@ export class QuizController {
     @Body() createQuizDto: CreateQuizDto,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    // Standard quizzes land in the curated public `quiz` catalog (and can be created
-    // already-published) — staff only. Checked here rather than via @Roles because the
-    // same route also serves every learner's self-directed UserQuiz.
+    // Standard (catalog) quizzes are staff-only. Not via @Roles, since learners use
+    // this same route for practice quizzes.
     if (
       createQuizDto.quizType === QuizTypeEnum.Standard &&
       ![UserRoleEnum.ADMIN, UserRoleEnum.MODERATOR].includes(req.user?.role)
@@ -71,14 +70,18 @@ export class QuizController {
       );
     }
 
-    // Never trust a client-supplied userId — it drives both quiz ownership and the
-    // enrollment/daily-cap gate, so a forged one would let any user borrow another
-    // user's (e.g. Pro) entitlements. Always attribute to the authenticated caller.
-    const result: any = await this.quizService.createQuiz(
+    // Reserved for the system-generated onboarding quiz; letting a client set it would
+    // shadow the real one (createInitialAssessmentQuiz is idempotent on this tag).
+    if (createQuizDto.tag === INITIAL_ASSESSMENT_TAG) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'This tag is reserved.');
+    }
+
+    // Always the authenticated caller — userId drives ownership and entitlement checks.
+    const result = await this.quizService.createQuiz(
       { ...createQuizDto, userId: req.user.id },
       req.user.id,
     );
-    return new ApiResponse(`${result?.message}`, result?.quiz);
+    return new ApiResponse(result.message, result.quiz);
   }
 
   @ApiOperation({
@@ -98,13 +101,10 @@ export class QuizController {
       );
     }
 
-    // Never trust a client-supplied userId — the achievement layer (XP, badges,
-    // certificates) makes forging another user's submission a real fraud vector,
-    // not just a data-quality nuisance. Always attribute to the authenticated caller.
+    // userId and IP come from the server, never the client.
     const result = await this.quizService.submitQuiz({
       ...submitQuizDto,
       userId: req.user.id,
-      // Server-observed only — a client-reported IP is unverifiable by definition.
       ipAddress: req.ip,
     });
     return new ApiResponse(`Quiz submitted successfully.`, result);
@@ -124,7 +124,6 @@ export class QuizController {
     const result = await this.quizResultService.getQuizResultByCode(resultCode, req.user?.id);
     return new ApiResponse('Quiz Result Found', result);
   }
-
 
   @ApiOperation({
     summary: 'Update a Standard Quiz',
@@ -164,32 +163,21 @@ export class QuizController {
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
     const result = await this.quizService.getPublishedQuizzes(filters);
-    let quizzesWithTaken;
-    if (req.user && req.user.id) {
-      const userId = req.user.id;
-      const quizIds = result.map((quiz: any) => quiz.id);
-      const resultCodeMap = await this.quizResultService.findAllResultCodesByUserAndQuizIds(
-        userId,
-        quizIds,
-      );
-
-      quizzesWithTaken = result.map((quiz: any) => {
-        const resultCodes = resultCodeMap[quiz.id] ?? [];
-        return {
-          ...quiz,
-          isQuizTaken: Boolean(resultCodes.length),
-          resultCodes,
-          latestResultCode: resultCodes[0] ?? null,
-        };
-      });
-    } else {
-      quizzesWithTaken = result.map((quiz: any) => ({
+    const resultCodeMap = req.user?.id
+      ? await this.quizResultService.findAllResultCodesByUserAndQuizIds(
+          req.user.id,
+          result.map((quiz: any) => quiz.id),
+        )
+      : {};
+    const quizzesWithTaken = result.map((quiz: any) => {
+      const resultCodes = resultCodeMap[quiz.id] ?? [];
+      return {
         ...quiz,
-        isQuizTaken: false,
-        resultCodes: [],
-        latestResultCode: null,
-      }));
-    }
+        isQuizTaken: resultCodes.length > 0,
+        resultCodes,
+        latestResultCode: resultCodes[0] ?? null,
+      };
+    });
     return new ApiResponse(
       'Published quizzes fetched successfully',
       quizzesWithTaken,
@@ -199,11 +187,8 @@ export class QuizController {
   @ApiOperation({
     summary: 'Get my practice quizzes',
     description:
-      'Every practice quiz (UserQuiz) the authenticated caller has generated for ' +
-      'themselves, each with question/attempt counts and a link to the latest ' +
-      'result if taken. Always scoped to the authenticated caller, never a ' +
-      'client-supplied id — distinct from GET /:userId below, which lists ' +
-      'Standard quizzes a user authored.',
+      'Practice quizzes (UserQuiz) the caller generated, with counts and their own ' +
+      'latest result. Distinct from GET /:userId, which lists authored Standard quizzes.',
   })
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
@@ -230,15 +215,19 @@ export class QuizController {
 
   @ApiOperation({
     summary: 'Get user created quizzes with attempt count',
+    description: 'Standard quizzes the user authored, drafts included. Admins see every author\'s.',
   })
   @Get('/:userId')
   async getUserQuizzes(
     @Param('userId', ParseIntPipe) userId: number,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const isAdmin = req.user?.role === 'Admin';
-    const result = await this.quizService.getUserQuizzes(Number(userId), isAdmin);
+    const isAdmin = req.user?.role === UserRoleEnum.ADMIN;
+    // Drafts are private to their author.
+    if (!isAdmin && userId !== req.user?.id) {
+      throw new AppCustomException(HttpStatus.FORBIDDEN, 'You can only view your own quizzes.');
+    }
+    const result = await this.quizService.getUserQuizzes(userId, isAdmin);
     return new ApiResponse('User quizzes fetched successfully', result);
   }
-
 }

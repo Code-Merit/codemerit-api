@@ -21,15 +21,14 @@ import { QuizSettingsDto } from './quiz-settings.dto';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 
 export class CreateQuizDto {
-  // Ignored on the API route — the controller always overwrites it with the JWT's user
-  // id. Optional so existing clients that still send it keep validating.
+  // Ignored on the API route; the controller sets it from the JWT.
   @ApiPropertyOptional()
   @IsOptional()
   @IsNumber()
   userId?: number;
 
   @ApiPropertyOptional({
-    description: 'Title of the topic',
+    description: 'Title of the quiz',
     example: 'Forms in Angular',
   })
   @ValidateIf((o) => o.quizType === QuizTypeEnum.Standard)
@@ -95,7 +94,7 @@ export class CreateQuizDto {
     description: 'Type of quiz',
   })
   @IsEnum(QuizTypeEnum)
-  quizType: QuizTypeEnum; // user will create as UserQuiz
+  quizType: QuizTypeEnum;
 
   @ApiPropertyOptional({ example: 10 })
   @IsOptional()

@@ -5,8 +5,6 @@ import { EnrollmentTierEnum, isTierAtLeast } from 'src/common/enum/enrollment-ti
 import { QuizTypeEnum } from 'src/common/enum/quiz-type.enum';
 import { QuizStatusEnum } from 'src/common/enum/quiz-status.enum';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
-import { MailService } from 'src/common/mail/providers/mail.service';
-import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
 import { QuizQuestion } from 'src/common/typeorm/entities/quiz-quesion.entity';
@@ -50,9 +48,16 @@ import {
   INITIAL_ASSESSMENT_LENGTH,
 } from 'src/common/constants/quiz-generation.constants';
 
-// Marks a Quiz (Quiz.tag) as the one-time, system-generated initial skill check,
-// distinguishing it from every other UserQuiz a user creates for themselves.
-const INITIAL_ASSESSMENT_TAG = 'initial_assessment';
+// UserQuiz.tag value marking the one-time onboarding skill check. Reserved: the API
+// rejects it from clients (see QuizController.create).
+export const INITIAL_ASSESSMENT_TAG = 'initial_assessment';
+
+/** Parses a comma-separated id list ("1, 2,3"), dropping anything not a positive int. */
+const parseIdList = (raw: string): number[] =>
+  String(raw)
+    .split(',')
+    .map((id) => parseInt(id.trim(), 10))
+    .filter((id) => Number.isInteger(id) && id > 0);
 
 @Injectable()
 export class QuizService {
@@ -67,28 +72,23 @@ export class QuizService {
     private quizSettingsRepository: Repository<QuizSettings>,
     @InjectRepository(QuizSubject)
     private quizSubjectRepo: Repository<QuizSubject>,
-    @InjectRepository(QuizTopic)
-    private quizTopicRepo: Repository<QuizTopic>,
     @InjectRepository(QuizResult)
     private quizResultRepository: Repository<QuizResult>,
     private readonly questionGeneratorService: QuestionGeneratorService,
     private readonly questionService: QuestionService,
     private readonly masterService: MasterService,
     private readonly notificationService: NotificationService,
-    private readonly mailService: MailService,
     private readonly achievementService: AchievementService,
     private readonly skillEnrollmentService: SkillEnrollmentService,
     private readonly activityService: ActivityService,
     private readonly dataSource: DataSource,
   ) { }
 
-  /** `viewerId` (optional — the route is public) lets the response carry the
-   * viewer's own `myResultCode` when they've already taken it, so the client can send
-   * them to their result instead of letting them play a quiz submitQuiz will reject. */
+  /** Public route. When `viewerId` is given and they've already taken the quiz, the
+   * response carries their `myResultCode` so the client can show the result instead
+   * of a quiz submitQuiz would reject. */
   async fetchQuizBySlug(slug: string, viewerId?: number): Promise<any> {
-    // Slugs stay globally unique across both tables (enforced at creation time in
-    // createQuiz()) — Standard is checked first since `quiz` is the smaller,
-    // curated table.
+    // Slugs are unique across both tables; Standard is checked first.
     let quiz: Quiz | UserQuiz = await this.quizRepository
       .createQueryBuilder('quiz')
       .leftJoinAndSelect('quiz.quizQuestions', 'quizQuestion')
@@ -96,9 +96,7 @@ export class QuizService {
       .where('quiz.slug = :slug', { slug })
       .getOne();
 
-    // Step 1: Collect questionIds — Standard reads them off the QuizQuestion hanger
-    // relation already joined above; UserQuiz reads its own `questionIds` column
-    // instead (see UserQuiz.questionIds rationale), so no join is needed for it.
+    // Standard quizzes list questions via QuizQuestion; UserQuiz stores them inline.
     let questionIds: number[];
     if (quiz) {
       questionIds = quiz.quizQuestions.map((qq) => qq.questionId);
@@ -126,33 +124,31 @@ export class QuizService {
       );
     }
 
-    // Step 2: Use QuestionService
+    const isUserQuiz = (quiz as any).quizType === QuizTypeEnum.UserQuiz;
     const ids = new GetQuestionsByIdsDto();
     ids.questionIds = questionIds;
     let questions = await this.questionService.getQuestionsFromQIds(ids);
 
-    // getQuestionsFromQIds() doesn't preserve any particular order — for a UserQuiz,
-    // shuffle then stable-sort by level so the user always sees Easy questions first,
-    // then Intermediate, then Advanced (random order within a level). Derived purely
-    // from each question's own level at read time, so this works retroactively for
-    // quizzes generated before this ordering existed. Standard quizzes are untouched.
-    if ((quiz as any).quizType === QuizTypeEnum.UserQuiz) {
+    // UserQuiz: easiest level first, random order within a level. Standard quizzes
+    // keep the order returned.
+    if (isUserQuiz) {
       questions = shuffleArray(questions).sort((a: any, b: any) => a.level - b.level);
     }
 
     let myResultCode: string | null = null;
     if (viewerId) {
-      const isUserQuiz = (quiz as any).quizType === QuizTypeEnum.UserQuiz;
       const prior = await this.quizResultRepository.findOne({
         where: isUserQuiz
           ? { userQuizId: quiz.id, userId: viewerId }
           : { quizId: quiz.id, userId: viewerId },
-        select: ['resultCode'],
+        // Keep `id` selected: with eager relations, findOne builds a DISTINCT subquery
+        // keyed on the primary key and fails without it.
+        select: { id: true, resultCode: true },
+        loadEagerRelations: false,
       });
       myResultCode = prior?.resultCode ?? null;
     }
 
-    // Step 3: Return quiz with questions
     return {
       ...quiz,
       questions,
@@ -160,10 +156,13 @@ export class QuizService {
     };
   }
 
+  /** `skipAccessCheck` is for trusted internal callers only (the onboarding assessment)
+   * — never derive it from request data. */
   async createQuiz(
     createQuizDto: CreateQuizDto,
     userId: number,
-  ): Promise<Quiz> {
+    { skipAccessCheck = false }: { skipAccessCheck?: boolean } = {},
+  ): Promise<{ message: string; quiz: Quiz | UserQuiz }> {
     if (
       !createQuizDto?.subjectIds?.length &&
       !createQuizDto?.topicIds?.length &&
@@ -185,56 +184,28 @@ export class QuizService {
       );
     }
 
-    let topicIds: number[] = [];
-    let subjectIds: number[] = [];
-    let subjectTrackIds: number[] = [];
+    const subjectIds = createQuizDto?.subjectIds ? parseIdList(createQuizDto.subjectIds) : [];
+    const subjectTrackIds = createQuizDto?.subjectTrackIds
+      ? parseIdList(createQuizDto.subjectTrackIds)
+      : [];
+    let topicIds = createQuizDto?.topicIds ? parseIdList(createQuizDto.topicIds) : [];
     const questionIds: number[] = createQuizDto?.questionIds ?? [];
 
-    const parseIdList = (raw: string): number[] =>
-      String(raw)
-        .split(',')
-        .map((id) => parseInt(id.trim(), 10))
-        .filter((id) => Number.isInteger(id) && id > 0);
-
-    if (createQuizDto?.subjectIds) {
-      subjectIds = parseIdList(createQuizDto.subjectIds);
-    }
-
-    if (createQuizDto?.subjectTrackIds) {
-      subjectTrackIds = parseIdList(createQuizDto.subjectTrackIds);
-    }
-
-    if (createQuizDto?.topicIds) {
-      topicIds = parseIdList(createQuizDto.topicIds);
-    }
-
-    // Guided "keep going" quizzes: the caller names one seed topic and asks the server to
-    // roll forward through the rest of the subject itself, rather than the frontend having
-    // to precompute and carry that topic list — see resolveForwardTopicSequence's doc
-    // comment. Expanded here, before anything below reads topicIds, so question selection,
-    // the persisted QuizTopic rows, and title/shortDesc generation all see the same full
-    // scope consistently. No-op for any other shape (multi-topic, or no continue flag).
+    // Guided "keep going" quiz: expand the single seed topic to it plus every later
+    // topic in the subject, before anything below reads topicIds.
     if (createQuizDto?.continueThroughSubject && topicIds.length === 1) {
       topicIds = await this.questionGeneratorService.resolveForwardTopicSequence(topicIds[0]);
     }
 
-    // Free-tier gating: only for self-directed practice (UserQuiz), and never for the
-    // one-time system-generated initial assessment (createInitialAssessmentQuiz calls
-    // back into this method with tag=INITIAL_ASSESSMENT_TAG — that's free onboarding,
-    // not a purchase decision, since the user hasn't even seen pricing yet). Standard
-    // (admin-authored) quizzes are intentionally left ungated in this pass — see the
-    // enrollment implementation notes.
-    if (
-      createQuizDto?.quizType === QuizTypeEnum.UserQuiz &&
-      createQuizDto?.tag !== INITIAL_ASSESSMENT_TAG
-    ) {
+    const isStandard = createQuizDto.quizType === QuizTypeEnum.Standard;
+
+    // Enrollment and daily-cap gating applies to self-directed practice only — not to
+    // Standard quizzes, nor to the free onboarding assessment.
+    if (!isStandard && !skipAccessCheck) {
       await this.enforceSubjectAccessForUserQuiz(userId, subjectIds, topicIds, subjectTrackIds);
     }
 
-    // All three scopes are resolved down to one topic-level pool by
-    // QuestionGeneratorService — they combine (union), they don't override each other,
-    // so a quiz can legitimately span e.g. one whole subject plus a couple of
-    // specific extra topics.
+    // The scopes combine (union) into one question pool.
     const ids = new GetQuestionsByIdsDto();
     ids.subjectIds = subjectIds;
     ids.topicIds = topicIds;
@@ -243,20 +214,13 @@ export class QuizService {
     const requestedNumQuestions =
       createQuizDto?.numQuestions ?? createQuizDto?.settings?.numQuestions;
 
-    if (createQuizDto?.quizType === QuizTypeEnum.Standard) {
+    if (isStandard) {
       ids.numQuestions = requestedNumQuestions
         ? Math.min(requestedNumQuestions, questionIds.length)
         : questionIds.length;
-    } else if (createQuizDto?.quizType === QuizTypeEnum.UserQuiz) {
-      // Server-side cap — no client request can produce a quiz longer than
-      // MAX_QUIZ_LENGTH, regardless of what numQuestions asks for. This is what
-      // stops a "practice this topic" request from silently returning every
-      // question in the topic.
-      ids.numQuestions = Math.min(requestedNumQuestions ?? DEFAULT_QUIZ_LENGTH, MAX_QUIZ_LENGTH);
-    } else if (requestedNumQuestions && requestedNumQuestions > 0) {
-      ids.numQuestions = requestedNumQuestions;
     } else {
-      ids.numQuestions = 20;
+      // Hard server-side ceiling regardless of what the client asks for.
+      ids.numQuestions = Math.min(requestedNumQuestions ?? DEFAULT_QUIZ_LENGTH, MAX_QUIZ_LENGTH);
     }
 
     let questionObj: any = null;
@@ -264,7 +228,7 @@ export class QuizService {
     let requestedCount: number | undefined;
     let actualCount: number | undefined;
 
-    if (createQuizDto?.quizType === QuizTypeEnum.Standard) {
+    if (isStandard) {
       questions = await this.questionService.getQuestionsFromQIds(ids);
     } else {
       questionObj = await this.questionGeneratorService.generateUserQuiz(
@@ -276,9 +240,7 @@ export class QuizService {
       actualCount = questionObj?.actualCount ?? questions.length;
     }
 
-    // Save quiz in DB if at least 3 questions are available
     if (!questions || questions.length === 0) {
-      console.log('QuizBuilder #4: @NotEnoughQuestions', questions?.length ?? 0);
       throw new AppCustomException(
         HttpStatus.NOT_FOUND,
         'No questions found for this quiz — the selected content may be unavailable or unpublished.',
@@ -287,10 +249,8 @@ export class QuizService {
     try {
       let title = createQuizDto.title;
       let shortDesc = createQuizDto.shortDesc;
-      // Frontend sends "" rather than omitting these fields — both are falsy, so this
-      // still triggers auto-generation. Reuses the one lookup per scope for both title
-      // and shortDesc instead of querying twice; precedence is last-applied-wins, most
-      // specific scope given overwrites (Subject → SubjectTrack → Topic order below).
+      // Auto-generate a missing (or "") title/shortDesc from the scope. The first scope
+      // present wins, in order Subject → SubjectTrack → Topic.
       if (!title || !shortDesc) {
         if (subjectIds && subjectIds.length > 0) {
           const subjects =
@@ -312,10 +272,7 @@ export class QuizService {
         }
         if (topicIds && topicIds.length > 0) {
           const topics = await this.masterService.getTopicListByIds(topicIds);
-          // Never enumerates every topic's name — a quiz can legitimately be scoped to
-          // dozens of topics (e.g. a guided quiz spanning the rest of a subject), and
-          // joining all of their titles produces an unreadable wall of text. Same bound
-          // as getTitleByTopicIds: name the first topic, note the rest by count.
+          // Name only the first topic; a guided quiz can span dozens.
           const names = topics.length > 1
             ? `${topics[0]?.title} and ${topics.length - 1} more topics`
             : topics[0]?.title ?? '';
@@ -323,11 +280,8 @@ export class QuizService {
           if (!shortDesc) shortDesc = `Quick quiz on ${names}.`;
         }
       }
-      const isStandard = createQuizDto.quizType === QuizTypeEnum.Standard;
-      // Standard quizzes stay in `quiz` (curated, permanent); everything else lands
-      // in `user_quiz` (ephemeral, prunable) — see the entity split rationale on
-      // UserQuiz. The two tables share the same column shape, so building the
-      // in-memory instance is identical either way, only the target entity differs.
+      // Standard → `quiz` (curated, permanent); UserQuiz → `user_quiz` (ephemeral).
+      // Both tables share the same column shape.
       const quiz: Quiz | UserQuiz = isStandard ? new Quiz() : new UserQuiz();
       quiz.title = title;
       quiz.tag = createQuizDto.tag;
@@ -339,123 +293,82 @@ export class QuizService {
       quiz.category = createQuizDto.category ?? 'Default';
       if (isStandard) (quiz as Quiz).isPublished = createQuizDto.isPublished ?? false;
 
-      // Slugs stay globally unique across BOTH tables (fetchQuizBySlug checks `quiz`
-      // then `user_quiz`, and can't disambiguate a collision), so every candidate is
-      // checked against both regardless of which table this quiz is landing in.
-      const slugExists = async (candidate: string): Promise<boolean> => {
-        const [inStandard, inUser] = await Promise.all([
-          this.quizRepository.findOne({ where: { slug: candidate } }),
-          this.userQuizRepository.findOne({ where: { slug: candidate } }),
-        ]);
-        return !!(inStandard || inUser);
-      };
-
       let slug: string;
       if (!isStandard) {
-        // Auto-generated UserQuiz titles are templated from scope names (e.g. every
-        // "HTML Document Structure" topic quiz gets the same title), so the plain
-        // title-slug collides constantly — baking in the creator's username + a short
-        // timestamp makes every UserQuiz slug unique on the first try, and still reads
-        // as: html-document-structure-quiz-by-vishal-kumar-md41k2a0
+        // UserQuiz titles repeat constantly, so the slug carries the creator's username
+        // and a short timestamp, e.g. html-document-structure-quiz-by-vishal-kumar-md41k2a0
         const username = await this.getUsernameForSlug(userId);
         slug = this.buildUserQuizSlug(title, username);
-        while (await slugExists(slug)) {
+        while (await this.slugExists(slug)) {
           slug = this.buildUserQuizSlug(title, username);
         }
       } else {
         slug = generateSlug(title);
-        while (await slugExists(slug)) {
+        while (await this.slugExists(slug)) {
           slug = generateUniqueSlug(title);
         }
       }
       quiz.slug = slug;
       quiz.createdBy = userId;
       quiz.level = createQuizDto.level ?? DifficultyLevelEnum.Easy;
-      return this.dataSource.transaction(async (manager) => {
-        const savedQuizzes = isStandard
+      if (!isStandard) {
+        (quiz as UserQuiz).questionIds = questions.map((q) => q.id);
+      }
+
+      // Awaited (not just returned) so a failed transaction reaches the catch below.
+      return await this.dataSource.transaction(async (manager) => {
+        const savedQuiz = isStandard
           ? await manager.save(Quiz, quiz as Quiz)
           : await manager.save(UserQuiz, quiz as UserQuiz);
-        // UserQuiz has no quizType column of its own (the table IS the type) — attach
-        // it to the in-memory/response object so every existing consumer that reads
-        // `.quizType` off a created/fetched quiz keeps working unchanged.
-        (savedQuizzes as any).quizType = createQuizDto.quizType;
+        // UserQuiz has no quizType column (the table is the type); attach it so
+        // consumers can read `.quizType` uniformly.
+        (savedQuiz as any).quizType = createQuizDto.quizType;
         if (!isStandard) {
-          (savedQuizzes as any).requestedCount = requestedCount;
-          (savedQuizzes as any).actualCount = actualCount;
+          (savedQuiz as any).requestedCount = requestedCount;
+          (savedQuiz as any).actualCount = actualCount;
         }
-        // Every hanger row gets exactly one of quizId/userQuizId set, plus the
-        // denormalized quizType — see the entity comments for why both are kept.
-        const anchor = isStandard
-          ? { quizId: savedQuizzes.id, userQuizId: null as number | null }
-          : { quizId: null as number | null, userQuizId: savedQuizzes.id };
+
+        // Link rows carry exactly one of quizId/userQuizId, plus quizType.
+        const link = {
+          quizId: isStandard ? savedQuiz.id : null,
+          userQuizId: isStandard ? null : savedQuiz.id,
+          quizType: createQuizDto.quizType,
+        };
 
         if (isStandard) {
-          const quizQuestion: QuizQuestion[] = [];
-          for (const question of questions) {
-            const quizQuestionItem = new QuizQuestion();
-            Object.assign(quizQuestionItem, anchor);
-            quizQuestionItem.quizType = createQuizDto.quizType;
-            quizQuestionItem.questionId = question.id;
-            quizQuestion.push(quizQuestionItem);
-          }
-          await manager.save(QuizQuestion, quizQuestion);
-        } else {
-          // UserQuiz: question list lives directly on the row, not the shared
-          // QuizQuestion hanger table — see UserQuiz.questionIds for rationale.
-          (savedQuizzes as UserQuiz).questionIds = questions.map((q) => q.id);
-          await manager.save(UserQuiz, savedQuizzes as UserQuiz);
+          await manager.save(
+            QuizQuestion,
+            questions.map((q) => manager.create(QuizQuestion, { ...link, questionId: q.id })),
+          );
         }
-
-        const quizSubject: QuizSubject[] = [];
-        const quizTopic: QuizTopic[] = [];
-        if (subjectIds && subjectIds.length > 0) {
-          for (const id of subjectIds) {
-            const quizSubjectItem = new QuizSubject();
-            Object.assign(quizSubjectItem, anchor);
-            quizSubjectItem.quizType = createQuizDto.quizType;
-            quizSubjectItem.subjectId = id;
-            quizSubject.push(quizSubjectItem);
-          }
-          await manager.save(QuizSubject, quizSubject);
+        if (subjectIds.length > 0) {
+          await manager.save(
+            QuizSubject,
+            subjectIds.map((subjectId) => manager.create(QuizSubject, { ...link, subjectId })),
+          );
         }
-        if (topicIds && topicIds.length > 0) {
-          for (const id of topicIds) {
-            const quizTopicItem = new QuizTopic();
-            Object.assign(quizTopicItem, anchor);
-            quizTopicItem.quizType = createQuizDto.quizType;
-            quizTopicItem.topicId = id;
-            quizTopic.push(quizTopicItem);
-          }
-          await manager.save(QuizTopic, quizTopic);
-        }
-
-        // Create quiz settings if Standard quiz (settings optional in payload, defaults applied in DTO)
-        if (isStandard && createQuizDto.settings) {
-          const quizSettings = manager.create(QuizSettings, {
-            ...createQuizDto.settings,
-            ...anchor,
-            quizType: createQuizDto.quizType,
-          });
-          (savedQuizzes as Quiz).settings = await manager.save(
-            QuizSettings,
-            quizSettings,
+        if (topicIds.length > 0) {
+          await manager.save(
+            QuizTopic,
+            topicIds.map((topicId) => manager.create(QuizTopic, { ...link, topicId })),
           );
         }
 
-        const response: any = {
-          message: questionObj?.message
-            ? questionObj?.message
-            : 'Quiz created successfully.',
-          quiz: savedQuizzes,
+        if (isStandard && createQuizDto.settings) {
+          (savedQuiz as Quiz).settings = await manager.save(
+            QuizSettings,
+            manager.create(QuizSettings, { ...createQuizDto.settings, ...link }),
+          );
+        }
+
+        return {
+          message: questionObj?.message || 'Quiz created successfully.',
+          quiz: savedQuiz,
         };
-        return response;
       });
     } catch (error) {
-      // Logged in full server-side; the client only ever sees a generic message — the
-      // real cause here is always a server-side fault (DB write, constraint, etc.), never
-      // something the caller can act on, so echoing it back would just be noise at best
-      // and an internals leak at worst.
-      console.error('QuizBuilder #6: failed to save quiz', error);
+      // Server-side fault; log it, return a generic message.
+      console.error('createQuiz: failed to save quiz', error);
       throw new AppCustomException(
         HttpStatus.INTERNAL_SERVER_ERROR,
         "We couldn't create your quiz right now. Please try again in a moment.",
@@ -480,10 +393,18 @@ export class QuizService {
     return `${titlePart}${suffix}`;
   }
 
-  /** Resolves subjectIds/topicIds/subjectTrackIds down to the flat set of subjects a
-   * would-be UserQuiz actually touches, purely for the entitlement check below — this
-   * is a separate, read-only resolution from the one QuestionGeneratorService does for
-   * actually building the question pool. */
+  /** Slugs must be unique across both `quiz` and `user_quiz` — fetchQuizBySlug looks
+   * in both and can't tell a collision apart. */
+  private async slugExists(slug: string, excludeQuizId?: number): Promise<boolean> {
+    const [standard, userQuiz] = await Promise.all([
+      this.quizRepository.findOne({ where: { slug }, select: ['id'] }),
+      this.userQuizRepository.findOne({ where: { slug }, select: ['id'] }),
+    ]);
+    return !!userQuiz || (!!standard && standard.id !== excludeQuizId);
+  }
+
+  /** Flattens the requested scopes to the set of subjects a UserQuiz touches, for the
+   * entitlement check. */
   private async resolveSubjectIdsForGating(
     subjectIds: number[],
     topicIds: number[],
@@ -515,19 +436,11 @@ export class QuizService {
     return Array.from(resolved);
   }
 
-  /** Tier-aware: non-premium subjects and Pro+ tiers are unlimited. Otherwise, the
-   * MINIMUM effective tier across every target subject (all-or-nothing, same pattern
-   * as before) determines the daily question cap for this request. The cap itself is
-   * enforced per-subject (each subject enrollment carries its own independent daily
-   * allowance, not a pool shared across every subject the user is enrolled in) — via a
-   * quiz_subject join, since Quiz has no direct subjectId column. A quiz spanning
-   * multiple target subjects is blocked if ANY one of those specific subjects has
-   * already exhausted its own cap. This never blocks a quiz on subjects the user
-   * actually has full access to; it only ever throttles the ones they don't.
-   *
-   * The cap counts QUESTIONS answered today, not quizzes taken — a quiz's length
-   * (numQuestions) is arbitrary per attempt, so counting quiz attempts wasn't a fair
-   * unit; summing questions is. */
+  /** Blocks a UserQuiz when the user isn't enrolled in every target subject, or when
+   * any target subject has used up its daily question cap. The lowest effective tier
+   * across the target subjects sets the cap; Pro and above are unlimited. The cap is
+   * per subject and counts questions in practice quizzes generated today (not answered,
+   * and not quizzes). */
   private async enforceSubjectAccessForUserQuiz(
     userId: number,
     subjectIds: number[],
@@ -571,16 +484,8 @@ export class QuizService {
     }
   }
 
-  // UserQuiz rows (and their QuizSubject tags) live in user_quiz/userQuizId now — this
-  // only ever concerns UserQuiz, so join there directly rather than via the old
-  // quizId/Quiz path. Counted from UserQuiz.questionIds (JSON_LENGTH) rather than a
-  // QuizSettings join — QuizSettings rows are only ever created for Standard quizzes
-  // (see createQuiz's `if (isStandard && createQuizDto.settings)` settings step), never
-  // for UserQuiz, so a qset join here always matched zero rows and silently reported
-  // 0 questions used every day regardless of real usage — both the "X of Y practice
-  // questions left today" display and enforceSubjectAccessForUserQuiz's cap check were
-  // reading off that permanently-empty join. Shared by enforceSubjectAccessForUserQuiz
-  // (blocking) and getSubjectQuestionQuota (display).
+  /** Questions in the user's practice quizzes generated today, per subject. Counted from
+   * UserQuiz.questionIds; UserQuiz has no QuizSettings row to read a count from. */
   private async sumQuestionsUsedTodayBySubject(
     userId: number,
     subjectIds: number[],
@@ -604,11 +509,9 @@ export class QuizService {
     return new Map(rows.map((r) => [Number(r.subjectId), Number(r.total) || 0]));
   }
 
-  /** Read-only counterpart to enforceSubjectAccessForUserQuiz, for display rather than
-   * blocking — e.g. a "X of Y practice questions left today" indicator on the Subject
-   * Dashboard. `tier: null` means not enrolled at all (no quota applies — nothing to
-   * show but an enroll prompt); `dailyQuestionCap: null` means unlimited (Pro and
-   * above, or a non-premium subject). */
+  /** Display-only counterpart to enforceSubjectAccessForUserQuiz ("X of Y practice
+   * questions left today"). `tier: null` = not enrolled; `dailyQuestionCap: null` =
+   * unlimited. */
   async getSubjectQuestionQuota(
     userId: number,
     subjectId: number,
@@ -631,21 +534,14 @@ export class QuizService {
     return { tier, dailyQuestionCap: dailyCap, questionsUsedToday: usedBySubject.get(subjectId) ?? 0 };
   }
 
-  /**
-   * One-time, system-generated skill check for a newly registered user, scoped to
-   * every subject under their job role. Idempotent — calling this again after one
-   * already exists just returns it rather than generating a second one. Takeable
-   * once: a QuizSettings row with maxAttempts=1 is created directly here rather than
-   * via createQuiz()'s own settings step, since that step only ever runs for
-   * quizType=Standard — changing that condition would affect every other UserQuiz
-   * caller, not just this one.
-   */
+  /** One-time skill check for a new user across every subject in their job role.
+   * Idempotent: returns the existing one if already generated. Gets its own
+   * QuizSettings row, since createQuiz only creates settings for Standard quizzes. */
   async createInitialAssessmentQuiz(
     userId: number,
     firstName: string,
     jobRoleId: number,
   ): Promise<{ message: string; quiz: UserQuiz }> {
-    // Initial assessments are UserQuiz rows (tag-marked) — live in user_quiz now.
     const existing = await this.userQuizRepository.findOne({
       where: { createdBy: userId, tag: INITIAL_ASSESSMENT_TAG },
       relations: ['settings'],
@@ -686,16 +582,10 @@ export class QuizService {
       category: 'InitialAssessment',
     } as CreateQuizDto;
 
-    // createQuiz() is declared as Promise<Quiz> but actually resolves
-    // { message, quiz } at runtime (pre-existing mismatch — see how
-    // quiz.controller.ts's own create-quiz route already works around it).
-    const created: any = await this.createQuiz(createQuizDto, userId);
-    const quiz: UserQuiz = created.quiz;
+    const created = await this.createQuiz(createQuizDto, userId, { skipAccessCheck: true });
+    const quiz = created.quiz as UserQuiz;
 
-    // createQuiz() only fails if it finds zero questions — fewer than the
-    // requested 20 (e.g. a job role whose subjects only have 12 available) is
-    // allowed and already succeeds. Reflect the ACTUAL count here rather than
-    // hardcoding 20, since that's what really got saved onto questionIds.
+    // May be fewer than requested when the subjects have few questions.
     const actualQuestionCount = quiz.questionIds?.length ?? 0;
 
     const quizSettings = this.quizSettingsRepository.create({
@@ -709,16 +599,10 @@ export class QuizService {
     return { message: 'Initial assessment generated successfully.', quiz };
   }
 
-  /**
-   * Re-derives isCorrect server-side for every attempt against QuestionOption ground
-   * truth, so a client bug can never mis-file a question as wrong (or right) — the
-   * selection logic in QuestionGeneratorService permanently excludes a question once it
-   * has any all-time isCorrect=TRUE row, so a mis-scored question would otherwise keep
-   * resurfacing forever regardless of what the user actually answers afterward.
-   * Questions with zero QuestionOption rows (free-text General/Survey, never served by
-   * UserQuiz but possible on Standard quizzes) are left on the client-reported value —
-   * the server has no ground truth to check those against.
-   */
+  /** Re-derives isCorrect from QuestionOption rather than trusting the client.
+   * Question selection permanently excludes questions answered correctly, so a
+   * mis-scored attempt would skew it for good. Questions without options (free text)
+   * keep the client-reported value — there's nothing to check against. */
   private async recomputeAttemptCorrectness(
     rawAttempts: AttemptDto[],
   ): Promise<AttemptDto[]> {
@@ -749,10 +633,9 @@ export class QuizService {
       }
       const correctIds = correctIdsByQuestion.get(a.questionId);
       if (!correctIds || correctIds.size === 0) {
-        // Data-quality gap: question has options but none marked correct. Trusting the
-        // client here would silently reopen the trust-boundary hole this fix closes.
-        console.log(
-          `QuizBuilder: question ${a.questionId} has options but none marked correct; grading attempt as incorrect.`,
+        // Bad data: options exist but none is marked correct. Don't fall back to the client.
+        console.warn(
+          `recomputeAttemptCorrectness: question ${a.questionId} has no correct option; grading as incorrect.`,
         );
         return { ...a, isCorrect: false };
       }
@@ -763,19 +646,8 @@ export class QuizService {
     });
   }
 
-  /** Resolves a bare quizId — ambiguous across two independent id spaces since the
-   * Standard/UserQuiz split (a `quiz.id` and a `user_quiz.id` can collide) — to
-   * which table it actually belongs to. Trusts an explicitly-provided quizType (the
-   * fast path — the frontend already has it from the quiz it fetched); falls back
-   * to probing `quiz` then `user_quiz` for older/uncoordinated callers. Throws if
-   * the id exists in neither. */
-  // `quiz` and `user_quiz` have independent auto-increment id sequences post-split,
-  // so a bare numeric quizId is ambiguous between them — quizType is required to
-  // disambiguate. Previously this fell back to probing the Standard `quiz` table
-  // first when quizType was missing, which silently misanchored UserQuiz
-  // submissions to an unrelated Standard quiz whenever their ids coincidentally
-  // collided (confirmed twice against real data). Never guess: require the caller
-  // to say which table, and look up only that one.
+  /** Loads the quiz being submitted. `quiz` and `user_quiz` have independent id
+   * sequences, so quizType is required — never guess the table from a bare id. */
   private async resolveQuizAnchor(
     quizId: number,
     quizType?: QuizTypeEnum,
@@ -816,9 +688,8 @@ export class QuizService {
     );
   }
 
-  /** Keeps only attempts for questions that actually belong to this quiz, at most one
-   * per question (first wins). Without this, a client could pad a submission with
-   * unrelated or repeated questionIds to inflate its score, XP and badge progress. */
+  /** Keeps only attempts for this quiz's questions, one per question (first wins), so a
+   * client can't pad a submission to inflate score, XP or badge progress. */
   private filterAttemptsToQuiz(attempts: AttemptDto[], quizQuestionIds: Set<number>): AttemptDto[] {
     const seen = new Set<number>();
     return attempts.filter((a) => {
@@ -839,27 +710,24 @@ export class QuizService {
     const anchor = isStandard
       ? { quizId: submitQuizDto.quizId, userQuizId: null as number | null }
       : { quizId: null as number | null, userQuizId: submitQuizDto.quizId };
+    const anchorWhere = isStandard
+      ? { quizId: submitQuizDto.quizId }
+      : { userQuizId: submitQuizDto.quizId };
 
     const settings = await this.quizSettingsRepository.findOne({
-      where: anchor,
+      where: anchorWhere,
       select: ['passMarks'],
     });
 
-    // Any quiz (Standard or a shared UserQuiz) can be taken by many people, but each
-    // person only once — this supersedes QuizSettings.maxAttempts. Also backed by the
-    // UQ_quiz_result_quizId_userId / UQ_quiz_result_userQuizId_userId unique indexes
-    // (see the catch below) so a double-submit race can't slip a second result in.
+    // One attempt per person per quiz (supersedes QuizSettings.maxAttempts). The unique
+    // indexes on quiz_result back this up against double-submit races — see the catch.
     const alreadyTaken = await this.quizResultRepository.exists({
-      where: isStandard
-        ? { quizId: submitQuizDto.quizId, userId: submitQuizDto?.userId }
-        : { userQuizId: submitQuizDto.quizId, userId: submitQuizDto?.userId },
+      where: { ...anchorWhere, userId: submitQuizDto.userId },
     });
     if (alreadyTaken) throw this.quizAlreadyTakenException();
 
-    // total/correct/wrong/unanswered/score must never be trusted from the client — they're
-    // recomputed here from the submitted attempts using the same generateScore() formula
-    // every other scoring surface (subject dashboard, job-role readiness, etc.) uses, so a
-    // quiz's own result and the dashboards built from it can never silently diverge again.
+    // Totals and score are recomputed server-side, never taken from the client, using
+    // the same generateScore() as every other scoring surface.
     const rawAttempts = this.filterAttemptsToQuiz(submitQuizDto?.attempts ?? [], quizQuestionIds);
     if (rawAttempts.length === 0) {
       throw new AppCustomException(
@@ -886,10 +754,8 @@ export class QuizService {
     });
 
     let questionResult: QuizResult;
-    // Populated inside the transaction with the *actual* saved QuestionAttempt ids —
-    // the achievement layer needs these to tell "the correct answer I just saved"
-    // apart from "a correct answer this user already had on record for this question"
-    // (see EvaluateAfterQuizAttempt.id).
+    // Saved attempt ids let the achievement layer tell this submission's correct answers
+    // apart from ones already on record (see EvaluateAfterQuizAttempt.id).
     let savedAttempts: { id: number; questionId: number; isCorrect: boolean; isSkipped: boolean; hintUsed: boolean }[] = [];
     try {
       questionResult = await this.dataSource.transaction(async (manager) => {
@@ -906,8 +772,7 @@ export class QuizService {
           score,
           feedback,
           status: QuizStatusEnum.Completed,
-          // Client-reported telemetry — clamped to the column widths so an oversized
-          // value can never fail the whole submission transaction.
+          // Clamped to column widths so oversized telemetry can't fail the submission.
           device: submitQuizDto?.device?.slice(0, 100),
           client: submitQuizDto?.client?.slice(0, 100),
           ipAddress: submitQuizDto?.ipAddress?.slice(0, 45),
@@ -927,7 +792,7 @@ export class QuizService {
             isSkipped: attempt?.isSkipped,
             hintUsed: attempt?.hintUsed,
             isCorrect: attempt?.isCorrect,
-            // Display-only copy of the chosen option's text — clamped like the above.
+            // Display-only copy of the chosen option's text.
             answer: attempt?.answer?.slice(0, 255),
           }),
         );
@@ -943,24 +808,22 @@ export class QuizService {
         return savedResult;
       });
     } catch (error) {
-      // Lost the race against a concurrent submit of the same quiz — the unique
-      // index rejected the second row, so report it like the pre-check above does.
+      // Lost a race with a concurrent submit of the same quiz.
       if (
         error?.code === 'ER_DUP_ENTRY' &&
         /UQ_quiz_result_(quizId|userQuizId)_userId/.test(String(error?.message))
       ) {
         throw this.quizAlreadyTakenException();
       }
-      console.log('QuizBuilder #6: Exception', error);
+      console.error('submitQuiz: failed to save result', error);
       throw new AppCustomException(
         HttpStatus.INTERNAL_SERVER_ERROR,
         'Failed to submit quiz result.',
       );
     }
 
-    // Notification runs after commit, not inside the transaction: notificationService
-    // writes through its own repository (not `manager`), so from inside it would persist
-    // a "Quiz Completed" notification even when the result itself rolled back.
+    // Side effects below run after commit and must never fail the submission: the
+    // result and attempts above are the source of truth.
     try {
       await this.notificationService.notifyQuizCompleted(
         submitQuizDto?.userId,
@@ -969,13 +832,9 @@ export class QuizService {
         submitQuizDto?.quizId,
       );
     } catch (error) {
-      console.log('QuizBuilder #6: Failed to create quiz-completed notification', error);
+      console.error('submitQuiz: failed to create notification', error);
     }
 
-    // Base "Quiz Completed" activity, separate from the XP/streak/badge/certificate
-    // side-effects below — this fires unconditionally on every submission (not just
-    // ones that happen to earn something), same as the transaction commit above,
-    // and must never fail the quiz submission itself.
     try {
       await this.activityService.createActivity(
         submitQuizDto?.userId,
@@ -984,14 +843,10 @@ export class QuizService {
         { dataId: String(questionResult.id), dataType: 'quiz_result' },
       );
     } catch (error) {
-      console.log('QuizBuilder #6: Failed to log quiz-completed activity', error);
+      console.error('submitQuiz: failed to log activity', error);
     }
 
-    // Achievement evaluation (XP, streak, badges, certificates) runs after the
-    // QuestionAttempt/QuizResult transaction has already committed, and must never
-    // fail the quiz submission itself — those rows are the ground truth the rest
-    // of the app derives everything from, so losing them over a badge-rule bug
-    // would be strictly worse than just missing a badge this one time.
+    // XP, streak, badges, certificates.
     let newlyEarned: NewlyEarnedDto | null = null;
     try {
       newlyEarned = await this.achievementService.evaluateAfterQuiz({
@@ -1000,15 +855,15 @@ export class QuizService {
         attempts: savedAttempts,
       });
     } catch (error) {
-      console.log('QuizBuilder #6: Achievement evaluation error', error);
+      console.error('submitQuiz: achievement evaluation failed', error);
     }
 
     return { ...questionResult, newlyEarned };
   }
 
-
-  async getUserQuizzes(userId: number, isAdmin: boolean,): Promise<any> {
-    const query = await this.quizRepository
+  /** Standard quizzes authored by `userId` (all authors' for an admin). */
+  async getUserQuizzes(userId: number, isAdmin: boolean): Promise<any> {
+    const query = this.quizRepository
       .createQueryBuilder('quiz')
       .leftJoin(QuizResult, 'qr', 'qr.quizId = quiz.id')
       .leftJoin(QuizQuestion, 'qq', 'qq.quizId = quiz.id')
@@ -1064,11 +919,9 @@ export class QuizService {
     }));
   }
 
-  /** The "My Quizzes" list — every practice quiz (UserQuiz) this learner has
-   * generated for themselves, in `user_quiz` since the Standard/UserQuiz split,
-   * each with its question/attempt counts and (if taken) a direct link to the
-   * latest result. Distinct from getUserQuizzes() above, which lists Standard
-   * quizzes the caller *authored* (admin/quiz-builder use) — unrelated lists. */
+  /** "My Quizzes": the practice quizzes this user generated, with counts and their own
+   * result if they've taken it. totalAttempts includes other people the quiz was
+   * shared with. */
   async getMyPracticeQuizzes(userId: number): Promise<any[]> {
     const quizzes = await this.userQuizRepository
       .createQueryBuilder('uq')
@@ -1084,7 +937,7 @@ export class QuizService {
       .addSelect('COALESCE(JSON_LENGTH(uq.questionIds), 0)', 'totalQuestions')
       .addSelect(
         `(SELECT qr2.resultCode FROM quiz_result qr2
-          WHERE qr2.userQuizId = uq.id
+          WHERE qr2.userQuizId = uq.id AND qr2.userId = uq.createdBy
           ORDER BY qr2.createdAt DESC LIMIT 1)`,
         'latestResultCode',
       )
@@ -1109,311 +962,102 @@ export class QuizService {
       createdAt: item.createdAt,
       totalQuestions: parseInt(item.totalQuestions, 10) || 0,
       totalAttempts: parseInt(item.totalAttempts, 10) || 0,
-      isQuizTaken: parseInt(item.totalAttempts, 10) > 0,
+      isQuizTaken: !!item.latestResultCode,
       latestResultCode: item.latestResultCode ?? null,
     }));
   }
 
-
-  async getPublishedQuizzes(
-    filters: PublishedQuizFilterDto,
-  ): Promise<any[]> {
-
+  /** Published Standard quizzes, optionally filtered (a filter of 0 is ignored). */
+  async getPublishedQuizzes(filters: PublishedQuizFilterDto): Promise<any[]> {
     const query = this.quizRepository
       .createQueryBuilder('quiz')
-      .distinct(true)
+      .leftJoinAndSelect('quiz.settings', 'settings')
+      .leftJoinAndSelect('quiz.userCreatedBy', 'userCreatedBy')
+      .leftJoin(QuizSubject, 'quizSubjects', 'quizSubjects.quizId = quiz.id')
+      .leftJoinAndMapMany('quiz.subjects', Subject, 'subject', 'subject.id = quizSubjects.subjectId')
+      .where('quiz.isPublished = :isPublished', { isPublished: true })
+      .andWhere('quiz.quizType = :quizType', { quizType: QuizTypeEnum.Standard });
 
-      .leftJoinAndSelect(
-        'quiz.settings',
-        'settings',
-      )
-
-      .leftJoinAndSelect(
-        'quiz.userCreatedBy',
-        'userCreatedBy',
-      )
-
-      // Subject Mapping
-      .leftJoin(
-        QuizSubject,
-        'filterQuizSubjects',
-        'filterQuizSubjects.quizId = quiz.id',
-      )
-      .leftJoin(
-        QuizSubject,
-        'quizSubjects',
-        'quizSubjects.quizId = quiz.id',
-      )
-      .leftJoinAndMapMany(
-        'quiz.subjects',
-        Subject,
-        'subject',
-        'subject.id = quizSubjects.subjectId',
-      )
-
-      // Topic Mapping
-      .leftJoin(
-        QuizTopic,
-        'quizTopics',
-        'quizTopics.quizId = quiz.id',
-      )
-
-      .leftJoin(
-        JobRoleSubject,
-        'jobRoleSubjects',
-        `
-  jobRoleSubjects.subjectId =
-  filterQuizSubjects.subjectId
-  `,
-      )
-
-      .where(
-        'quiz.isPublished = :isPublished',
-        {
-          isPublished: true,
-        },
-      )
-
-      .andWhere(
-        'quiz.quizType = :quizType',
-        {
-          quizType:
-            QuizTypeEnum.Standard,
-        },
-      );
-
-    /*
-    JOB ROLE FILTER
-  */
-    if (
-      filters.jobRoleId &&
-      Number(filters.jobRoleId) !== 0
-    ) {
+    // EXISTS subqueries rather than joins, so filters don't multiply rows or narrow
+    // the mapped `subjects` list.
+    if (Number(filters.jobRoleId)) {
       query.andWhere(
-        'jobRoleSubjects.jobRoleId = :jobRoleId',
-        {
-          jobRoleId:
-            filters.jobRoleId,
-        },
+        `EXISTS (SELECT 1 FROM quiz_subject fqs
+          INNER JOIN job_role_subject jrs ON jrs.subjectId = fqs.subjectId
+          WHERE fqs.quizId = quiz.id AND jrs.jobRoleId = :jobRoleId)`,
+        { jobRoleId: Number(filters.jobRoleId) },
       );
     }
-
-    /*
-      QUIZ SETTINGS MODE FILTER
-    */
+    if (Number(filters.subjectId)) {
+      query.andWhere(
+        'EXISTS (SELECT 1 FROM quiz_subject fqs WHERE fqs.quizId = quiz.id AND fqs.subjectId = :subjectId)',
+        { subjectId: Number(filters.subjectId) },
+      );
+    }
+    if (Number(filters.topicId)) {
+      query.andWhere(
+        'EXISTS (SELECT 1 FROM quiz_topic fqt WHERE fqt.quizId = quiz.id AND fqt.topicId = :topicId)',
+        { topicId: Number(filters.topicId) },
+      );
+    }
     if (filters.mode) {
-      query.andWhere(
-        'settings.mode = :mode',
-        {
-          mode: filters.mode,
-        },
-      );
+      query.andWhere('settings.mode = :mode', { mode: filters.mode });
     }
 
-    /*
-      SUBJECT FILTER
-      subjectId = 0 => ignore filter
-    */
-    if (
-      filters.subjectId &&
-      Number(filters.subjectId) !== 0
-    ) {
+    const quizzes = await query.orderBy('quiz.createdAt', 'DESC').getMany();
+    if (!quizzes.length) return [];
 
-      query.andWhere(
-        'filterQuizSubjects.subjectId = :subjectId',
-        {
-          subjectId:
-            filters.subjectId,
-        },
-      );
-    }
-
-    /*
-      TOPIC FILTER
-      topicId = 0 => ignore filter
-    */
-    if (
-      filters.topicId &&
-      Number(filters.topicId) !== 0
-    ) {
-
-      query.andWhere(
-        `
-  quizTopics.topicId = :topicId
-  AND
-  jobRoleSubjects.topicId =
-  quizTopics.topicId
-  `,
-        {
-          topicId:
-            filters.topicId,
-        },
-      );
-    }
-
-    /*
-      If filters are empty/0
-      => no extra filters
-      => fetch all quizzes
-    */
-
-    query.orderBy(
-      'quiz.createdAt',
-      'DESC',
-    );
-
-    const quizzes =
-      await query.getMany();
-
-    if (!quizzes.length) {
-      return [];
-    }
-
-    const quizIds = quizzes.map(
-      (quiz) => quiz.id,
-    );
-
-    /*
-      TOTAL ATTEMPTS
-    */
-    const attempts =
-      await this.quizResultRepository
+    const quizIds = quizzes.map((quiz) => quiz.id);
+    const [attempts, questionCounts] = await Promise.all([
+      this.quizResultRepository
         .createQueryBuilder('qr')
-        .select(
-          'qr.quizId',
-          'quizId',
-        )
-        .addSelect(
-          'COUNT(qr.id)',
-          'totalAttempts',
-        )
-        .where(
-          'qr.quizId IN (:...quizIds)',
-          {
-            quizIds,
-          },
-        )
+        .select('qr.quizId', 'quizId')
+        .addSelect('COUNT(qr.id)', 'total')
+        .where('qr.quizId IN (:...quizIds)', { quizIds })
         .groupBy('qr.quizId')
-        .getRawMany();
-
-    const attemptMap = new Map<
-      number,
-      number
-    >();
-
-    for (const item of attempts) {
-
-      attemptMap.set(
-        Number(item.quizId),
-        Number(item.totalAttempts),
-      );
-    }
-
-    /*
-      TOTAL QUESTIONS
-    */
-    const questionCounts =
-      await this.quizQuestionRepo
+        .getRawMany(),
+      this.quizQuestionRepo
         .createQueryBuilder('qq')
-        .select(
-          'qq.quizId',
-          'quizId',
-        )
-        .addSelect(
-          'COUNT(qq.id)',
-          'totalQuestions',
-        )
-        .where(
-          'qq.quizId IN (:...quizIds)',
-          {
-            quizIds,
-          },
-        )
+        .select('qq.quizId', 'quizId')
+        .addSelect('COUNT(qq.id)', 'total')
+        .where('qq.quizId IN (:...quizIds)', { quizIds })
         .groupBy('qq.quizId')
-        .getRawMany();
+        .getRawMany(),
+    ]);
+    const attemptMap = new Map(attempts.map((r) => [Number(r.quizId), Number(r.total)]));
+    const questionCountMap = new Map(questionCounts.map((r) => [Number(r.quizId), Number(r.total)]));
 
-    const questionCountMap =
-      new Map<number, number>();
+    return quizzes.map((quiz: any) => {
+      const { userCreatedBy, ...quizData } = quiz;
+      const createdByName =
+        `${userCreatedBy?.firstName || ''} ${userCreatedBy?.lastName || ''}`.trim();
 
-    for (const item of questionCounts) {
-
-      questionCountMap.set(
-        Number(item.quizId),
-        Number(item.totalQuestions),
-      );
-    }
-
-    /*
-      FINAL RESPONSE
-    */
-    return quizzes.map(
-      (quiz: any) => {
-
-        const {
-          userCreatedBy,
-          ...quizData
-        } = quiz;
-
-        const createdByName = `${userCreatedBy?.firstName || ''
-          } ${userCreatedBy?.lastName || ''
-          }`.trim();
-
-        return {
-
-          ...quizData,
-
-          createdBy:
-            userCreatedBy
-              ? {
-                id:
-                  userCreatedBy.id,
-
-                name:
-                  createdByName ||
-                  userCreatedBy.username ||
-                  null,
-              }
-              : null,
-
-          status:
-            quiz.isPublished
-              ? 'Published'
-              : 'Draft',
-
-          totalQuestions:
-            questionCountMap.get(
-              quiz.id,
-            ) || 0,
-
-          totalAttempts:
-            attemptMap.get(
-              quiz.id,
-            ) || 0,
-
-          settings:
-            quiz.settings || null,
-
-          subjects:
-            quiz?.subjects?.map(
-              (subject: any) => ({
-                id: subject.id,
-                title: subject.title,
-                colour: subject.color,
-                image: subject.image,
-              }),
-            ) || [],
-        };
-      },
-    );
+      return {
+        ...quizData,
+        createdBy: userCreatedBy
+          ? { id: userCreatedBy.id, name: createdByName || userCreatedBy.username || null }
+          : null,
+        status: quiz.isPublished ? 'Published' : 'Draft',
+        totalQuestions: questionCountMap.get(quiz.id) || 0,
+        totalAttempts: attemptMap.get(quiz.id) || 0,
+        settings: quiz.settings || null,
+        subjects:
+          quiz.subjects?.map((subject: any) => ({
+            id: subject.id,
+            title: subject.title,
+            colour: subject.color,
+            image: subject.image,
+          })) || [],
+      };
+    });
   }
-
 
   async updateQuiz(
     quizId: number,
     updateQuizDto: UpdateQuizDto,
     userId: number,
   ): Promise<Quiz> {
-    // Fetch the quiz with createdBy field selected (it has select: false in entity)
+    // createdBy is select:false on the entity.
     const quiz = await this.quizRepository
       .createQueryBuilder('quiz')
       .addSelect('quiz.createdBy')
@@ -1441,151 +1085,69 @@ export class QuizService {
       );
     }
 
-    // Parse IDs from strings if provided
-    let subjectIds: number[] = [];
-    let topicIds: number[] = [];
-    let questionIds: number[] = updateQuizDto?.questionIds ?? [];
+    const subjectIds = updateQuizDto?.subjectIds ? parseIdList(updateQuizDto.subjectIds) : [];
+    const topicIds = updateQuizDto?.topicIds ? parseIdList(updateQuizDto.topicIds) : [];
+    const questionIds: number[] = updateQuizDto?.questionIds ?? [];
 
-    if (updateQuizDto?.subjectIds) {
-      const subjectStr = String(updateQuizDto.subjectIds);
-      subjectIds = subjectStr
-        .split(',')
-        .map((id) => parseInt(id.trim(), 10))
-        .filter((id) => Number.isInteger(id) && id > 0);
-    }
-
-    if (updateQuizDto?.topicIds) {
-      const topicStr = String(updateQuizDto.topicIds);
-      topicIds = topicStr
-        .split(',')
-        .map((id) => parseInt(id.trim(), 10))
-        .filter((id) => Number.isInteger(id) && id > 0);
-    }
-
-    // Update quiz properties
     if (updateQuizDto.title) {
       quiz.title = updateQuizDto.title;
-      // Generate new slug if title changed
       let slug = generateSlug(updateQuizDto.title);
-      let existingSlug = await this.quizRepository.findOne({
-        where: { slug },
-      });
-      while (existingSlug && existingSlug.id !== quizId) {
+      while (await this.slugExists(slug, quizId)) {
         slug = generateUniqueSlug(updateQuizDto.title);
-        existingSlug = await this.quizRepository.findOne({
-          where: { slug },
-        });
       }
       quiz.slug = slug;
     }
 
-    if (updateQuizDto.shortDesc !== undefined) {
-      quiz.shortDesc = updateQuizDto.shortDesc;
-    }
-
-    if (updateQuizDto.description !== undefined) {
-      quiz.description = updateQuizDto.description;
-    }
-
-    if (updateQuizDto.label !== undefined) {
-      quiz.label = updateQuizDto.label;
-    }
-
-    if (updateQuizDto.isPublished !== undefined) {
-      quiz.isPublished = updateQuizDto.isPublished;
-    }
-
-    if (updateQuizDto.goal !== undefined) {
-      quiz.goal = updateQuizDto.goal;
-    }
-
-    if (updateQuizDto.category !== undefined) {
-      quiz.category = updateQuizDto.category;
-    }
-
-    if (updateQuizDto.level !== undefined) {
-      quiz.level = updateQuizDto.level;
-    }
-
+    if (updateQuizDto.shortDesc !== undefined) quiz.shortDesc = updateQuizDto.shortDesc;
+    if (updateQuizDto.description !== undefined) quiz.description = updateQuizDto.description;
+    if (updateQuizDto.label !== undefined) quiz.label = updateQuizDto.label;
+    if (updateQuizDto.isPublished !== undefined) quiz.isPublished = updateQuizDto.isPublished;
+    if (updateQuizDto.goal !== undefined) quiz.goal = updateQuizDto.goal;
+    if (updateQuizDto.category !== undefined) quiz.category = updateQuizDto.category;
+    if (updateQuizDto.level !== undefined) quiz.level = updateQuizDto.level;
 
     return this.dataSource.transaction(async (manager) => {
-      // Save updated quiz
       const updatedQuiz = await manager.save(Quiz, quiz);
+      const link = { quizId: updatedQuiz.id, quizType: QuizTypeEnum.Standard };
 
-      // Update questions if provided
+      // Link lists are replaced wholesale when provided; an explicitly sent empty
+      // subjectIds/topicIds clears them.
       if (questionIds.length > 0) {
-        // Delete existing quiz questions
         await manager.delete(QuizQuestion, { quizId: updatedQuiz.id });
-
-        // Create new quiz questions
-        const quizQuestions: QuizQuestion[] = [];
-        for (const qId of questionIds) {
-          const quizQuestion = new QuizQuestion();
-          quizQuestion.quizId = updatedQuiz.id;
-          quizQuestion.quizType = QuizTypeEnum.Standard;
-          quizQuestion.questionId = qId;
-          quizQuestions.push(quizQuestion);
-        }
-        await manager.save(QuizQuestion, quizQuestions);
+        await manager.save(
+          QuizQuestion,
+          questionIds.map((questionId) => manager.create(QuizQuestion, { ...link, questionId })),
+        );
       }
-
-      // Update subjects if provided
-      if (subjectIds.length > 0 || updateQuizDto.subjectIds !== undefined) {
-        // Delete existing quiz subjects
+      if (updateQuizDto.subjectIds !== undefined) {
         await manager.delete(QuizSubject, { quizId: updatedQuiz.id });
-
-        // Create new quiz subjects
         if (subjectIds.length > 0) {
-          const quizSubjects: QuizSubject[] = [];
-          for (const sId of subjectIds) {
-            const quizSubject = new QuizSubject();
-            quizSubject.quizId = updatedQuiz.id;
-            quizSubject.quizType = QuizTypeEnum.Standard;
-            quizSubject.subjectId = sId;
-            quizSubjects.push(quizSubject);
-          }
-          await manager.save(QuizSubject, quizSubjects);
+          await manager.save(
+            QuizSubject,
+            subjectIds.map((subjectId) => manager.create(QuizSubject, { ...link, subjectId })),
+          );
         }
       }
-
-      // Update topics if provided
-      if (topicIds.length > 0 || updateQuizDto.topicIds !== undefined) {
-        // Delete existing quiz topics
+      if (updateQuizDto.topicIds !== undefined) {
         await manager.delete(QuizTopic, { quizId: updatedQuiz.id });
-
-        // Create new quiz topics
         if (topicIds.length > 0) {
-          const quizTopics: QuizTopic[] = [];
-          for (const tId of topicIds) {
-            const quizTopic = new QuizTopic();
-            quizTopic.quizId = updatedQuiz.id;
-            quizTopic.quizType = QuizTypeEnum.Standard;
-            quizTopic.topicId = tId;
-            quizTopics.push(quizTopic);
-          }
-          await manager.save(QuizTopic, quizTopics);
+          await manager.save(
+            QuizTopic,
+            topicIds.map((topicId) => manager.create(QuizTopic, { ...link, topicId })),
+          );
         }
       }
 
-      // Update settings if provided
       if (updateQuizDto.settings) {
         const existingSettings = await manager.findOne(QuizSettings, {
           where: { quizId: updatedQuiz.id },
         });
-
-        if (existingSettings) {
-          // Update existing settings
-          Object.assign(existingSettings, updateQuizDto.settings);
-          await manager.save(QuizSettings, existingSettings);
-        } else {
-          // Create new settings
-          const quizSettings = manager.create(QuizSettings, {
-            ...updateQuizDto.settings,
-            quizId: updatedQuiz.id,
-            quizType: QuizTypeEnum.Standard,
-          });
-          await manager.save(QuizSettings, quizSettings);
-        }
+        await manager.save(
+          QuizSettings,
+          existingSettings
+            ? Object.assign(existingSettings, updateQuizDto.settings)
+            : manager.create(QuizSettings, { ...updateQuizDto.settings, ...link }),
+        );
       }
 
       return updatedQuiz;

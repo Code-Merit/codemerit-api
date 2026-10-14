@@ -11,7 +11,6 @@ import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
 import { MasterModule } from '../master/master.module';
 import { NotificationModule } from '../notification/notification.module';
 import { QuestionModule } from '../question/question.module';
-import { QuestionAttemptService } from './providers/question-attempt.service';
 import { QuizResultService } from './providers/quiz-result.service';
 import { QuizService } from './providers/quiz.service';
 import { QuizController } from './quiz.controller';
@@ -40,7 +39,7 @@ import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.modu
     AchievementModule,
     SkillEnrollmentModule,
   ],
-  providers: [QuizService, QuestionAttemptService, QuizResultService],
+  providers: [QuizService, QuizResultService],
   controllers: [QuizController],
   exports: [QuizService],
 })
