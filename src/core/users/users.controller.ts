@@ -327,6 +327,18 @@ export class UsersController {
   }
 
   @ApiOperation({
+    summary: "Disconnect the authenticated user's LinkedIn sharing access",
+    description:
+      'Clears the stored LinkedIn access token so nothing more can be posted for this account ' +
+      'until it reconnects. Does not change how the account signs in.',
+  })
+  @Delete('linkedin/connect')
+  async disconnectLinkedin(@Request() req): Promise<ApiResponse<any>> {
+    const result = await this.linkedinShareService.disconnectAccount(req.user.id);
+    return new ApiResponse('LinkedIn disconnected.', result);
+  }
+
+  @ApiOperation({
     summary: 'Check LinkedIn connection status',
     description:
       'Returns whether the authenticated user has a valid LinkedIn connection available for sharing.',

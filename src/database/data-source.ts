@@ -58,6 +58,7 @@ import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offeri
 import { EnrollmentTierCapConfig } from 'src/common/typeorm/entities/enrollment-tier-cap-config.entity';
 import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
 import { Invite } from 'src/common/typeorm/entities/invite.entity';
+import { UserPreference } from 'src/common/typeorm/entities/user-preference.entity';
 
 export const AppDataSource = new DataSource({
   type: 'mysql',
@@ -124,6 +125,7 @@ export const AppDataSource = new DataSource({
     QualityMetric,
     QualityReview,
     QualityReviewTag,
+    UserPreference,
     Invite,
   ],
   migrations: ['src/database/migrations/*.ts'],

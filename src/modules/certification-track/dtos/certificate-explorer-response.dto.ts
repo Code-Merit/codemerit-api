@@ -73,6 +73,10 @@ export class CertificateExplorerTrackDto {
   // certification," based on each question's allotted time (Question.timeAllowed), not
   // actual attempt time. The UI rounds this to minutes.
   estimatedTimeSeconds: number;
+  // Fewest correct answers that can earn this certification from scratch — see
+  // minCorrectForCertification() in common/utils/completion-rules.ts. null when it can't be
+  // earned yet (e.g. topics still without Trivia questions).
+  correctAnswersToEarn: number | null;
   // Authoritative from an actual issued Certificate row — never re-derived from progressPercent
   // vs. achievementThreshold, since issuance is the real event and progress can drift afterwards.
   isAchieved: boolean;

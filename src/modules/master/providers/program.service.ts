@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CERT_ACHIEVED } from 'src/common/constants/completion-thresholds';
+import { minCorrectForCertification } from 'src/common/utils/completion-rules';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
 import { CertificateStatusEnum } from 'src/common/enum/certificate-status.enum';
 import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
@@ -797,6 +798,9 @@ export class ProgramService {
           ...ct,
           totalSubjectTracks: total, completedSubjectTracks: completed,
           progressPercent, isAchieved, achievementThreshold: CERT_ACHIEVED,
+          correctAnswersToEarn: minCorrectForCertification(
+            subjectTracks.map((st: any) => st.minCorrectToComplete), CERT_ACHIEVED,
+          ),
           subjectTracks,
         };
       });
@@ -1058,6 +1062,10 @@ export class ProgramService {
           ...ct,
           totalSubjectTracks: total, completedSubjectTracks: completed,
           progressPercent, isAchieved, achievementThreshold: CERT_ACHIEVED,
+          correctAnswersToEarn: minCorrectForCertification(
+            uniqueStIds.filter((id) => stMap.has(id)).map((id) => stMap.get(id).minCorrectToComplete),
+            CERT_ACHIEVED,
+          ),
           subjectTracks,
           // Formal issuance record, distinct from isAchieved above (progress can hit 100%
           // before a Certificate row is actually created) — null until one exists.
@@ -1381,7 +1389,13 @@ export class ProgramService {
           : 0;
         const isAchieved = progressPercent >= CERT_ACHIEVED;
 
-        const certCard: any = { ...meta, totalSubjectTracks: total, subjectTracks };
+        const certCard: any = {
+          ...meta, totalSubjectTracks: total, subjectTracks,
+          correctAnswersToEarn: minCorrectForCertification(
+            uniqueStIds.filter((id) => stMap.has(id)).map((id) => stMap.get(id).minCorrectToComplete),
+            CERT_ACHIEVED,
+          ),
+        };
         if (userId) {
           Object.assign(certCard, {
             completedSubjectTracks: completed, progressPercent,

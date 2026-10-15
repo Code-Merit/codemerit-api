@@ -9,6 +9,7 @@ import { BadgeRule } from 'src/common/typeorm/entities/badge-rule.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { UserXpLog } from 'src/common/typeorm/entities/user-xp-log.entity';
+import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
 import { CertificationTrack } from 'src/common/typeorm/entities/certification-track.entity';
 import { CertificationTrackJobRole } from 'src/common/typeorm/entities/certification-track-job-role.entity';
@@ -124,6 +125,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         UserBadge,
         UserStreak,
         UserXpLog,
+        LinkedinShare,
         SkillEnrollment,
         PaymentOrder,
         SkillTierOffering,

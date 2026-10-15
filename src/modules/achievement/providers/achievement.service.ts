@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CERT_ACHIEVED } from 'src/common/constants/completion-thresholds';
+import { isCertificationAchieved } from 'src/common/utils/completion-rules';
 import { BadgeAwardMethodEnum } from 'src/common/enum/badge-award-method.enum';
 import { BadgeRuleMetricEnum } from 'src/common/enum/badge-rule-metric.enum';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
@@ -672,7 +673,7 @@ export class AchievementService {
       const completed = subjectTrackIds.filter((id) => subjectTrackMap.get(id)?.isCompleted).length;
       const progressPercent = (completed / total) * 100;
       const threshold = thresholdMap.get(certTrackId) ?? CERT_ACHIEVED;
-      if (progressPercent < threshold) continue;
+      if (!isCertificationAchieved(completed, total, threshold)) continue;
 
       const issued = await this.issueCertificate(
         userId,

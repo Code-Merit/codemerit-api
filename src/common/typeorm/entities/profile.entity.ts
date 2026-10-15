@@ -41,10 +41,13 @@ export class Profile extends AbstractEntity implements IProfile {
   })
   linkedinId: string;
 
+  // A live posting credential — never loaded unless a query selects it explicitly
+  // (LinkedinShareService), so no profile response can carry it to a client.
   @Column({
     type: 'text',
     nullable: true,
     default: null,
+    select: false,
   })
   linkedinAccessToken: string;
 

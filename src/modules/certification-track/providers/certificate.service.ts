@@ -2,6 +2,7 @@ import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { CERT_ACHIEVED } from 'src/common/constants/completion-thresholds';
+import { minCorrectForCertification } from 'src/common/utils/completion-rules';
 import { CertificateSourceEnum } from 'src/common/enum/certificate-source.enum';
 import { CertificateStatusEnum } from 'src/common/enum/certificate-status.enum';
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
@@ -136,6 +137,7 @@ export class CertificateService {
       questionsAttempted: 0,
       questionsCorrect: 0,
       estimatedTimeSeconds: 0,
+      correctAnswersToEarn: null,
       isAchieved: false,
       subjectTracks: [],
       myCertificate: null,
@@ -366,6 +368,10 @@ export class CertificateService {
       // as a rounded minute estimate. Based on the per-question time budget, not actual
       // attempt time, so it's available even for a track no one has started yet.
       const estimatedTimeSeconds = subjectTracks.reduce((sum, st) => sum + st.estimatedTimeSeconds, 0);
+      const correctAnswersToEarn = minCorrectForCertification(
+        subjectTrackIds.filter((id) => subjectTrackMap.has(id)).map((id) => subjectTrackMap.get(id).minCorrectToComplete),
+        track.passThreshold ?? CERT_ACHIEVED,
+      );
       // Weighted by actual question volume across the whole cert — questionsAttempted /
       // totalQuestions — not an unweighted average of each subject-track's own percentage
       // (the previous pass here) and not completed/total subject tracks (the original bug).
@@ -410,6 +416,7 @@ export class CertificateService {
         questionsAttempted,
         questionsCorrect,
         estimatedTimeSeconds,
+        correctAnswersToEarn,
         // Authoritative from an actual issued row — never re-derived from progressPercent vs.
         // achievementThreshold (see certification-tracks.component.ts's own comment on why).
         isAchieved: !!myCertificate,

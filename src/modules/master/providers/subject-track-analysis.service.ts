@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TOPIC_DONE, TRACK_DONE } from 'src/common/constants/completion-thresholds';
+import { isSubjectTrackComplete, isTopicComplete, minCorrectForSubjectTrack } from 'src/common/utils/completion-rules';
 import { computeAttemptMetrics, getAggregateUserLevel } from 'src/common/utils/common-functions';
 import { DataSource } from 'typeorm';
 import { MeritService } from './merit.service';
@@ -137,7 +137,7 @@ export class SubjectTrackAnalysisService {
         // Completion requires correctness, not just exposure — coverage (above) only
         // measures "have you touched this," which must never gate completion/certificate
         // issuance on its own (a topic "completed" by guessing wrong isn't completed).
-        const isCompleted = correctCoverage >= TOPIC_DONE;
+        const isCompleted = isTopicComplete(correctCoverage);
         // attemptedEasy/correctEasy/etc. are intentionally NOT carried on this response
         // object anymore — they used to back the topic card's own "By Level" grid
         // (Score/Coverage/Accuracy per difficulty), which was found inaccurate and
@@ -227,7 +227,12 @@ export class SubjectTrackAnalysisService {
       // Completion gate is intentionally UNCHANGED (still topic-count-based, not derived from
       // the now fine-grained progressPercent above) — this is a display fix, not a change to
       // what counts as "done" for existing learners' completion/certificate eligibility.
-      const isCompleted = totalTopics > 0 && +((completedTopics / totalTopics) * 100).toFixed(0) >= TRACK_DONE;
+      const isCompleted = isSubjectTrackComplete(completedTopics, totalTopics);
+      // Fewest correct answers that complete this track from scratch (null = can't be
+      // completed, e.g. too many topics with no Trivia yet) — rolled up per certification by
+      // minCorrectForCertification(), so its "answer N correctly to earn it" line uses the same
+      // rules as completion itself.
+      const minCorrectToComplete = minCorrectForSubjectTrack(topics.map((t: any) => t.numTrivia || 0));
 
       result.set(stId, {
         ...meta,
@@ -265,6 +270,7 @@ export class SubjectTrackAnalysisService {
         completedTopics,
         progressPercent,
         isCompleted,
+        minCorrectToComplete,
         meritList: stMerits.meritLists.get(stId) ?? [],
         userRank: userId != null ? stMerits.userRanks.get(stId) ?? null : null,
         topics,

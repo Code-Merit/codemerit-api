@@ -2,10 +2,6 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import axios from 'axios';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import { randomUUID } from 'crypto';
 
 import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { LinkedinShareDto } from '../dtos/linkedin-share.dto';
@@ -13,6 +9,9 @@ import { ActivityService } from 'src/modules/activity/providers/activity/activit
 import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
 import { LinkedInOAuthService } from 'src/core/auth/providers/linkedin-oauth.service';
 import { UserProfileService } from './user-profile.service';
+
+// The frontend share button matches on "not connected" to switch to its Connect action.
+const LINKEDIN_NOT_CONNECTED = 'LinkedIn is not connected for this user.';
 
 @Injectable()
 export class LinkedinShareService {
@@ -35,8 +34,17 @@ export class LinkedinShareService {
    * actually signs in.
    */
   async connectAccount(userId: number, code: string) {
-    const accessToken = await this.linkedInOAuth.exchangeCodeForToken(code);
-    const profile = await this.linkedInOAuth.fetchLinkedInProfile(accessToken);
+    let accessToken: string;
+    let profile: { sub: string };
+    try {
+      accessToken = await this.linkedInOAuth.exchangeCodeForToken(code);
+      profile = await this.linkedInOAuth.fetchLinkedInProfile(accessToken);
+    } catch (error: any) {
+      // Most often an expired/reused code or a LINKEDIN_REDIRECT_URI that doesn't match the
+      // origin the popup ran on — LinkedIn's reason is logged, the user gets a retryable 400.
+      this.logger.error(`LinkedIn connect failed: ${JSON.stringify(error?.response?.data ?? error?.message)}`);
+      throw new BadRequestException('Could not connect LinkedIn. Please try again.');
+    }
     const linkedinTokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60 days, matches the login flow's own grant window
 
     await this.userProfileService.updateSocialProfile(userId, {
@@ -61,33 +69,32 @@ export class LinkedinShareService {
     return { connected: true, expiresAt: linkedinTokenExpiresAt };
   }
 
+  /** Drops the stored posting token. linkedinId stays — it's harmless on its own (login matches
+   * by email), and keeps a LinkedIn-signed-in account's identity intact. */
+  async disconnectAccount(userId: number) {
+    await this.profileRepository.update(
+      { userId },
+      { linkedinAccessToken: null, linkedinTokenExpiresAt: null },
+    );
+    return { connected: false, expiresAt: null };
+  }
+
   async getStatus(userId: number) {
-    const profile = await this.profileRepository.findOne({
-      where: { userId },
-      select: ['linkedinId', 'linkedinAccessToken', 'linkedinTokenExpiresAt'],
-    });
-
-    const connected =
-      !!profile?.linkedinId &&
-      !!profile?.linkedinAccessToken &&
-      (!profile.linkedinTokenExpiresAt ||
-        profile.linkedinTokenExpiresAt > new Date());
-
+    const profile = await this.findLinkedInCredentials(userId);
     return {
-      connected,
+      connected: this.hasValidToken(profile),
       expiresAt: profile?.linkedinTokenExpiresAt ?? null,
     };
   }
 
   async share(userId: number, dto: LinkedinShareDto) {
-    const profile = await this.profileRepository.findOne({
-      where: { userId },
-    });
-
-    if (!profile?.linkedinAccessToken || !profile.linkedinId) {
-      throw new BadRequestException('LinkedIn is not connected for this user.');
+    const profile = await this.findLinkedInCredentials(userId);
+    if (!this.hasValidToken(profile)) {
+      throw new BadRequestException(LINKEDIN_NOT_CONNECTED);
     }
+
     let shareRecord: LinkedinShare | undefined;
+    let postUrn: string | null;
 
     try {
       // create an audit row with pending status
@@ -100,57 +107,10 @@ export class LinkedinShareService {
       });
 
       const author = `urn:li:person:${profile.linkedinId}`;
-      let media: any[] = [];
+      const media: any[] = [];
 
-      // 1. Upload image asset to LinkedIn if a URL is provided
-      if (dto.imageUrl) {
-        const registerResponse = await axios.post(
-          'https://api.linkedin.com/v2/assets?action=registerUpload',
-          {
-            registerUploadRequest: {
-              recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-              owner: author,
-              serviceRelationships: [
-                {
-                  relationshipType: 'OWNER',
-                  identifier: 'urn:li:userGeneratedContent',
-                },
-              ],
-            },
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${profile.linkedinAccessToken}`,
-              'X-Restli-Protocol-Version': '2.0.0',
-            },
-          },
-        );
-
-        const uploadUrl =
-          registerResponse.data.value.uploadMechanism[
-            'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
-          ].uploadUrl;
-        const asset = registerResponse.data.value.asset;
-
-        // Fetch image as binary array data from the provided image link
-        const imageResponse = await axios.get(dto.imageUrl, {
-          responseType: 'arraybuffer',
-        });
-
-        // Binary transfer directly to LinkedIn's media pipeline storage bucket
-        await axios.put(uploadUrl, imageResponse.data, {
-          headers: {
-            'Content-Type': 'image/jpeg',
-          },
-        });
-
-        media.push({
-          status: 'READY',
-          media: asset,
-        });
-      }
-
-      // If frontend supplied a base64 data URL, decode and upload that image
+      // 1. Upload the client-captured image (base64 data URL), if any. Uploaded straight from
+      // memory — never via a temp file, and never fetched from a client-supplied URL.
       if (dto.imageDataUrl) {
         const match = dto.imageDataUrl.match(
           /^data:(image\/[^;]+);base64,(.+)$/,
@@ -158,74 +118,13 @@ export class LinkedinShareService {
         if (!match) {
           throw new BadRequestException('Invalid imageDataUrl format.');
         }
-        const mime = match[1];
-        const base64Data = match[2];
-        const ext = mime.split('/')[1] === 'jpeg' ? 'jpg' : mime.split('/')[1];
-        const filename = dto.imageFileName
-          ? dto.imageFileName
-          : `linkedin_${randomUUID()}.${ext}`;
-
-        const tmpPath = path.join(os.tmpdir(), filename);
-        try {
-          const buffer = Buffer.from(base64Data, 'base64');
-          await fs.promises.writeFile(tmpPath, buffer);
-
-          const registerResponse = await axios.post(
-            'https://api.linkedin.com/v2/assets?action=registerUpload',
-            {
-              registerUploadRequest: {
-                recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-                owner: author,
-                serviceRelationships: [
-                  {
-                    relationshipType: 'OWNER',
-                    identifier: 'urn:li:userGeneratedContent',
-                  },
-                ],
-              },
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${profile.linkedinAccessToken}`,
-                'X-Restli-Protocol-Version': '2.0.0',
-              },
-            },
-          );
-
-          const uploadUrl =
-            registerResponse.data.value.uploadMechanism[
-              'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
-            ].uploadUrl;
-          const asset = registerResponse.data.value.asset;
-
-          // stream file to LinkedIn
-          const stream = fs.createReadStream(tmpPath);
-          await axios.put(uploadUrl, stream, {
-            headers: {
-              'Content-Type': mime,
-            },
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-          });
-
-          media.push({
-            status: 'READY',
-            media: asset,
-          });
-
-          // update audit record with filename
-          shareRecord.imageFileName = filename;
-          await this.linkedinShareRepo.save(shareRecord);
-        } finally {
-          // remove temp file if it exists
-          try {
-            await fs.promises.unlink(tmpPath);
-          } catch (e) {
-            this.logger.debug(
-              `Temp file cleanup failed: ${e instanceof Error ? e.message : String(e)}`,
-            );
-          }
-        }
+        const asset = await this.uploadImage(
+          profile.linkedinAccessToken,
+          author,
+          Buffer.from(match[2], 'base64'),
+          match[1],
+        );
+        media.push({ status: 'READY', media: asset });
       }
 
       // 2. Structuring user generated feed content payload schema
@@ -267,60 +166,18 @@ export class LinkedinShareService {
           },
         },
       );
-      await this.activityService.createActivity(
-        userId,
-        'Shared on LinkedIn',
-        dto.url
-          ? 'shared content with a link on LinkedIn.'
-          : dto.imageUrl || dto.imageDataUrl
-            ? 'shared content with an image on LinkedIn.'
-            : 'shared a text post on LinkedIn.',
-        {
-          dataId: postResponse.headers['x-restli-id'] ?? undefined,
-          dataType: 'LINKEDIN_SHARE',
-        },
-      );
-
-      // update audit row as successful
-      try {
-        shareRecord.status = 'SENT';
-        shareRecord.linkedinUrn = postResponse.headers['x-restli-id'] ?? null;
-        await this.linkedinShareRepo.save(shareRecord);
-      } catch (e) {
-        this.logger.debug(
-          'Failed to update linkedin share record: ' +
-            (e instanceof Error ? e.message : String(e)),
-        );
-      }
-
-      return {
-        success: true,
-        postId: postResponse.headers['x-restli-id'] ?? null,
-        shared: {
-          text: dto.text,
-          url: dto.url ?? null,
-          image: dto.imageUrl
-            ? dto.imageUrl
-            : dto.imageDataUrl
-              ? 'uploaded'
-              : null,
-        },
-      };
+      postUrn = postResponse.headers['x-restli-id'] ?? null;
     } catch (error: any) {
-      // try to persist failure state
-      try {
-        if (typeof shareRecord !== 'undefined' && shareRecord?.id) {
-          shareRecord.status = 'FAILED';
-          shareRecord.errorMessage = error?.response?.data || error.message;
-          await this.linkedinShareRepo.save(shareRecord);
-        }
-      } catch (e) {
-        this.logger.debug(
-          'Failed to mark linkedin share as failed: ' +
-            (e instanceof Error ? e.message : String(e)),
-        );
-      }
+      const detail = error?.response?.data ?? error?.message;
+      await this.updateShareRecord(shareRecord, {
+        status: 'FAILED',
+        errorMessage: typeof detail === 'string' ? detail : JSON.stringify(detail),
+      });
 
+      // 401 = LinkedIn revoked or expired the token early — same reconnect path as no token.
+      if (error?.response?.status === 401) {
+        throw new BadRequestException(LINKEDIN_NOT_CONNECTED);
+      }
       throw new BadRequestException(
         error.response?.data?.message ??
           error?.response?.data?.serviceErrorCode ??
@@ -328,5 +185,100 @@ export class LinkedinShareService {
           'Failed to share on LinkedIn.',
       );
     }
+
+    // The post is live from here on — bookkeeping must never fail the request, or the user
+    // sees an error, retries, and posts twice.
+    await this.updateShareRecord(shareRecord, { status: 'SENT', linkedinUrn: postUrn });
+    try {
+      await this.activityService.createActivity(
+        userId,
+        'Shared on LinkedIn',
+        dto.url
+          ? 'shared content with a link on LinkedIn.'
+          : dto.imageDataUrl
+            ? 'shared content with an image on LinkedIn.'
+            : 'shared a text post on LinkedIn.',
+        { dataId: postUrn ?? undefined, dataType: 'LINKEDIN_SHARE' },
+      );
+    } catch (e) {
+      this.logger.error(`Failed to log LinkedIn share activity: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    return {
+      success: true,
+      postId: postUrn,
+      postUrl: postUrn ? `https://www.linkedin.com/feed/update/${postUrn}` : null,
+      shared: {
+        text: dto.text,
+        url: dto.url ?? null,
+        image: dto.imageDataUrl ? 'uploaded' : null,
+      },
+    };
+  }
+
+  private findLinkedInCredentials(userId: number) {
+    return this.profileRepository.findOne({
+      where: { userId },
+      select: ['linkedinId', 'linkedinAccessToken', 'linkedinTokenExpiresAt'],
+    });
+  }
+
+  private hasValidToken(profile: Profile | null): boolean {
+    return (
+      !!profile?.linkedinId &&
+      !!profile?.linkedinAccessToken &&
+      (!profile.linkedinTokenExpiresAt || profile.linkedinTokenExpiresAt > new Date())
+    );
+  }
+
+  /** Best-effort audit-row update — a failure here is logged, never surfaced to the caller. */
+  private async updateShareRecord(record: LinkedinShare | undefined, changes: Partial<LinkedinShare>) {
+    if (!record?.id) return;
+    try {
+      await this.linkedinShareRepo.save({ ...record, ...changes });
+    } catch (e) {
+      this.logger.error(`Failed to update LinkedIn share record: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
+  /** Registers an image asset with LinkedIn, uploads its bytes, and returns the asset URN. */
+  private async uploadImage(
+    accessToken: string,
+    owner: string,
+    data: Buffer,
+    mime: string,
+  ): Promise<string> {
+    const registerResponse = await axios.post(
+      'https://api.linkedin.com/v2/assets?action=registerUpload',
+      {
+        registerUploadRequest: {
+          recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+          owner,
+          serviceRelationships: [
+            {
+              relationshipType: 'OWNER',
+              identifier: 'urn:li:userGeneratedContent',
+            },
+          ],
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'X-Restli-Protocol-Version': '2.0.0',
+        },
+      },
+    );
+
+    const { asset, uploadMechanism } = registerResponse.data.value;
+    const uploadUrl =
+      uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+
+    await axios.put(uploadUrl, data, {
+      headers: { 'Content-Type': mime },
+      maxBodyLength: Infinity,
+    });
+
+    return asset;
   }
 }

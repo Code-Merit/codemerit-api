@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CERT_ACHIEVED } from 'src/common/constants/completion-thresholds';
+import { minCorrectForCertification } from 'src/common/utils/completion-rules';
 import { BadgeScopeEnum } from 'src/common/enum/badge-scope.enum';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
@@ -691,6 +692,14 @@ export class SubjectStatsService {
         const questionsAttempted = subjectTracks.reduce((sum: number, st: any) => sum + st.attempted, 0);
         const questionsCorrect = subjectTracks.reduce((sum: number, st: any) => sum + st.correct, 0);
         const estimatedTimeSeconds = subjectTracks.reduce((sum: number, st: any) => sum + (st.estimatedTimeSeconds || 0), 0);
+        // Read off the full subjectTrackMap entries — the light subjectTracks shape above
+        // doesn't carry minCorrectToComplete.
+        const correctAnswersToEarn = minCorrectForCertification(
+          [...(stIdsByCt.get(track.id) ?? [])]
+            .filter((id) => subjectTrackMap.has(id))
+            .map((id) => subjectTrackMap.get(id).minCorrectToComplete),
+          track.passThreshold ?? CERT_ACHIEVED,
+        );
         // Weighted by actual question volume across the whole cert — questionsAttempted /
         // totalQuestions — not an unweighted average of each subject-track's own percentage
         // (the previous pass here) and not completed/total subject tracks (the original bug,
@@ -721,6 +730,7 @@ export class SubjectStatsService {
           questionsAttempted,
           questionsCorrect,
           estimatedTimeSeconds,
+          correctAnswersToEarn,
           subjectTracks,
           // Matches DisplayCertificationTrack's roleTitles contract (certification-tracks
           // component + Browse Certificates explorer) — undefined, not [], when there's no

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { TOPIC_DONE } from 'src/common/constants/completion-thresholds';
+import { isTopicComplete } from 'src/common/utils/completion-rules';
 import { DifficultyLevelEnum } from 'src/common/enum/difficulty-lavel.enum';
 import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
 import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
@@ -263,7 +263,7 @@ export class TopicAnalysisService {
       journeyCorrect,
       journeyWrong,
     });
-    const isCompleted = correctCoverage >= TOPIC_DONE;
+    const isCompleted = isTopicComplete(correctCoverage);
     // userLevel needs correctCoverage (above) to cap an over-confident accuracy-only
     // read — see getAggregateUserLevel's doc comment.
     const userLevel = getAggregateUserLevel(

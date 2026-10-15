@@ -137,6 +137,10 @@ export interface SubjectPageCertificationTrack {
   // Rolled up across subjectTracks' own estimatedTimeSeconds — see
   // SubjectTrackAnalysisService.buildSubjectTrackMap's totalTimeAllowedSeconds.
   estimatedTimeSeconds: number;
+  // Fewest correct answers that can earn this certification from scratch — see
+  // minCorrectForCertification() in common/utils/completion-rules.ts. null when it can't be
+  // earned yet (e.g. topics still without Trivia questions).
+  correctAnswersToEarn: number | null;
   subjectTracks: SubjectPageCertSubjectTrack[];
   // undefined (not []) when there's no published job role at all — see this field's own
   // comment in getCertificationTracksForSubject for why the frontend template depends on that.

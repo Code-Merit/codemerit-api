@@ -1,6 +1,7 @@
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { configDotenv } from 'dotenv';
 import { AppModule } from './app.module';
@@ -42,7 +43,10 @@ async function bootstrap() {
   // without disabling JSON parsing anywhere else — needed for Razorpay/Stripe webhook
   // signature verification, which re-hashes the exact bytes received (see
   // PaymentController's webhook routes and the corresponding provider classes).
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+  // Express's 100kb default is too small for a LinkedIn share carrying a captured result-card
+  // image (base64 data URL). useBodyParser keeps rawBody intact for the payment webhooks.
+  app.useBodyParser('json', { limit: '8mb' });
   const config: IAppConfig = app.get<IAppConfig>(appConfig.KEY);
 
   // Enable CORS for localhost dev

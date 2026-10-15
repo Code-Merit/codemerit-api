@@ -58,7 +58,6 @@ export class UserProfileService {
         'subjectTrackId',
         'masteryLevel',
         'profileCompleted',
-        'linkedinAccessToken',
         'linkedinTokenExpiresAt',
         'inviteCodePromptedAt',
       ],
