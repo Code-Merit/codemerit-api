@@ -13,6 +13,13 @@ import { UserProfileService } from './user-profile.service';
 // The frontend share button matches on "not connected" to switch to its Connect action.
 const LINKEDIN_NOT_CONNECTED = 'LinkedIn is not connected for this user.';
 
+// Versioned LinkedIn API (the legacy unversioned v2/assets + v2/ugcPosts calls are refused for
+// newer apps: "Not enough permissions to access: assets.ACTION-registerUpload.NO_VERSION").
+// Each monthly version (YYYYMM) is supported for at least a year — bump LINKEDIN_API_VERSION in
+// .env before this default is sunset.
+const LINKEDIN_REST = 'https://api.linkedin.com/rest';
+const DEFAULT_LINKEDIN_API_VERSION = '202601';
+
 @Injectable()
 export class LinkedinShareService {
   private readonly logger = new Logger(LinkedinShareService.name);
@@ -107,64 +114,36 @@ export class LinkedinShareService {
       });
 
       const author = `urn:li:person:${profile.linkedinId}`;
-      const media: any[] = [];
+      const headers = this.linkedInHeaders(profile.linkedinAccessToken);
 
       // 1. Upload the client-captured image (base64 data URL), if any. Uploaded straight from
       // memory — never via a temp file, and never fetched from a client-supplied URL.
+      let imageUrn: string | null = null;
       if (dto.imageDataUrl) {
-        const match = dto.imageDataUrl.match(
-          /^data:(image\/[^;]+);base64,(.+)$/,
-        );
+        const match = dto.imageDataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
         if (!match) {
           throw new BadRequestException('Invalid imageDataUrl format.');
         }
-        const asset = await this.uploadImage(
-          profile.linkedinAccessToken,
-          author,
-          Buffer.from(match[2], 'base64'),
-          match[1],
-        );
-        media.push({ status: 'READY', media: asset });
+        imageUrn = await this.uploadImage(headers, author, Buffer.from(match[2], 'base64'), match[1]);
       }
 
-      // 2. Structuring user generated feed content payload schema
-      const postPayload: any = {
-        author,
-        lifecycleState: 'PUBLISHED',
-        specificContent: {
-          'com.linkedin.ugc.ShareContent': {
-            shareCommentary: {
-              text: dto.text,
-            },
-            shareMediaCategory: media.length ? 'IMAGE' : 'ARTICLE',
-            media: media.length
-              ? media
-              : dto.url
-                ? [
-                    {
-                      status: 'READY',
-                      originalUrl: dto.url,
-                    },
-                  ]
-                : [],
-          },
-        },
-        visibility: {
-          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-        },
-      };
-
-      // 3. Make the final post deployment call on LinkedIn feed network
+      // 2. Publish via the versioned Posts API — an image post, a link-card post, or plain text.
       const postResponse = await axios.post(
-        'https://api.linkedin.com/v2/ugcPosts',
-        postPayload,
+        `${LINKEDIN_REST}/posts`,
         {
-          headers: {
-            Authorization: `Bearer ${profile.linkedinAccessToken}`,
-            'X-Restli-Protocol-Version': '2.0.0',
-            'Content-Type': 'application/json',
-          },
+          author,
+          commentary: escapeLittleText(dto.text),
+          visibility: 'PUBLIC',
+          distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] },
+          lifecycleState: 'PUBLISHED',
+          isReshareDisabledByAuthor: false,
+          ...(imageUrn
+            ? { content: { media: { id: imageUrn } } }
+            : dto.url
+              ? { content: { article: { source: dto.url, title: 'CodeMerit' } } }
+              : {}),
         },
+        { headers },
       );
       postUrn = postResponse.headers['x-restli-id'] ?? null;
     } catch (error: any) {
@@ -241,44 +220,35 @@ export class LinkedinShareService {
     }
   }
 
-  /** Registers an image asset with LinkedIn, uploads its bytes, and returns the asset URN. */
-  private async uploadImage(
-    accessToken: string,
-    owner: string,
-    data: Buffer,
-    mime: string,
-  ): Promise<string> {
-    const registerResponse = await axios.post(
-      'https://api.linkedin.com/v2/assets?action=registerUpload',
-      {
-        registerUploadRequest: {
-          recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-          owner,
-          serviceRelationships: [
-            {
-              relationshipType: 'OWNER',
-              identifier: 'urn:li:userGeneratedContent',
-            },
-          ],
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'X-Restli-Protocol-Version': '2.0.0',
-        },
-      },
-    );
+  /** Headers every versioned (/rest) LinkedIn call needs. */
+  private linkedInHeaders(accessToken: string) {
+    return {
+      Authorization: `Bearer ${accessToken}`,
+      'LinkedIn-Version': process.env.LINKEDIN_API_VERSION || DEFAULT_LINKEDIN_API_VERSION,
+      'X-Restli-Protocol-Version': '2.0.0',
+    };
+  }
 
-    const { asset, uploadMechanism } = registerResponse.data.value;
-    const uploadUrl =
-      uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+  /** Images API: initializes an upload, PUTs the bytes, and returns the image URN (urn:li:image:…). */
+  private async uploadImage(headers: Record<string, string>, owner: string, data: Buffer, mime: string): Promise<string> {
+    const init = await axios.post(
+      `${LINKEDIN_REST}/images?action=initializeUpload`,
+      { initializeUploadRequest: { owner } },
+      { headers },
+    );
+    const { uploadUrl, image } = init.data.value;
 
     await axios.put(uploadUrl, data, {
-      headers: { 'Content-Type': mime },
+      headers: { Authorization: headers.Authorization, 'Content-Type': mime },
       maxBodyLength: Infinity,
     });
 
-    return asset;
+    return image;
   }
+}
+
+/** Posts API `commentary` is LinkedIn "little text": these characters are markup and must be
+ * backslash-escaped, or the post fails / renders garbled (e.g. a "(80%)" in a score line). */
+function escapeLittleText(text: string): string {
+  return text.replace(/[\\|{}@[\]()<>#*_~]/g, '\\$&');
 }
