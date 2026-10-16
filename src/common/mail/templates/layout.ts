@@ -63,8 +63,10 @@ export function renderEmailLayout(options: EmailLayoutOptions): string {
         <td align="center">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;background-color:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb;">
             <tr>
-              <td style="background:linear-gradient(90deg,#4f46e5 0%,#6366f1 100%);padding:24px 32px;">
-                <span style="color:#ffffff;font-size:20px;font-weight:700;letter-spacing:0.3px;">CodeMerit</span>
+              <td style="background-color:#ffffff;padding:20px 32px;border-bottom:3px solid ${BRAND_COLOR};">
+                <a href="{{FRONTEND_URL}}" style="text-decoration:none;">
+                  <img src="{{LOGO_URL}}" width="162" height="35" alt="CodeMerit" style="display:block;width:162px;height:35px;border:0;outline:none;text-decoration:none;font-size:20px;font-weight:700;line-height:35px;color:${BRAND_COLOR};" />
+                </a>
               </td>
             </tr>
             <tr>

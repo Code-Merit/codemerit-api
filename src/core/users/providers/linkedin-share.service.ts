@@ -13,12 +13,11 @@ import { UserProfileService } from './user-profile.service';
 // The frontend share button matches on "not connected" to switch to its Connect action.
 const LINKEDIN_NOT_CONNECTED = 'LinkedIn is not connected for this user.';
 
-// Versioned LinkedIn API (the legacy unversioned v2/assets + v2/ugcPosts calls are refused for
-// newer apps: "Not enough permissions to access: assets.ACTION-registerUpload.NO_VERSION").
-// Each monthly version (YYYYMM) is supported for at least a year — bump LINKEDIN_API_VERSION in
-// .env before this default is sunset.
-const LINKEDIN_REST = 'https://api.linkedin.com/rest';
-const DEFAULT_LINKEDIN_API_VERSION = '202601';
+// "Share on LinkedIn" product (w_member_social): v2/ugcPosts + v2/assets, per
+// learn.microsoft.com/linkedin/consumer/integrations/self-serve/share-on-linkedin.
+// NOT the versioned /rest/posts + /rest/images APIs — those belong to partner products
+// (Community Management), and this app is refused them ("partnerApiImagesExternal…").
+const LINKEDIN_V2 = 'https://api.linkedin.com/v2';
 
 @Injectable()
 export class LinkedinShareService {
@@ -102,6 +101,7 @@ export class LinkedinShareService {
 
     let shareRecord: LinkedinShare | undefined;
     let postUrn: string | null;
+    let imageAsset: string | null = null;
 
     try {
       // create an audit row with pending status
@@ -114,34 +114,44 @@ export class LinkedinShareService {
       });
 
       const author = `urn:li:person:${profile.linkedinId}`;
-      const headers = this.linkedInHeaders(profile.linkedinAccessToken);
+      const headers = {
+        Authorization: `Bearer ${profile.linkedinAccessToken}`,
+        'X-Restli-Protocol-Version': '2.0.0',
+      };
 
-      // 1. Upload the client-captured image (base64 data URL), if any. Uploaded straight from
-      // memory — never via a temp file, and never fetched from a client-supplied URL.
-      let imageUrn: string | null = null;
+      // 1. Best-effort image (client-captured base64 data URL), uploaded straight from memory.
+      // If LinkedIn refuses the upload (403 — the app's product access doesn't cover it), the
+      // post still goes out as text + link card instead of failing the whole share.
       if (dto.imageDataUrl) {
         const match = dto.imageDataUrl.match(/^data:(image\/[^;]+);base64,(.+)$/);
         if (!match) {
           throw new BadRequestException('Invalid imageDataUrl format.');
         }
-        imageUrn = await this.uploadImage(headers, author, Buffer.from(match[2], 'base64'), match[1]);
+        try {
+          imageAsset = await this.uploadImage(headers, author, Buffer.from(match[2], 'base64'), match[1]);
+        } catch (error: any) {
+          if (error?.response?.status !== 403) throw error;
+          this.logger.warn(`LinkedIn image upload refused, posting without it: ${JSON.stringify(error.response.data)}`);
+        }
       }
 
-      // 2. Publish via the versioned Posts API — an image post, a link-card post, or plain text.
+      // 2. Publish — an image post, a link-card post, or plain text.
       const postResponse = await axios.post(
-        `${LINKEDIN_REST}/posts`,
+        `${LINKEDIN_V2}/ugcPosts`,
         {
           author,
-          commentary: escapeLittleText(dto.text),
-          visibility: 'PUBLIC',
-          distribution: { feedDistribution: 'MAIN_FEED', targetEntities: [], thirdPartyDistributionChannels: [] },
           lifecycleState: 'PUBLISHED',
-          isReshareDisabledByAuthor: false,
-          ...(imageUrn
-            ? { content: { media: { id: imageUrn } } }
-            : dto.url
-              ? { content: { article: { source: dto.url, title: 'CodeMerit' } } }
-              : {}),
+          specificContent: {
+            'com.linkedin.ugc.ShareContent': {
+              shareCommentary: { text: dto.text },
+              ...(imageAsset
+                ? { shareMediaCategory: 'IMAGE', media: [{ status: 'READY', media: imageAsset }] }
+                : dto.url
+                  ? { shareMediaCategory: 'ARTICLE', media: [{ status: 'READY', originalUrl: dto.url }] }
+                  : { shareMediaCategory: 'NONE' }),
+            },
+          },
+          visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
         },
         { headers },
       );
@@ -174,7 +184,7 @@ export class LinkedinShareService {
         'Shared on LinkedIn',
         dto.url
           ? 'shared content with a link on LinkedIn.'
-          : dto.imageDataUrl
+          : imageAsset
             ? 'shared content with an image on LinkedIn.'
             : 'shared a text post on LinkedIn.',
         { dataId: postUrn ?? undefined, dataType: 'LINKEDIN_SHARE' },
@@ -187,10 +197,12 @@ export class LinkedinShareService {
       success: true,
       postId: postUrn,
       postUrl: postUrn ? `https://www.linkedin.com/feed/update/${postUrn}` : null,
+      // false when an image was sent but LinkedIn refused the upload (posted without it).
+      imageAttached: !!imageAsset,
       shared: {
         text: dto.text,
         url: dto.url ?? null,
-        image: dto.imageDataUrl ? 'uploaded' : null,
+        image: imageAsset ? 'uploaded' : null,
       },
     };
   }
@@ -220,35 +232,29 @@ export class LinkedinShareService {
     }
   }
 
-  /** Headers every versioned (/rest) LinkedIn call needs. */
-  private linkedInHeaders(accessToken: string) {
-    return {
-      Authorization: `Bearer ${accessToken}`,
-      'LinkedIn-Version': process.env.LINKEDIN_API_VERSION || DEFAULT_LINKEDIN_API_VERSION,
-      'X-Restli-Protocol-Version': '2.0.0',
-    };
-  }
-
-  /** Images API: initializes an upload, PUTs the bytes, and returns the image URN (urn:li:image:…). */
+  /** Assets API: registers a feed image, uploads its bytes, and returns the asset URN. */
   private async uploadImage(headers: Record<string, string>, owner: string, data: Buffer, mime: string): Promise<string> {
-    const init = await axios.post(
-      `${LINKEDIN_REST}/images?action=initializeUpload`,
-      { initializeUploadRequest: { owner } },
+    const register = await axios.post(
+      `${LINKEDIN_V2}/assets?action=registerUpload`,
+      {
+        registerUploadRequest: {
+          recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+          owner,
+          serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
+        },
+      },
       { headers },
     );
-    const { uploadUrl, image } = init.data.value;
+    const { asset, uploadMechanism } = register.data.value;
+    const uploadUrl = uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
 
+    // Same as the original, previously working upload: the uploadUrl is pre-signed, so only the
+    // content type is sent with the bytes.
     await axios.put(uploadUrl, data, {
-      headers: { Authorization: headers.Authorization, 'Content-Type': mime },
+      headers: { 'Content-Type': mime },
       maxBodyLength: Infinity,
     });
 
-    return image;
+    return asset;
   }
-}
-
-/** Posts API `commentary` is LinkedIn "little text": these characters are markup and must be
- * backslash-escaped, or the post fails / renders garbled (e.g. a "(80%)" in a score line). */
-function escapeLittleText(text: string): string {
-  return text.replace(/[\\|{}@[\]()<>#*_~]/g, '\\$&');
 }

@@ -41,6 +41,7 @@ export class MailService {
   private readonly resend: Resend;
   private readonly fromAddress: string;
   private readonly frontendUrl: string;
+  private readonly logoUrl: string;
 
   constructor(private readonly configService: ConfigService) {
     this.resend = new Resend(
@@ -50,6 +51,7 @@ export class MailService {
     const fromEmail = this.configService.get<string>('mail.fromEmail');
     this.fromAddress = `${fromName} <${fromEmail}>`;
     this.frontendUrl = this.configService.get<string>('mail.frontendUrl');
+    this.logoUrl = this.configService.get<string>('mail.logoUrl');
   }
 
   private async dispatch(
@@ -64,10 +66,9 @@ export class MailService {
       return;
     }
 
-    const html = template.html.replace(
-      /\{\{FRONTEND_URL\}\}/g,
-      this.frontendUrl,
-    );
+    const html = template.html
+      .replace(/\{\{LOGO_URL\}\}/g, this.logoUrl)
+      .replace(/\{\{FRONTEND_URL\}\}/g, this.frontendUrl);
     const subject = template.subject.replace(
       /\{\{FRONTEND_URL\}\}/g,
       this.frontendUrl,
