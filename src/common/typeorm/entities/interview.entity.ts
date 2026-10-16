@@ -33,6 +33,13 @@ export class Interview extends AbstractEntity {
   @Column()
   jobRoleId: number;
 
+  @Column({
+    type: 'enum',
+    enum: InterviewStatusEnum,
+    default: InterviewStatusEnum.SCHEDULED,
+  })
+  status: InterviewStatusEnum;
+
   // datetime, not timestamp — MySQL's TIMESTAMP type auto-attaches
   // DEFAULT/ON UPDATE CURRENT_TIMESTAMP to the first such column in a table
   // when explicit_defaults_for_timestamp is off (true on this server), which
@@ -46,11 +53,14 @@ export class Interview extends AbstractEntity {
   scheduledAt: Date;
 
   @Column({
-    type: 'enum',
-    enum: InterviewStatusEnum,
-    default: InterviewStatusEnum.SCHEDULED,
+    nullable: true,
   })
-  status: InterviewStatusEnum;
+  startedAt?: Date;
+
+  @Column({
+    nullable: true,
+  })
+  completedAt?: Date;
 
   @Column({
     type: 'text',
@@ -63,16 +73,6 @@ export class Interview extends AbstractEntity {
     nullable: true,
   })
   declineReason?: string;
-
-  @Column({
-    nullable: true,
-  })
-  startedAt?: Date;
-
-  @Column({
-    nullable: true,
-  })
-  completedAt?: Date;
 
   @CreateDateColumn()
   createdAt: Date;

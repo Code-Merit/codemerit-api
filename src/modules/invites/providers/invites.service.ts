@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import { HttpStatus, Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
+import { In, IsNull, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { Invite } from 'src/common/typeorm/entities/invite.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
@@ -84,10 +84,12 @@ export class InvitesService {
       where: {
         inviterId,
         type: dto.type,
-        targetType: dto.targetType ?? null,
-        targetId: dto.targetId ?? null,
-        recipientEmail: isEmail ? dto.recipientEmail : null,
-        recipientPhone: isPhone ? dto.recipientPhone : null,
+        // IsNull(), not null — find options drop null keys, which let an untargeted / code-only
+        // invite match (and overwrite) a pending invite aimed at a specific target or recipient.
+        targetType: dto.targetType ?? IsNull(),
+        targetId: dto.targetId ?? IsNull(),
+        recipientEmail: isEmail ? dto.recipientEmail : IsNull(),
+        recipientPhone: isPhone ? dto.recipientPhone : IsNull(),
         status: InviteStatusEnum.PENDING,
       },
     });

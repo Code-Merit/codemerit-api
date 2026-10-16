@@ -8,6 +8,9 @@ import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { generateScore } from 'src/common/utils/common-functions';
 import { DataSource, SelectQueryBuilder } from 'typeorm';
 
+// Per-question time limit when a question has none — matches take-quiz and Quick Practice.
+const DEFAULT_QUESTION_TIME_SECONDS = 30;
+
 @Injectable()
 export class QuizResultService {
   constructor(
@@ -73,6 +76,7 @@ export class QuizResultService {
           'qa.isSkipped AS isSkipped',
           'qa.isCorrect AS isCorrect',
           'qa.timeTaken AS timeTaken',
+          'q.timeAllowed AS timeAllowed',
           'q.level AS level',
           'q.answer AS answer'
         ])
@@ -110,6 +114,12 @@ export class QuizResultService {
     const questionList = Array.from(uniqueQuestionRows.values());
 
     const timeSpent = questionList.reduce((sum, r) => sum + (Number(r.timeTaken) || 0), 0);
+    // Sum of each question's own time limit — the denominator for "Time Efficiency". The 30s
+    // fallback (question with no timeAllowed) is the same default both quiz timers use.
+    const totalTimeAllowed = questionList.reduce(
+      (sum, r) => sum + (Number(r.timeAllowed) || DEFAULT_QUESTION_TIME_SECONDS),
+      0,
+    );
 
     const levelLabelMap: Record<number, string> = {
       [DifficultyLevelEnum.Easy]: 'Easy',
@@ -235,6 +245,7 @@ export class QuizResultService {
       wrong: Number(base.r_wrong) || 0,
       unanswered: Number(base.r_unanswered) || 0,
       timeSpent,
+      totalTimeAllowed,
       remarks: base.r_remarks ?? '',
       feedback: base.r_feedback ?? '',
       createdAt: base.r_createdAt,

@@ -18,6 +18,8 @@ export class EmailService {
   private async getRecipient(
     userId: number,
   ): Promise<{ email: string; name: string } | null> {
+    // A nullish id would make findOne unfiltered and e-mail user #1 (Admin) instead.
+    if (userId == null) return null;
     const user = await this.userRepo.findOne({
       where: { id: userId },
       select: ['email', 'firstName'],

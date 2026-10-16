@@ -16,6 +16,9 @@ export class UserPermission implements IUserPermission {
   id: number;
 
   @Column()
+  userId: number;
+
+  @Column()
   permissionId: number;
 
   // Values must match UserPermissionTitleEnum exactly (lowercase, e.g. 'subject-track') —
@@ -26,9 +29,6 @@ export class UserPermission implements IUserPermission {
 
   @Column({ type: 'int', nullable: true, default: null })
   resourceId?: number | null;
-
-  @Column()
-  userId: number;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

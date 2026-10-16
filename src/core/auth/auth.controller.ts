@@ -24,6 +24,9 @@ import { LoginDto } from './dto/login.dto';
 import { SendOtpDto } from './dto/send-otp.dto';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { LoginResponseDto } from './dto/login-response.dto';
+import { Throttle } from '@nestjs/throttler';
+import { OtpThrottlerGuard } from './guards/otp-throttler.guard';
+import { OTP_TTL_MS, OTP_VERIFY_LIMIT } from 'src/common/constants/otp.constants';
 import { LinkedinCallbackDto } from 'src/modules/auth/dtos/linkedin-callback.dto';
 import { GoogleCallbackDto } from 'src/modules/auth/dtos/google-callback.dto';
 import {
@@ -202,6 +205,8 @@ export class AuthController {
       'log in afterwards with their new password. The `tag` field in the body, not the URL, decides ' +
       'which business rule actually runs.',
   })
+  @UseGuards(OtpThrottlerGuard)
+  @Throttle({ default: { limit: OTP_VERIFY_LIMIT, ttl: OTP_TTL_MS } })
   @Post('verify')
   async acoountVerification(
     @Body()
@@ -221,6 +226,8 @@ export class AuthController {
       'unused OTP the account password is replaced, a password-changed e-mail is sent, and an ' +
       'activity entry is logged. Rejects with 400 on OTP mismatch or an unrecognized e-mail.',
   })
+  @UseGuards(OtpThrottlerGuard)
+  @Throttle({ default: { limit: OTP_VERIFY_LIMIT, ttl: OTP_TTL_MS } })
   @Post('recover-password')
   async recoverPassword(
     @Body()

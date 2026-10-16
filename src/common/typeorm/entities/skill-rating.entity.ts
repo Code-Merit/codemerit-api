@@ -15,10 +15,10 @@ import { RatingTypeEnum } from 'src/common/enum/rating-type.enum';
 export class SkillRating extends AbstractEntity implements ISkillRating {
   @Column({
     type: 'integer',
-    nullable: true,
+    nullable: false,
     default: null,
   })
-  skillId: number;
+  assessmentSessionId: number;
 
   @Column({
     type: 'enum',
@@ -26,6 +26,13 @@ export class SkillRating extends AbstractEntity implements ISkillRating {
     default: SkillTypeEnum.SUBJECT,
   })
   skillType: SkillTypeEnum;
+
+  @Column({
+    type: 'integer',
+    nullable: true,
+    default: null,
+  })
+  skillId: number;
 
   @Column({
     type: 'integer',
@@ -40,13 +47,6 @@ export class SkillRating extends AbstractEntity implements ISkillRating {
     default: RatingTypeEnum.SELF,
   })
   ratingType: RatingTypeEnum;
-
-  @Column({
-    type: 'integer',
-    nullable: false,
-    default: null,
-  })
-  assessmentSessionId: number;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

@@ -16,6 +16,19 @@ export class QuizSettings implements IQuizSettings {
   @PrimaryGeneratedColumn()
   id: number;
 
+  // Exactly one of quizId/userQuizId is populated per row — see QuizQuestion for
+  // the same convention/rationale.
+  @Column({ type: 'int', nullable: true })
+  quizId: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  userQuizId: number | null;
+
+  // Nullable purely so `synchronize: true` can add this column to a table that
+  // already has rows without a default — see QuizQuestion for the same rationale.
+  @Column({ type: 'enum', enum: QuizTypeEnum, nullable: true })
+  quizType: QuizTypeEnum | null;
+
   @Column({ type: 'int' })
   numQuestions: number;
 
@@ -51,27 +64,14 @@ export class QuizSettings implements IQuizSettings {
   @Column({ type: 'boolean', default: false })
   enableCertificate: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  enableReview: boolean;
+
   @Column({ type: 'int', default: 60 })
   passMarks: number;
 
   @Column({ type: 'int', default: 1 })
   maxAttempts: number;
-
-  @Column({ type: 'boolean', default: false })
-  enableReview: boolean;
-
-  // Exactly one of quizId/userQuizId is populated per row — see QuizQuestion for
-  // the same convention/rationale.
-  @Column({ type: 'int', nullable: true })
-  quizId: number | null;
-
-  @Column({ type: 'int', nullable: true })
-  userQuizId: number | null;
-
-  // Nullable purely so `synchronize: true` can add this column to a table that
-  // already has rows without a default — see QuizQuestion for the same rationale.
-  @Column({ type: 'enum', enum: QuizTypeEnum, nullable: true })
-  quizType: QuizTypeEnum | null;
 
   @OneToOne(() => Quiz, (quiz) => quiz.settings, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'quizId' })

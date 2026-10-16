@@ -1,11 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 
+/** /v2/userinfo response (Sign In with LinkedIn using OpenID Connect). Per the doc, `email` and
+ * `email_verified` are optional and may be absent; `sub` is pairwise (differs per LinkedIn app). */
 export interface LinkedInProfile {
   sub: string;
-  email: string;
-  given_name: string;
-  picture: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+  locale?: string;
+  email?: string;
+  email_verified?: boolean;
 }
 
 export interface LinkedInTokenGrant {

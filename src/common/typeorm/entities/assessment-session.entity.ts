@@ -39,44 +39,6 @@ export class AssessmentSession
   })
   candidateId?: number;
 
-  @Column({ type: 'text', nullable: true, default: null })
-  assessmentTitle: string;
-
-  @Column({ type: 'text', nullable: true, default: null })
-  notes?: string;
-
-  @Column({
-    type: 'integer',
-    nullable: true,
-    default: null,
-  })
-  ratedBy?: number;
-
-  @Column({
-    type: 'enum',
-    enum: RatingTypeEnum,
-    default: RatingTypeEnum.SELF,
-  })
-  ratingType: RatingTypeEnum;
-
-  @Column({ name: 'createdBy', default: null, select: false })
-  createdBy: number;
-
-  @Column({ name: 'updatedBy', default: null, select: false })
-  updatedBy: number;
-
-  @CreateDateColumn({ name: 'createdAt' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updatedAt', select: false })
-  updatedAt: Date;
-
-  @OneToMany(() => SkillRating, (rating) => rating.assessmentSession, {
-    cascade: true,
-    eager: true,
-  })
-  skillRatings?: SkillRating[];
-
   @Column({
     nullable: true,
   })
@@ -96,6 +58,23 @@ export class AssessmentSession
     nullable: true,
   })
   roundNumber?: number;
+
+  @Column({ type: 'text', nullable: true, default: null })
+  assessmentTitle: string;
+
+  @Column({
+    type: 'enum',
+    enum: RatingTypeEnum,
+    default: RatingTypeEnum.SELF,
+  })
+  ratingType: RatingTypeEnum;
+
+  @Column({
+    type: 'integer',
+    nullable: true,
+    default: null,
+  })
+  ratedBy?: number;
 
   @Column({
     type: 'enum',
@@ -132,6 +111,9 @@ export class AssessmentSession
   })
   completedAt?: Date;
 
+  @Column({ type: 'text', nullable: true, default: null })
+  notes?: string;
+
   @Column({
     type: 'text',
     nullable: true,
@@ -144,6 +126,24 @@ export class AssessmentSession
   })
   declineReason?: string;
 
+  @Column({ name: 'createdBy', default: null, select: false })
+  createdBy: number;
+
+  @Column({ name: 'updatedBy', default: null, select: false })
+  updatedBy: number;
+
+  @CreateDateColumn({ name: 'createdAt' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updatedAt', select: false })
+  updatedAt: Date;
+
+  @OneToMany(() => SkillRating, (rating) => rating.assessmentSession, {
+    cascade: true,
+    eager: true,
+  })
+  skillRatings?: SkillRating[];
+
   @ManyToOne(() => User, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
@@ -155,6 +155,7 @@ export class AssessmentSession
   @ManyToOne(() => User, { eager: true, nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'ratedBy', referencedColumnName: 'id' })
   rater: User;
+
   //score should be able to calculated from the skill ratings, so we can remove it from here to avoid redundancy and inconsistency
 
   @ManyToOne(

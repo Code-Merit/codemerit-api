@@ -1,11 +1,11 @@
-import { Column, Entity, JoinColumn, OneToOne, Unique } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 import { AbstractEntity } from './abstract.entity';
 import { User } from './user.entity';
 import { DefaultLandingPageEnum } from '../../enum/default-landing-page.enum';
 
 // One row per user, created lazily on first write (see UserPreferenceService). Every column is
 // nullable with no DB default — null means "unset, use DEFAULT_USER_PREFERENCES."
-@Unique(['userId'])
+// userId uniqueness is enforced by the unique index TypeORM creates for the @OneToOne below.
 @Entity('user_preference')
 export class UserPreference extends AbstractEntity {
   @Column({ type: 'int', nullable: false })

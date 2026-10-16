@@ -63,8 +63,10 @@ export class UserPermissionService {
       where: {
         userId,
         permissionId: In([permissionIds]),
-        resourceType,
-        resourceId,
+        // null must become IsNull(): TypeORM find options drop null/undefined keys entirely,
+        // so a global (null) grant would otherwise match any scoped grant of the same permission.
+        resourceType: resourceType ?? IsNull(),
+        resourceId: resourceId ?? IsNull(),
       },
     });
 
@@ -194,7 +196,7 @@ export class UserPermissionService {
     const resourceId = dto.resourceId ? dto.resourceId : null;
 
     const alreadyGranted = await this.userPermissionRepo.findOne({
-      where: { userId, permissionId: dto.permissionId, resourceType, resourceId },
+      where: { userId, permissionId: dto.permissionId, resourceType: resourceType ?? IsNull(), resourceId: resourceId ?? IsNull() },
     });
     if (alreadyGranted) {
       throw new AppCustomException(HttpStatus.CONFLICT, `You already have this permission.`);
@@ -204,8 +206,8 @@ export class UserPermissionService {
       where: {
         userId,
         permissionId: dto.permissionId,
-        resourceType,
-        resourceId,
+        resourceType: resourceType ?? IsNull(),
+        resourceId: resourceId ?? IsNull(),
         status: PermissionRequestStatusEnum.PENDING,
       },
     });
@@ -264,8 +266,8 @@ export class UserPermissionService {
       where: {
         userId: request.userId,
         permissionId: request.permissionId,
-        resourceType: request.resourceType ?? null,
-        resourceId: request.resourceId ?? null,
+        resourceType: request.resourceType ?? IsNull(),
+        resourceId: request.resourceId ?? IsNull(),
       },
     });
     if (!alreadyGranted) {

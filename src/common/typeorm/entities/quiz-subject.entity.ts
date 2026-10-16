@@ -13,12 +13,6 @@ import { QuizTypeEnum } from '../../enum/quiz-type.enum';
 
 @Entity()
 export class QuizSubject extends AbstractEntity implements IQuizSubject {
-  @Column({
-    type: 'integer',
-    nullable: false,
-  })
-  subjectId: number;
-
   // Exactly one of quizId/userQuizId is populated per row — see QuizQuestion for
   // the same convention/rationale.
   @Column({
@@ -41,6 +35,12 @@ export class QuizSubject extends AbstractEntity implements IQuizSubject {
     nullable: true,
   })
   quizType: QuizTypeEnum | null;
+
+  @Column({
+    type: 'integer',
+    nullable: false,
+  })
+  subjectId: number;
 
   @ManyToOne(() => Quiz, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'quizId', referencedColumnName: 'id' })

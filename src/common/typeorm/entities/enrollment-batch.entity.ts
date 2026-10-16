@@ -44,9 +44,9 @@ export class EnrollmentBatch extends AbstractEntity {
   @Column({ type: 'varchar', length: 10, nullable: true, default: null })
   currency: string | null;
 
-  @CreateDateColumn({ name: 'createdAt' })
-  createdAt: Date;
-
   @Column({ type: 'datetime', nullable: true, default: null })
   completedAt: Date | null;
+
+  @CreateDateColumn({ name: 'createdAt' })
+  createdAt: Date;
 }

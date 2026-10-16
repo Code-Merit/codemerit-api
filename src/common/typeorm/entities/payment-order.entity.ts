@@ -36,6 +36,10 @@ export class PaymentOrder extends AbstractEntity {
   @Column({ type: 'integer', nullable: true, default: null })
   batchId: number | null;
 
+  // Set once the webhook fulfills this order into an active SkillEnrollment.
+  @Column({ type: 'integer', nullable: true, default: null })
+  enrollmentId: number | null;
+
   @Column({ type: 'enum', enum: EnrollmentTierEnum, nullable: false })
   tier: EnrollmentTierEnum;
 
@@ -65,21 +69,17 @@ export class PaymentOrder extends AbstractEntity {
   })
   status: PaymentOrderStatusEnum;
 
-  // Set once the webhook fulfills this order into an active SkillEnrollment.
-  @Column({ type: 'integer', nullable: true, default: null })
-  enrollmentId: number | null;
-
   @Column({ type: 'text', nullable: true, default: null })
   failureReason: string | null;
+
+  @Column({ type: 'datetime', nullable: true, default: null })
+  paidAt: Date | null;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 
   @UpdateDateColumn({ name: 'updatedAt', select: false })
   updatedAt: Date;
-
-  @Column({ type: 'datetime', nullable: true, default: null })
-  paidAt: Date | null;
 
   @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })

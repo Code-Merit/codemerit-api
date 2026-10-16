@@ -14,12 +14,6 @@ import { QuizTypeEnum } from '../../enum/quiz-type.enum';
 
 @Entity()
 export class QuizQuestion extends AbstractEntity implements IQuizQuestion {
-  @Column({
-    type: 'integer',
-    nullable: false,
-  })
-  questionId: number;
-
   // quizId: FK -> quiz.id. Standard-only going forward — UserQuiz's question list
   // now lives directly on UserQuiz.questionIds instead of rows in this table (see
   // its entity comment for rationale). userQuizId/quizType below are vestigial:
@@ -47,6 +41,12 @@ export class QuizQuestion extends AbstractEntity implements IQuizQuestion {
     nullable: true,
   })
   quizType: QuizTypeEnum | null;
+
+  @Column({
+    type: 'integer',
+    nullable: false,
+  })
+  questionId: number;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

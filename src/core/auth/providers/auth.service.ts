@@ -17,7 +17,7 @@ import { DataSource, Repository } from 'typeorm';
 import { AccountVerificationDto } from '../dto/account-verification.dto';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginResponseDto } from '../dto/login-response.dto';
-import { LinkedInOAuthService } from './linkedin-oauth.service';
+import { LinkedInOAuthService, LinkedInProfile, LinkedInTokenGrant } from './linkedin-oauth.service';
 
 @Injectable()
 export class AuthService {
@@ -249,8 +249,31 @@ export class AuthService {
   }
 
   async handleLinkedinCallback(code: string) {
-    const grant = await this.linkedInOAuth.exchangeCodeForTokenGrant(code);
-    const profile = await this.linkedInOAuth.fetchLinkedInProfile(grant.accessToken);
+    let grant: LinkedInTokenGrant;
+    let profile: LinkedInProfile;
+    try {
+      grant = await this.linkedInOAuth.exchangeCodeForTokenGrant(code);
+      profile = await this.linkedInOAuth.fetchLinkedInProfile(grant.accessToken);
+    } catch (error: any) {
+      this.logger.error(`LinkedIn sign-in failed: ${JSON.stringify(error?.response?.data ?? error?.message)}`);
+      throw new BadRequestException('LinkedIn authentication failed. Please try again.');
+    }
+
+    // Accounts are matched by email, and the doc marks `email` optional — anyone can mint a code
+    // without the `email` scope using our public client id. No email, no sign-in.
+    if (!profile?.sub || !profile.email) {
+      throw new BadRequestException(
+        'Your LinkedIn account did not share an email address. Please allow email access or sign in another way.',
+      );
+    }
+    // Linking to (or creating) an account by an email LinkedIn itself says is unverified would let
+    // someone claim another person's CodeMerit account. Absent = unknown, allowed (LinkedIn
+    // normally only returns a confirmed primary email).
+    if (profile.email_verified === false) {
+      throw new BadRequestException(
+        'Your LinkedIn email address is not verified. Please verify it on LinkedIn, then try again.',
+      );
+    }
     // The stored token doubles as the share token. Only keep it when it can actually post —
     // otherwise sign-in would overwrite a working share token with one that 403s on ugcPosts.
     // (updateSocialProfile skips undefined fields, so omitting them leaves the old ones intact.)
@@ -262,10 +285,11 @@ export class AuthService {
         }
       : {};
 
-    const [firstName, ...lastNameParts] = (profile.given_name || '')
-      .trim()
-      .split(' ');
-    const lastName = lastNameParts.join(' ');
+    // OIDC gives first and last name separately (given_name / family_name); fall back to
+    // splitting `name` only when they're missing.
+    const [nameFirst, ...nameRest] = (profile.name || '').trim().split(' ');
+    const firstName = (profile.given_name || nameFirst || '').trim();
+    const lastName = (profile.family_name ?? nameRest.join(' ')).trim();
 
     const existingUser = await this.usersService.findByEmail(profile.email);
 

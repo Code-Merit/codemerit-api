@@ -22,17 +22,17 @@ export class UserJobRole implements IUserJobRole {
   @Column({ type: 'int', nullable: false })
   jobRoleId: number;
 
-  @CreateDateColumn({ type: 'datetime', precision: 6 })
-  createdAt: Date;
-
   @Column({ type: 'int', nullable: true, default: null })
   createdBy: number;
 
-  @UpdateDateColumn({ type: 'datetime', precision: 6 })
-  updatedAt: Date;
-
   @Column({ type: 'int', nullable: true, default: null })
   updatedBy: number;
+
+  @CreateDateColumn({ type: 'datetime', precision: 6 })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'datetime', precision: 6 })
+  updatedAt: Date;
 
   // Relations
   @ManyToOne(() => User, (user) => user.id, { onDelete: 'CASCADE' })

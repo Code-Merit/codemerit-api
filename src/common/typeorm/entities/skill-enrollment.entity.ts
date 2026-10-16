@@ -97,12 +97,24 @@ export class SkillEnrollment extends AbstractEntity {
   @Column({ type: 'integer', nullable: true, default: null })
   previousEnrollmentId: number | null;
 
-  // DB-generated (see migration AddEnrollmentUpgradeSupport) — never set from application
-  // code. Emulates a partial unique index (MySQL/MariaDB has no native one): NULL unless
-  // status='active', with a UNIQUE INDEX on the column, so two Active rows for the same
-  // (userId, subjectId) are physically impossible to insert. Read-only from TypeORM's
-  // perspective; marked `select: false` so it never leaks into API responses by accident.
-  @Column({ type: 'varchar', length: 64, nullable: true, select: false, insert: false, update: false })
+  // DB-generated (STORED) — never set from application code. Emulates a partial unique
+  // index (MySQL/MariaDB has no native one): NULL unless status='active', with the
+  // UQ_skill_enrollment_active_guard UNIQUE INDEX on the column, so two Active rows for the
+  // same (userId, subjectId) are physically impossible to insert. The expression and index
+  // are declared here (not only in raw SQL) so migration:generate reproduces them on a
+  // fresh DB and never proposes dropping them. Marked `select: false` so it never leaks
+  // into API responses by accident.
+  @Index('UQ_skill_enrollment_active_guard', { unique: true })
+  @Column({
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+    select: false,
+    insert: false,
+    update: false,
+    generatedType: 'STORED',
+    asExpression: "IF(`status` = 'active', CONCAT(`userId`, '-', `subjectId`), NULL)",
+  })
   activeGuardKey: string | null;
 
   @CreateDateColumn({ name: 'createdAt' })
@@ -114,4 +126,10 @@ export class SkillEnrollment extends AbstractEntity {
   @ManyToOne(() => User, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })
   user: User;
+
+  // Declared so the self-referencing FK on previousEnrollmentId is part of the schema
+  // TypeORM generates (it previously existed only as raw migration SQL).
+  @ManyToOne(() => SkillEnrollment, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'previousEnrollmentId', referencedColumnName: 'id' })
+  previousEnrollment?: SkillEnrollment | null;
 }

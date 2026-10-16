@@ -13,7 +13,7 @@ import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { UserOtp } from 'src/common/typeorm/entities/user-otp.entity';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { generate6DigitNumber } from 'src/common/utils/common-functions';
-import { OTP_DAILY_LIMIT } from 'src/common/constants/otp.constants';
+import { OTP_DAILY_LIMIT, OTP_TTL_MS } from 'src/common/constants/otp.constants';
 import {
   generateSlug,
   generateUniqueSlug,
@@ -264,6 +264,10 @@ export class UserService {
   }
 
   async findByEmail(email: string): Promise<User | undefined> {
+    // TypeORM 0.3 drops undefined keys from `where`, so findOne({ where: { email: undefined } })
+    // runs an unfiltered query and returns the FIRST user (id 1 = Admin). Never let a missing
+    // email (e.g. an OAuth profile without one) reach it.
+    if (!email) return null;
     //Gives all fields
     const user = await this.userRepo.findOne({
       where: { email },
@@ -273,6 +277,7 @@ export class UserService {
   }
 
   async findByEmailForLogin(email: string): Promise<User | undefined> {
+    if (!email) return null; // same unfiltered-findOne hazard as findByEmail
     return this.userRepo.findOne({
       where: { email },
       select: [
@@ -290,13 +295,14 @@ export class UserService {
   }
 
   async findByMobile(mobile: string): Promise<User | null> {
+    if (!mobile) return null; // see findByEmail: undefined `where` keys match the first user
     return this.userRepo.findOne({ where: { mobile } });
   }
 
   async findByUsername(
     username: string,
   ): Promise<UserProfileResponseDto | undefined> {
-    const user = await this.userRepo.findOne({ where: { username } });
+    const user = username ? await this.userRepo.findOne({ where: { username } }) : null;
 
     if (!user) {
       throw new AppCustomException(HttpStatus.BAD_REQUEST, 'User not Found.');
@@ -311,6 +317,7 @@ export class UserService {
   }
 
   async findOne(id: number): Promise<User | undefined> {
+    if (id == null) return null; // see findByEmail
     return this.userRepo.findOne({ where: { id } });
   }
 
@@ -768,6 +775,14 @@ export class UserService {
       user.id,
       accountVerificationDto.tag,
     );
+    const latestOtp = userOtpList?.[0];
+    const otpIssuedAt = latestOtp?.audit?.createdAt ? new Date(latestOtp.audit.createdAt).getTime() : 0;
+    if (latestOtp && Date.now() - otpIssuedAt > OTP_TTL_MS) {
+      throw new AppCustomException(
+        HttpStatus.BAD_REQUEST,
+        'This OTP has expired. Please request a new one.',
+      );
+    }
     if (
       userOtpList &&
       userOtpList?.length > 0 &&

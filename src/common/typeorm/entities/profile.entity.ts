@@ -10,20 +10,18 @@ import { ReferralSourceEnum } from 'src/core/users/enums/referral-source.enum';
 @Entity()
 export class Profile extends AbstractEntity implements IProfile {
   @Column({
-    type: 'varchar',
-    length: 200,
-    nullable: true,
+    type: 'integer',
     default: null,
   })
-  linkedinUrl: string;
+  userId: number;
 
   @Column({
     type: 'varchar',
-    length: 100,
+    length: 50,
     nullable: true,
     default: null,
   })
-  about: string;
+  auth_provider: string;
 
   @Column({
     type: 'varchar',
@@ -40,6 +38,14 @@ export class Profile extends AbstractEntity implements IProfile {
     default: null,
   })
   linkedinId: string;
+
+  @Column({
+    type: 'varchar',
+    length: 200,
+    nullable: true,
+    default: null,
+  })
+  linkedinUrl: string;
 
   // A live posting credential — never loaded unless a query selects it explicitly
   // (LinkedinShareService), so no profile response can carry it to a client.
@@ -60,11 +66,11 @@ export class Profile extends AbstractEntity implements IProfile {
 
   @Column({
     type: 'varchar',
-    length: 50,
+    length: 100,
     nullable: true,
     default: null,
   })
-  auth_provider: string;
+  about: string;
 
   @Column({
     type: 'int',
@@ -193,12 +199,6 @@ export class Profile extends AbstractEntity implements IProfile {
     default: null,
   })
   inviteCodePromptedAt: Date;
-
-  @Column({
-    type: 'integer',
-    default: null,
-  })
-  userId: number;
 
   @OneToOne((type) => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'userId', referencedColumnName: 'id' })

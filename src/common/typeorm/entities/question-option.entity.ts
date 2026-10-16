@@ -12,6 +12,12 @@ import { Question } from './question.entity';
 
 @Entity()
 export class QuestionOption extends AbstractEntity implements IQuestionOption {
+  @Column({
+    type: 'integer',
+    nullable: false,
+  })
+  questionId: number;
+
   // Widened from 100 on 2026-08-23 — MySQL was silently truncating longer
   // scenario-explanation correct answers mid-word (varchar truncates, doesn't
   // error). Kept in sync with the DB-side ALTER TABLE so synchronize:true never
@@ -29,12 +35,6 @@ export class QuestionOption extends AbstractEntity implements IQuestionOption {
     length: 500,
   })
   comment: string;
-
-  @Column({
-    type: 'integer',
-    nullable: false,
-  })
-  questionId: number;
 
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;

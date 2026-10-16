@@ -36,11 +36,11 @@ export class Notification extends AbstractEntity implements INotification {
   @Column({ type: 'boolean', default: false })
   notifySMS: boolean;
 
-  @CreateDateColumn({ name: 'createdAt' })
-  createdAt: Date;
-
   @Column({ name: 'createdBy', default: null, select: false })
   createdBy: number;
+
+  @CreateDateColumn({ name: 'createdAt' })
+  createdAt: Date;
 
   @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;

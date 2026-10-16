@@ -55,12 +55,16 @@ export class LinkedinShareService {
       throw new BadRequestException('Could not connect LinkedIn. Please try again.');
     }
 
-    this.logger.log(`LinkedIn connect for userId=${userId}: granted scopes=${grant.scopes?.join(' ') ?? 'unknown'}`);
+    const granted = grant.scopes?.join(', ') ?? 'unknown';
+    const appId = process.env.LINKEDIN_CLIENT_ID ?? 'unset';
+    this.logger.log(`LinkedIn connect for userId=${userId}: app=${appId}, granted scopes=${granted}`);
     // A token without the posting scope "connects" fine but every share then 403s
-    // (ugcPosts.CREATE.NO_VERSION) — refuse it here, where the cause is still visible.
+    // (ugcPosts.CREATE.NO_VERSION) — refuse it here, where the cause is still visible. The app id
+    // and granted scopes go in the message: the usual cause is the Share on LinkedIn product being
+    // on a different LinkedIn app than the one this environment's client id points at.
     if (grant.scopes && !grant.scopes.includes(LINKEDIN_POST_SCOPE)) {
       throw new BadRequestException(
-        `LinkedIn didn't grant posting permission (${LINKEDIN_POST_SCOPE}). Please connect again and allow sharing.`,
+        `LinkedIn didn't grant posting permission (${LINKEDIN_POST_SCOPE}) for app ${appId}. Granted: ${granted}.`,
       );
     }
 
@@ -276,10 +280,9 @@ export class LinkedinShareService {
     const { asset, uploadMechanism } = register.data.value;
     const uploadUrl = uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
 
-    // Same as the original, previously working upload: the uploadUrl is pre-signed, so only the
-    // content type is sent with the bytes.
+    // Per the Share on LinkedIn doc's upload example, the bearer token goes with the bytes too.
     await axios.put(uploadUrl, data, {
-      headers: { 'Content-Type': mime },
+      headers: { Authorization: headers.Authorization, 'Content-Type': mime },
       maxBodyLength: Infinity,
     });
 
