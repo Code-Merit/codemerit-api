@@ -6,6 +6,7 @@ import { UserPreference } from 'src/common/typeorm/entities/user-preference.enti
 import { DEFAULT_USER_PREFERENCES } from 'src/common/utils/user-preference-defaults';
 import { CreateNotificationDto } from '../dtos/create-notification.dto';
 import { EmailService } from './email.service';
+import { CertificateEmailDetails } from 'src/common/mail/templates/mail-templates';
 import { NOTIFICATION_MESSAGES } from '../constants/notification.constants';
 
 @Injectable()
@@ -124,6 +125,7 @@ export class NotificationService {
     trackTitle: string,
     certificateNumber: string,
     certificationTrackId = 0,
+    emailDetails?: CertificateEmailDetails,
   ): Promise<Notification> {
     const entity = this.notificationRepo.create({
       userId,
@@ -145,6 +147,7 @@ export class NotificationService {
         userId,
         trackTitle,
         certificateNumber,
+        emailDetails,
       );
     }
     return saved;

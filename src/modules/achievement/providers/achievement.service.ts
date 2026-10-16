@@ -721,6 +721,12 @@ export class AchievementService {
         track?.title ?? 'Certification',
         cert.certificateNumber,
         certificationTrackId,
+        {
+          verificationCode: cert.verificationCode,
+          tierDisplayName: cert.tierDisplayName,
+          scorePercentage: cert.scorePercentage,
+          issuedAt: cert.issuedAt,
+        },
       );
       await this.activityService.createActivity(
         userId,

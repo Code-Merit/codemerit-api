@@ -11,12 +11,13 @@ export function inviteTemplate(
   const safeTarget = targetLabel ? escapeHtml(targetLabel) : null;
   const safeNote = note ? escapeHtml(note) : null;
   const whatFor = safeTarget ? `start ${safeTarget}` : 'start learning on CodeMerit';
+  const whatForText = targetLabel ? `start ${targetLabel}` : 'start learning on CodeMerit';
 
   return {
-    subject: `${inviterName} invited you to ${safeTarget ?? 'CodeMerit'}`,
+    subject: `${inviterName} invited you to ${targetLabel ?? 'CodeMerit'}`,
     html: renderEmailLayout({
-      preheader: `${inviterName} thinks you'd do great here — join and ${whatFor}.`,
-      heading: `${safeInviter} invited you!`,
+      preheader: `${inviterName} thinks you'd do great here — join and ${whatForText}.`,
+      heading: `${inviterName} invited you!`,
       bodyHtml: `
         <p>Hi there, <strong>${safeInviter}</strong> invited you to ${whatFor} on CodeMerit — skill assessments, hands-on lessons, and a certificate issued by a subject-matter specialist once you're ready.</p>
         ${safeNote ? `<p style="font-style:italic;color:#6b7280;">“${safeNote}”</p>` : ''}
@@ -39,6 +40,7 @@ export interface EmailTemplate {
 export function registrationWelcomeTemplate(
   name: string,
   otp: string,
+  email?: string,
 ): EmailTemplate {
   const safeName = escapeHtml(name);
   return {
@@ -46,7 +48,7 @@ export function registrationWelcomeTemplate(
     html: renderEmailLayout({
       preheader:
         'Use this code to verify your CodeMerit account and get started.',
-      heading: `Welcome, ${safeName}!`,
+      heading: `Welcome, ${name}!`,
       bodyHtml: `
         <p>Thanks for joining CodeMerit. We’re excited to help you learn faster, practice smarter, and build momentum toward your goals.</p>
         <p>To get started, please verify your account using the one-time code below.</p>
@@ -63,8 +65,8 @@ export function registrationWelcomeTemplate(
         'Start quizzes and track your growth',
         'Stay motivated with streaks and achievements',
       ],
-      ctaLabel: 'Open CodeMerit',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaLabel: 'Verify your account',
+      ctaUrl: `{{FRONTEND_URL}}/authentication/verify${email ? `?email=${encodeURIComponent(email)}` : ''}`,
     }),
   };
 }
@@ -110,14 +112,14 @@ export function accountVerifiedTemplate(name: string): EmailTemplate {
     subject: 'Your CodeMerit account is verified',
     html: renderEmailLayout({
       preheader: 'Your account is verified and ready to go.',
-      heading: `You’re all set, ${safeName}!`,
+      heading: `You’re all set, ${name}!`,
       bodyHtml: `
         <p>Your CodeMerit account is now verified. You can sign in and start learning, practicing, and building your achievements right away.</p>
       `,
       highlightHtml:
         '<strong>Your learning journey is ready.</strong><p>Open your dashboard to continue your streak, explore new lessons, and move toward your next milestone.</p>',
       ctaLabel: 'Go to CodeMerit',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/dashboard',
     }),
   };
 }
@@ -133,6 +135,8 @@ export function passwordChangedTemplate(name: string): EmailTemplate {
         <p>Hi ${safeName}, this confirms that your CodeMerit password was successfully updated.</p>
         <p>If you did not make this change, please reset your password immediately and contact support so we can help secure your account.</p>
       `,
+      ctaLabel: 'Reset your password',
+      ctaUrl: '{{FRONTEND_URL}}/authentication/forgot-password',
     }),
   };
 }
@@ -147,39 +151,127 @@ export function roleEnrolledTemplate(
     subject: `You’re enrolled in ${jobRoleTitle}`,
     html: renderEmailLayout({
       preheader: `You’re now on the ${jobRoleTitle} career track.`,
-      heading: `Welcome to ${safeRole}`,
+      heading: `Welcome to ${jobRoleTitle}`,
       bodyHtml: `
         <p>Hi ${safeName}, you’re now enrolled in the <strong>${safeRole}</strong> career track.</p>
         <p>Your progress across the related subjects and learning paths will now contribute to your journey toward this role’s certifications and milestones.</p>
       `,
       ctaLabel: 'View your career dashboard',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/dashboard',
     }),
   };
+}
+
+/** Optional snapshot fields from the issued Certificate row. All optional: manual grants carry
+ * no score/tier, and older callers may not have a verification code. */
+export interface CertificateEmailDetails {
+  verificationCode?: string | null;
+  tierDisplayName?: string | null;
+  scorePercentage?: number | string | null;
+  issuedAt?: Date | null;
 }
 
 export function certificateIssuedTemplate(
   name: string,
   trackTitle: string,
   certificateNumber: string,
+  details: CertificateEmailDetails = {},
 ): EmailTemplate {
   const safeName = escapeHtml(name);
   const safeTrack = escapeHtml(trackTitle);
   const safeCertNumber = escapeHtml(certificateNumber);
+
+  const issuedAt = details.issuedAt ? new Date(details.issuedAt) : new Date();
+  const issuedLabel = issuedAt.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  // decimal columns can come back from TypeORM as strings
+  const score =
+    details.scorePercentage != null && details.scorePercentage !== ''
+      ? Number(details.scorePercentage)
+      : null;
+  // floor, not round: 89.6 must not read "90%" next to a plain "Certified" (Distinction is >= 90)
+  const scoreLabel = score != null && !Number.isNaN(score) ? `${Math.floor(score)}%` : null;
+  const tier = details.tierDisplayName?.trim() || null;
+  const withDistinction = !!tier && /distinction/i.test(tier);
+
+  // /verify/:code is the public credential page (view + PDF download); fall back to the
+  // signed-in certificates explorer when no code is available.
+  const certPath = details.verificationCode
+    ? `/verify/${encodeURIComponent(details.verificationCode)}`
+    : '/certificates';
+  const certUrl = `{{FRONTEND_URL}}${certPath}`;
+
+  const linkedInParams: Array<[string, string]> = [
+    ['startTask', 'CERTIFICATION_NAME'],
+    ['name', encodeURIComponent(trackTitle)],
+    ['organizationName', 'CodeMerit'],
+    ['issueYear', String(issuedAt.getFullYear())],
+    ['issueMonth', String(issuedAt.getMonth() + 1)],
+    ['certId', encodeURIComponent(certificateNumber)],
+  ];
+  if (details.verificationCode) {
+    // {{FRONTEND_URL}} is substituted raw at dispatch; ':' and '/' are legal in a query value.
+    linkedInParams.push(['certUrl', certUrl]);
+  }
+  const linkedInUrl = `https://www.linkedin.com/profile/add?${linkedInParams
+    .map(([k, v]) => `${k}=${v}`)
+    .join('&amp;')}`;
+
+  const resultLabel = [tier, scoreLabel].filter(Boolean).join(' · ');
+  const detailRows: Array<[string, string]> = [
+    ['Certificate', safeTrack],
+    ['Certificate ID', safeCertNumber],
+    ['Issued', escapeHtml(issuedLabel)],
+    ...(resultLabel ? [['Result', escapeHtml(resultLabel)] as [string, string]] : []),
+    ...(details.verificationCode
+      ? [
+          [
+            'Verify',
+            `<a href="${certUrl}" style="color:#4F46E5;text-decoration:none;">{{FRONTEND_URL}}${escapeHtml(certPath)}</a>`,
+          ] as [string, string],
+        ]
+      : []),
+  ];
+  const detailsTable = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.6;">
+    ${detailRows
+      .map(
+        ([label, value]) =>
+          `<tr><td style="padding:4px 12px 4px 0;color:#6b7280;white-space:nowrap;vertical-align:top;width:1%;">${label}</td><td style="padding:4px 0;color:#1f2937;font-weight:600;word-break:break-word;">${value}</td></tr>`,
+      )
+      .join('')}
+  </table>`;
+
   return {
-    subject: `You earned the ${trackTitle} certificate!`,
+    subject: withDistinction
+      ? `You earned the ${trackTitle} certificate — with Distinction!`
+      : `You earned the ${trackTitle} certificate!`,
     html: renderEmailLayout({
-      preheader: `Congratulations on earning the ${trackTitle} certificate.`,
+      preheader: withDistinction
+        ? `Congratulations — you earned the ${trackTitle} certificate with Distinction.`
+        : `Congratulations on earning the ${trackTitle} certificate.`,
       heading: 'Congratulations! 🎉',
       bodyHtml: `
         <p>Hi ${safeName}, you’ve earned the <strong>${safeTrack}</strong> certificate.</p>
-        <p>Your certificate reference number is <strong>${safeCertNumber}</strong>.</p>
+        ${
+          withDistinction && scoreLabel
+            ? `<p>You scored <strong>${scoreLabel}</strong>, which earns this certificate <strong>with Distinction</strong>.</p>`
+            : ''
+        }
+        ${
+          details.verificationCode
+            ? '<p>Anyone can check your certificate at its public verification link, so it’s ready to add to your LinkedIn profile, résumé, or portfolio.</p>'
+            : ''
+        }
       `,
       sectionTitle: 'Certificate details',
-      sectionHtml:
-        '<p>Share your achievement with your network and keep the momentum going by taking on your next challenge.</p>',
+      sectionHtml: detailsTable,
       ctaLabel: 'View your certificate',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: certUrl,
+      secondaryCtaLabel: 'Add to LinkedIn',
+      secondaryCtaUrl: linkedInUrl,
     }),
   };
 }
@@ -202,7 +294,7 @@ export function badgeEarnedTemplate(
       highlightHtml:
         '<strong>Keep the momentum going.</strong><p>Your next lesson or quiz is waiting—keep building on this success.</p>',
       ctaLabel: 'View your badges',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/badges',
     }),
   };
 }
@@ -224,7 +316,7 @@ export function streakMilestoneTemplate(
       highlightHtml:
         '<strong>Small daily effort adds up.</strong><p>A short session today can help you build toward your next milestone and keep the streak alive.</p>',
       ctaLabel: 'Keep the streak going',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/dashboard',
     }),
   };
 }
@@ -247,7 +339,7 @@ export function interviewRescheduledTemplate(
         <p>New date &amp; time: <strong>${safeWhen}</strong></p>
       `,
       ctaLabel: 'View interview details',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/assessment/scheduled',
     }),
   };
 }
@@ -270,7 +362,7 @@ export function interviewAssignedTemplate(
         <p>Scheduled for: <strong>${safeWhen}</strong></p>
       `,
       ctaLabel: 'View interview details',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/assessment/panel',
     }),
   };
 }
@@ -295,7 +387,7 @@ export function interviewScheduledTemplate(
         change before then, you can reschedule or cancel from your dashboard.</p>
       `,
       ctaLabel: 'View interview details',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/assessment/scheduled',
     }),
   };
 }
@@ -345,7 +437,7 @@ export function interviewCompletedTemplate(
         <p>You can view the full report — including feedback from every round — any time.</p>
       `,
       ctaLabel: 'View your full report',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/assessment/scheduled',
     }),
   };
 }
@@ -373,7 +465,7 @@ export function interviewRoundScheduledTemplate(
         <p>You'll be meeting with: <strong>${safeInterviewer}</strong></p>
       `,
       ctaLabel: 'View interview details',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/assessment/scheduled',
     }),
   };
 }
@@ -398,7 +490,7 @@ export function interviewRoundRescheduledTemplate(
         <p>New date &amp; time: <strong>${safeWhen}</strong></p>
       `,
       ctaLabel: 'View interview details',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/assessment/panel',
     }),
   };
 }
@@ -451,7 +543,7 @@ export function interviewRoundCompletedTemplate(
         us once the overall interview has been finalized.</p>
       `,
       ctaLabel: 'View interview details',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/assessment/scheduled',
     }),
   };
 }
@@ -519,7 +611,7 @@ export function levelUpTemplate(
         <p>Hi ${safeName}, you've leveled up to <strong>Level ${level}: ${safeTitle}</strong>. Keep earning XP to reach the next level.</p>
       `,
       ctaLabel: 'View your progress',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/dashboard',
     }),
   };
 }
@@ -539,7 +631,7 @@ export function dailyEngagementTemplate(
         <p>Consistent daily practice is the key to mastering your track and acing technical interviews.</p>
       `,
       ctaLabel: 'Continue practicing',
-      ctaUrl: '{{FRONTEND_URL}}',
+      ctaUrl: '{{FRONTEND_URL}}/dashboard',
     }),
   };
 }

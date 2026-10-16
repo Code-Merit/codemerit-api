@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { MailService } from 'src/common/mail/providers/mail.service';
+import { CertificateEmailDetails } from 'src/common/mail/templates/mail-templates';
 
 @Injectable()
 export class EmailService {
@@ -55,6 +56,7 @@ export class EmailService {
     userId: number,
     trackTitle: string,
     certificateNumber: string,
+    details?: CertificateEmailDetails,
   ): Promise<void> {
     try {
       const recipient = await this.getRecipient(userId);
@@ -64,6 +66,7 @@ export class EmailService {
         recipient.name,
         trackTitle,
         certificateNumber,
+        details,
       );
     } catch (error) {
       this.handleFailure('certificate-issued', userId, error);

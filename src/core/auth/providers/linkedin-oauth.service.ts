@@ -8,6 +8,13 @@ export interface LinkedInProfile {
   picture: string;
 }
 
+export interface LinkedInTokenGrant {
+  accessToken: string;
+  expiresInSeconds: number | null;
+  /** null when LinkedIn omitted the field — treat as unknown, not as "nothing granted". */
+  scopes: string[] | null;
+}
+
 /**
  * The OAuth code<->token mechanics shared by two call sites that must never diverge: the existing
  * "Sign in with LinkedIn" login flow (AuthService.handleLinkedinCallback) and the newer "connect
@@ -23,6 +30,12 @@ export class LinkedInOAuthService {
   private readonly redirectUri = process.env.LINKEDIN_REDIRECT_URI;
 
   async exchangeCodeForToken(code: string): Promise<string> {
+    return (await this.exchangeCodeForTokenGrant(code)).accessToken;
+  }
+
+  /** Full token grant — `scopes` is what the member actually granted (LinkedIn's `scope`
+   * response field), which can be narrower than what the popup requested. */
+  async exchangeCodeForTokenGrant(code: string): Promise<LinkedInTokenGrant> {
     const tokenUrl = 'https://www.linkedin.com/oauth/v2/accessToken';
 
     const params = new URLSearchParams({
@@ -39,7 +52,12 @@ export class LinkedInOAuthService {
       },
     });
 
-    return response.data.access_token;
+    const { access_token, expires_in, scope } = response.data;
+    return {
+      accessToken: access_token,
+      expiresInSeconds: typeof expires_in === 'number' ? expires_in : null,
+      scopes: typeof scope === 'string' ? scope.split(/[\s,]+/).filter(Boolean) : null,
+    };
   }
 
   async fetchLinkedInProfile(accessToken: string): Promise<LinkedInProfile> {

@@ -7,11 +7,14 @@ import { Profile } from 'src/common/typeorm/entities/profile.entity';
 import { LinkedinShareDto } from '../dtos/linkedin-share.dto';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
-import { LinkedInOAuthService } from 'src/core/auth/providers/linkedin-oauth.service';
+import { LinkedInOAuthService, LinkedInTokenGrant } from 'src/core/auth/providers/linkedin-oauth.service';
 import { UserProfileService } from './user-profile.service';
 
 // The frontend share button matches on "not connected" to switch to its Connect action.
 const LINKEDIN_NOT_CONNECTED = 'LinkedIn is not connected for this user.';
+const LINKEDIN_RECONNECT_REQUIRED =
+  'LinkedIn is not connected for this user with posting permission. Please connect again.';
+const LINKEDIN_POST_SCOPE = 'w_member_social';
 
 // "Share on LinkedIn" product (w_member_social): v2/ugcPosts + v2/assets, per
 // learn.microsoft.com/linkedin/consumer/integrations/self-serve/share-on-linkedin.
@@ -40,18 +43,30 @@ export class LinkedinShareService {
    * actually signs in.
    */
   async connectAccount(userId: number, code: string) {
-    let accessToken: string;
+    let grant: LinkedInTokenGrant;
     let profile: { sub: string };
     try {
-      accessToken = await this.linkedInOAuth.exchangeCodeForToken(code);
-      profile = await this.linkedInOAuth.fetchLinkedInProfile(accessToken);
+      grant = await this.linkedInOAuth.exchangeCodeForTokenGrant(code);
+      profile = await this.linkedInOAuth.fetchLinkedInProfile(grant.accessToken);
     } catch (error: any) {
       // Most often an expired/reused code or a LINKEDIN_REDIRECT_URI that doesn't match the
       // origin the popup ran on — LinkedIn's reason is logged, the user gets a retryable 400.
       this.logger.error(`LinkedIn connect failed: ${JSON.stringify(error?.response?.data ?? error?.message)}`);
       throw new BadRequestException('Could not connect LinkedIn. Please try again.');
     }
-    const linkedinTokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000); // 60 days, matches the login flow's own grant window
+
+    this.logger.log(`LinkedIn connect for userId=${userId}: granted scopes=${grant.scopes?.join(' ') ?? 'unknown'}`);
+    // A token without the posting scope "connects" fine but every share then 403s
+    // (ugcPosts.CREATE.NO_VERSION) — refuse it here, where the cause is still visible.
+    if (grant.scopes && !grant.scopes.includes(LINKEDIN_POST_SCOPE)) {
+      throw new BadRequestException(
+        `LinkedIn didn't grant posting permission (${LINKEDIN_POST_SCOPE}). Please connect again and allow sharing.`,
+      );
+    }
+
+    const accessToken = grant.accessToken;
+    // LinkedIn's own expires_in when given (normally 60 days), same window the login flow assumes.
+    const linkedinTokenExpiresAt = new Date(Date.now() + (grant.expiresInSeconds ?? 60 * 24 * 60 * 60) * 1000);
 
     await this.userProfileService.updateSocialProfile(userId, {
       linkedinId: profile.sub,
@@ -102,6 +117,7 @@ export class LinkedinShareService {
     let shareRecord: LinkedinShare | undefined;
     let postUrn: string | null;
     let imageAsset: string | null = null;
+    let publishing = false;
 
     try {
       // create an audit row with pending status
@@ -136,6 +152,7 @@ export class LinkedinShareService {
       }
 
       // 2. Publish — an image post, a link-card post, or plain text.
+      publishing = true;
       const postResponse = await axios.post(
         `${LINKEDIN_V2}/ugcPosts`,
         {
@@ -166,6 +183,17 @@ export class LinkedinShareService {
       // 401 = LinkedIn revoked or expired the token early — same reconnect path as no token.
       if (error?.response?.status === 401) {
         throw new BadRequestException(LINKEDIN_NOT_CONNECTED);
+      }
+      // 403 on ugcPosts = the stored token can't post (ACCESS_DENIED "ugcPosts.CREATE.NO_VERSION"):
+      // typically issued without w_member_social, e.g. before the scope was requested or by a
+      // different LinkedIn app. Retrying with it can never work, so drop it — status flips to
+      // disconnected and the button offers Connect, which mints a fresh, scope-checked token.
+      if (publishing && error?.response?.status === 403) {
+        this.logger.warn(`LinkedIn post refused (403) for userId=${userId}, clearing token: ${JSON.stringify(detail)}`);
+        await this.disconnectAccount(userId).catch((e) =>
+          this.logger.error(`Failed to clear refused LinkedIn token: ${e instanceof Error ? e.message : String(e)}`),
+        );
+        throw new BadRequestException(LINKEDIN_RECONNECT_REQUIRED);
       }
       throw new BadRequestException(
         error.response?.data?.message ??

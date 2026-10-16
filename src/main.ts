@@ -9,6 +9,7 @@ import { GlobalExceptionsFilter } from './common/filters/global-exception.filter
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { IAppConfig, appConfig } from './config/app-config';
+import { uploadsRoot, UPLOADS_URL_PREFIX } from './common/constants/uploads.constants';
 
 configDotenv({
   path: `.env`,
@@ -61,6 +62,19 @@ async function bootstrap() {
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
+  });
+
+  // Public user uploads (profile pictures). Static middleware runs before the JWT guard, so these
+  // load in a plain <img> without a token. Registered AFTER enableCors on purpose — both are plain
+  // app.use() in call order, and canvas captures (html2canvas useCORS) need the CORS headers.
+  // File names are unique per upload, so they can be cached for long.
+  app.useStaticAssets(uploadsRoot(), {
+    prefix: `${UPLOADS_URL_PREFIX}/`,
+    maxAge: '365d',
+    immutable: true,
+    index: false,
+    dotfiles: 'deny',
+    setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
   });
 
   app.useGlobalInterceptors(new ResponseInterceptor(), new AuditInterceptor());

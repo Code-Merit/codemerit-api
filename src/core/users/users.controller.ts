@@ -18,6 +18,7 @@ import { QuizService } from 'src/modules/quiz/providers/quiz.service';
 import { CreateUserDto } from '../auth/dto/create-user.dto';
 import { UpdateUserProfileDto } from './dtos/update-user-profile.dto';
 import { UpdateBasicInfoDto } from './dtos/update-basic-info.dto';
+import { UpdateAvatarDto } from './dtos/update-avatar.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { LinkedinShareDto } from './dtos/linkedin-share.dto';
@@ -305,6 +306,47 @@ export class UsersController {
     }
     const result = await this.usersService.getOwnUserInfo(req.user.id);
     return new ApiResponse('Profile updated successfully.', result);
+  }
+
+  @ApiOperation({
+    summary: "Upload or replace the caller's own profile picture",
+    description:
+      'Self-serve, resolved from the JWT. Body is a base64 PNG/JPEG/WebP data URL (≤1 MB decoded; ' +
+      'the client crops/resizes first). Saved to uploads/users/images/ and served publicly under ' +
+      '/uploads/...; `user.image` is set to that URL and the previous upload is deleted. Returns `{ image }`.',
+  })
+  @Put('avatar')
+  async updateAvatar(
+    @Request() req: any,
+    @Body() dto: UpdateAvatarDto,
+  ): Promise<ApiResponse<any>> {
+    const result = await this.usersService.setOwnAvatar(
+      req.user.id,
+      dto.imageDataUrl,
+      this.publicApiBaseUrl(req),
+    );
+    return new ApiResponse('Profile picture updated.', result);
+  }
+
+  @ApiOperation({
+    summary: "Remove the caller's own profile picture",
+    description: 'Clears `user.image` (the default avatar shows) and deletes the uploaded file.',
+  })
+  @Delete('avatar')
+  async removeAvatar(@Request() req: any): Promise<ApiResponse<any>> {
+    const result = await this.usersService.removeOwnAvatar(req.user.id);
+    return new ApiResponse('Profile picture removed.', result);
+  }
+
+  /**
+   * API_PUBLIC_URL if set (required on deployed environments). The fallback — for local dev —
+   * deliberately ignores X-Forwarded-Host: it's client-controllable, and the URL built here is
+   * stored and shown to every other user who sees this avatar.
+   */
+  private publicApiBaseUrl(req: any): string {
+    const configured = process.env.API_PUBLIC_URL?.trim();
+    if (configured) return configured.replace(/\/+$/, '');
+    return `${req.protocol}://${req.get('host')}`;
   }
 
   @ApiOperation({

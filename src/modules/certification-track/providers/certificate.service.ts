@@ -216,7 +216,10 @@ export class CertificateService {
       return { certificateNumber: raced.certificateNumber, certificationTrackId: track.id, alreadyIssued: true };
     }
 
-    await this.notificationService.notifyCertificateIssued(dto.userId, track.title, cert.certificateNumber, track.id);
+    await this.notificationService.notifyCertificateIssued(dto.userId, track.title, cert.certificateNumber, track.id, {
+      verificationCode: cert.verificationCode,
+      issuedAt: cert.issuedAt,
+    });
     await this.activityService.createActivity(
       dto.userId,
       'Certificate Earned',

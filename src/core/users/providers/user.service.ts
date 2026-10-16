@@ -37,6 +37,20 @@ import { ActivityService } from 'src/modules/activity/providers/activity/activit
 import { UserPermissionService } from 'src/modules/user-permission/providers/user-permission.service';
 import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
 import { UserRoleEnum } from '../enums/user-roles.enum';
+import { mkdir, unlink, writeFile } from 'fs/promises';
+import { join } from 'path';
+import {
+  uploadsRoot,
+  UPLOADS_URL_PREFIX,
+  USER_IMAGES_SUBDIR,
+} from 'src/common/constants/uploads.constants';
+
+const MAX_AVATAR_BYTES = 1024 * 1024;
+const AVATAR_SIGNATURES: Record<string, (b: Buffer) => boolean> = {
+  png: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])),
+  jpg: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  webp: (b) => b.subarray(0, 4).toString('ascii') === 'RIFF' && b.subarray(8, 12).toString('ascii') === 'WEBP',
+};
 
 export interface RequestingUser {
   id: number;
@@ -335,6 +349,90 @@ export class UserService {
     if (data.country !== undefined) user.country = data.country;
     if (data.designation !== undefined) user.designation = data.designation;
     return this.userRepo.save(user);
+  }
+
+  /**
+   * Writes the caller's picture to uploads/users/images/<userId>-<timestamp>.<ext>, points
+   * `user.image` at its public URL, then deletes their previous upload (if any). A fresh file name
+   * per upload means browsers/CDNs never serve a stale cached picture.
+   */
+  async setOwnAvatar(userId: number, imageDataUrl: string, apiBaseUrl: string): Promise<{ image: string }> {
+    const match = imageDataUrl.match(/^data:image\/(png|jpeg|webp);base64,(.+)$/);
+    if (!match) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'Unsupported image format.');
+    }
+    const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+    const data = Buffer.from(match[2], 'base64');
+    if (data.length === 0 || data.length > MAX_AVATAR_BYTES) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'Image must be smaller than 1 MB.');
+    }
+    // The data-URL prefix is client-supplied — the bytes must really be that image type.
+    if (!AVATAR_SIGNATURES[ext](data)) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'File content does not match its image type.');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'User not Found.');
+    }
+
+    const dir = join(uploadsRoot(), USER_IMAGES_SUBDIR);
+    const fileName = `${userId}-${Date.now()}.${ext}`;
+    const filePath = join(dir, fileName);
+    await mkdir(dir, { recursive: true });
+    await writeFile(filePath, data);
+
+    const previous = user.image;
+    user.image = `${apiBaseUrl}${UPLOADS_URL_PREFIX}/${USER_IMAGES_SUBDIR}/${fileName}`;
+    try {
+      await this.userRepo.save(user);
+    } catch (err) {
+      await unlink(filePath).catch(() => undefined); // don't leave an unreferenced file behind
+      throw err;
+    }
+    await this.deleteOwnAvatarFile(userId, previous);
+    await this.logProfilePictureActivity(userId);
+    return { image: user.image };
+  }
+
+  /** Clears `user.image` (the app falls back to its default avatar) and deletes the uploaded file. */
+  async removeOwnAvatar(userId: number): Promise<{ image: null }> {
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new AppCustomException(HttpStatus.BAD_REQUEST, 'User not Found.');
+    }
+    const previous = user.image;
+    user.image = null;
+    await this.userRepo.save(user);
+    await this.deleteOwnAvatarFile(userId, previous);
+    return { image: null };
+  }
+
+  /**
+   * Deletes a previous upload only when the URL's file name is one this user owns
+   * (`<userId>-<digits>.<ext>`) — never a social-login picture URL or someone else's file.
+   */
+  private async deleteOwnAvatarFile(userId: number, imageUrl: string | null): Promise<void> {
+    const fileName = imageUrl?.split(`${UPLOADS_URL_PREFIX}/${USER_IMAGES_SUBDIR}/`)[1];
+    if (!fileName || !new RegExp(`^${userId}-\\d+\\.(jpg|png|webp)$`).test(fileName)) return;
+    try {
+      await unlink(join(uploadsRoot(), USER_IMAGES_SUBDIR, fileName));
+    } catch (err) {
+      this.logger.warn(`Could not delete old avatar ${fileName}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  private async logProfilePictureActivity(userId: number): Promise<void> {
+    try {
+      await this.activityService.createActivity(userId, 'Profile Updated', 'updated profile picture.', {
+        dataId: String(userId),
+        dataType: 'USER',
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to log avatar activity for userId=${userId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   async findAll(): Promise<User[]> {

@@ -249,8 +249,18 @@ export class AuthService {
   }
 
   async handleLinkedinCallback(code: string) {
-    const accessToken = await this.linkedInOAuth.exchangeCodeForToken(code);
-    const profile = await this.linkedInOAuth.fetchLinkedInProfile(accessToken);
+    const grant = await this.linkedInOAuth.exchangeCodeForTokenGrant(code);
+    const profile = await this.linkedInOAuth.fetchLinkedInProfile(grant.accessToken);
+    // The stored token doubles as the share token. Only keep it when it can actually post —
+    // otherwise sign-in would overwrite a working share token with one that 403s on ugcPosts.
+    // (updateSocialProfile skips undefined fields, so omitting them leaves the old ones intact.)
+    const canPost = !grant.scopes || grant.scopes.includes('w_member_social');
+    const shareToken = canPost
+      ? {
+          linkedinAccessToken: grant.accessToken,
+          linkedinTokenExpiresAt: new Date(Date.now() + (grant.expiresInSeconds ?? 60 * 24 * 60 * 60) * 1000),
+        }
+      : {};
 
     const [firstName, ...lastNameParts] = (profile.given_name || '')
       .trim()
@@ -262,8 +272,7 @@ export class AuthService {
     if (existingUser) {
       await this.userProfileService.updateSocialProfile(existingUser.id, {
         linkedinId: profile.sub,
-        linkedinAccessToken: accessToken,
-        linkedinTokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
+        ...shareToken,
         auth_provider: 'LinkedIn',
       });
 
@@ -291,8 +300,7 @@ export class AuthService {
 
     await this.userProfileService.updateSocialProfile(user.id, {
       linkedinId: profile.sub,
-      linkedinAccessToken: accessToken,
-      linkedinTokenExpiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
+      ...shareToken,
       auth_provider: 'LinkedIn',
     });
 

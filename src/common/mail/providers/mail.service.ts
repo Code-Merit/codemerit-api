@@ -5,6 +5,7 @@ import { UserOtpTagsEnum } from 'src/core/users/enums/user-otp-Tags.enum';
 import {
   accountVerifiedTemplate,
   badgeEarnedTemplate,
+  CertificateEmailDetails,
   certificateIssuedTemplate,
   interviewAssignedTemplate,
   interviewCancelledTemplate,
@@ -103,7 +104,7 @@ export class MailService {
     name: string,
     otp: string,
   ): Promise<void> {
-    await this.dispatch(to, registrationWelcomeTemplate(name, otp));
+    await this.dispatch(to, registrationWelcomeTemplate(name, otp, to));
   }
 
   async sendOtpEmail(
@@ -136,10 +137,11 @@ export class MailService {
     name: string,
     trackTitle: string,
     certificateNumber: string,
+    details?: CertificateEmailDetails,
   ): Promise<void> {
     await this.dispatch(
       to,
-      certificateIssuedTemplate(name, trackTitle, certificateNumber),
+      certificateIssuedTemplate(name, trackTitle, certificateNumber, details),
     );
   }
 
