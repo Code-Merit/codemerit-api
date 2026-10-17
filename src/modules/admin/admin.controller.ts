@@ -9,6 +9,9 @@ import { Roles } from 'src/core/auth/decorators/roles.decorator';
 import { RolesGuard } from 'src/core/auth/guards/roles.guard';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { AdminService } from './providers/admin.service';
+import { AdminCurriculumService } from './providers/admin-curriculum.service';
+import { AdminOrLmsManagerGuard } from 'src/common/policies/admin-or-lms-manager.guard';
+import { SubjectMatrixResponse } from './dtos/subject-matrix.model';
 
 
 @ApiTags('Admin')
@@ -17,6 +20,7 @@ import { AdminService } from './providers/admin.service';
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,
+    private readonly adminCurriculumService: AdminCurriculumService,
   ) {}
 
   @ApiOperation({
@@ -38,5 +42,20 @@ export class AdminController {
       return new ApiResponse('Data fetched successfully.', result);
     }
     return new ApiResponse('Error fetching data.', null);
+  }
+
+  @ApiOperation({
+    summary: 'Get the curriculum health matrix for every subject (Admin or LMS Manager)',
+    description:
+      'One row per published subject (plus unpublished subjects that already have topics): ' +
+      'topic/track counts, Active Trivia depth per topic (min, median, mean, max), Pending backlog, ' +
+      'lesson and interview coverage, the fewest correct answers that earn the subject’s entry and ' +
+      'top certificates (same completion rules as issuance), and a 0–8 health score with its verdict.',
+  })
+  @UseGuards(AdminOrLmsManagerGuard)
+  @Get('subject-matrix')
+  async getSubjectMatrix(): Promise<ApiResponse<SubjectMatrixResponse>> {
+    const result = await this.adminCurriculumService.getSubjectMatrix();
+    return new ApiResponse('Subject matrix fetched successfully.', result);
   }
 }

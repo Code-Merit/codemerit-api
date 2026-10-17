@@ -36,6 +36,20 @@ export const lmsRoutes = [
   //   submenu: [],
   // },
   {
+    // Curriculum health matrix. Admins reach it under Administration > Subject Matrix, so it is
+    // listed here only for non-admin LmsManager permission holders (no duplicate for Admins).
+    path: '/admin/dashboard/analysis',
+    title: 'Subject Matrix',
+    iconType: 'material-icons-outlined',
+    icon: 'table_chart',
+    class: '',
+    groupTitle: false,
+    badge: '',
+    badgeClass: '',
+    role: ['User', 'Moderator'],
+    submenu: [],
+  },
+  {
     path: '/lms/questions',
     title: 'My Questions',
     iconType: 'material-icons-outlined',

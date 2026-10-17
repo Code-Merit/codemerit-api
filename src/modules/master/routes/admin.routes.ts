@@ -31,10 +31,10 @@ export const adminRoutes = [
         submenu: [],
       },
       {
-        // Renamed from the old "Admin Panel" — that title now belongs to the page above.
-        // This is the older per-subject analytics view (AnalyticsDashboardComponent).
+        // Curriculum health per subject (AnalyticsDashboardComponent). Also offered to non-admin
+        // LMS Managers via lmsRoutes — same page, gated by AdminOrLmsManagerGuard on the API.
         path: '/admin/dashboard/analysis',
-        title: 'Subject Analytics',
+        title: 'Subject Matrix',
         iconType: '',
         icon: '',
         class: 'ml-menu',

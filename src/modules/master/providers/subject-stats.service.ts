@@ -654,7 +654,10 @@ export class SubjectStatsService {
     const certMap = new Map<number, Certificate>(myCertificates.map((c) => [c.certificationTrackId, c]));
 
     return [...nativeTracks]
-      .sort((a, b) => a.id - b.id) // no dedicated sortOrder on subject-native tracks; id order matches authoring order (Foundation -> Intermediate -> Developer)
+      // No dedicated sortOrder on subject-native certificates. Ladders are cumulative (each rung
+      // adds subject tracks), so track count is the rung, independent of creation order; id
+      // only breaks ties. (Pure id order broke once a middle rung was added after the top one.)
+      .sort((a, b) => (stIdsByCt.get(a.id)?.size ?? 0) - (stIdsByCt.get(b.id)?.size ?? 0) || a.id - b.id)
       .map((track) => {
         const subjectTracks = [...(stIdsByCt.get(track.id) ?? [])]
           .map((id) => subjectTrackMap.get(id))

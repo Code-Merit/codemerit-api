@@ -10,6 +10,7 @@ import { AdminInterviewsService } from './providers/admin-interviews.service';
 import { AdminEnrollmentsService } from './providers/admin-enrollments.service';
 import { AdminRevenueService } from './providers/admin-revenue.service';
 import { AdminTrendsService } from './providers/admin-trends.service';
+import { AdminCurriculumService } from './providers/admin-curriculum.service';
 import { User } from 'src/common/typeorm/entities/user.entity';
 import { Question } from 'src/common/typeorm/entities/question.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
@@ -75,6 +76,7 @@ import { PaymentOrder } from 'src/common/typeorm/entities/payment-order.entity';
     AdminEnrollmentsService,
     AdminRevenueService,
     AdminTrendsService,
+    AdminCurriculumService,
   ],
   controllers: [AdminController],
   exports: [AdminService],
