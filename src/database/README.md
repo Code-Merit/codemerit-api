@@ -11,6 +11,37 @@ This document covers how to seed the database and how to refresh the seed data f
 | Seed everything (permissions, subjects, curriculum, questions) | `npm run seed` | Idempotent — safe to re-run, matches every record by slug and skips what already exists |
 | Refresh the seed snapshot from the current DB | `npm run seed:snapshot` | Overwrites `seeds/data/*.seed.json` with the live DB state |
 | Generate standard quizzes from seeded questions | `npm run seed:quizzes` | Separate concern — quiz generation, not raw data |
+| Create / update the schema | `npm run migration:run` | Applies pending migrations from `migrations/` |
+| See which migrations are applied | `npm run migration:show` | `[X]` = applied |
+
+---
+
+## Schema & Migrations
+
+The schema starts from a single baseline, `migrations/<ts>-BaselineSchemaV1.ts`, which
+replaced all pre-release migrations before the first production launch. A fresh database
+is built with:
+
+```bash
+npm run migration:run   # creates every table from the baseline
+npm run seed            # loads curriculum, questions, lessons
+```
+
+**Column order convention.** TypeORM creates columns in the order properties are declared
+in the entity (`id` from `AbstractEntity` first). Keep that order when adding fields:
+`id` → foreign keys / identity (`userId`, `code`, `title`, `slug`) → business columns →
+audit columns last (`createdBy`, `updatedBy`, `createdAt`, `updatedAt`, `deletedAt`).
+New columns added later by `ALTER TABLE` land at the end of existing tables. That is fine,
+since order has no functional effect, but declare them in the right place in the entity so
+fresh environments get the intended order.
+
+**Writing new migrations.** `migration:generate` against a local **MariaDB** produces
+false positives: it re-`CHANGE`s every nullable column (MariaDB reports `DEFAULT NULL`
+differently) and the FKs/indexes on them. Strip that noise and keep only the real
+change, or hand-write the migration (as most pre-release ones were). Anything that only
+exists as raw SQL (generated columns, FKs without a relation, named indexes) must also be
+declared in the entity, or `migration:generate` will propose dropping it. See
+`SkillEnrollment.activeGuardKey`.
 
 ---
 

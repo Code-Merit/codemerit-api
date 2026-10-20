@@ -21,7 +21,11 @@
     "seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed.ts",
     "seed:snapshot": "ts-node -r tsconfig-paths/register src/database/scripts/export-seed-snapshot.ts",
     "seed:quizzes": "ts-node -r tsconfig-paths/register src/database/scripts/seed-standard-quizzes.ts",
-    "seed:lessons": "ts-node -r tsconfig-paths/register src/database/scripts/seed-lessons.ts"
+    "seed:lessons": "ts-node -r tsconfig-paths/register src/database/scripts/seed-lessons.ts",
+    "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js -d src/database/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "migration:show": "npm run typeorm -- migration:show"
   },
   "dependencies": {
     "@nestjs-modules/mailer": "^2.0.2",
