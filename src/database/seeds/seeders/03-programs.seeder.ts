@@ -9,6 +9,7 @@ import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { SubjectTrack } from 'src/common/typeorm/entities/subject-track.entity';
 import { SubjectTagEnum } from 'src/common/enum/subject-tag.enum';
+import { generateSlug, generateUniqueSlug } from 'src/common/utils/slugify.util';
 
 const DATA_FILE = path.join(__dirname, '../data/03-programs.seed.json');
 
@@ -17,7 +18,8 @@ interface ProgramsData {
     jobRoleSlug: string; subjectSlug: string; sortOrder: number; tag: string; note: string | null;
   }>;
   certificationTracks: Array<{
-    title: string; description: string | null;
+    title: string; slug?: string; description: string | null; content?: string | null;
+    subjectSlug?: string | null; passThreshold?: number | null; isPublished?: boolean;
   }>;
   certificationTrackJobRoles: Array<{
     certTrackTitle: string; jobRoleSlug: string; sortOrder: number; isPublished: boolean;
@@ -69,11 +71,35 @@ export async function seedPrograms(
   }
 
   let ctCreated = 0;
+  let ctContentBackfilled = 0;
   for (const c of data.certificationTracks) {
     const exists = await ctRepo.findOne({ where: { title: c.title } });
     if (!exists) {
-      await ctRepo.save(ctRepo.create({ title: c.title, description: c.description }));
+      const subject = c.subjectSlug ? subjectBySlug.get(c.subjectSlug) : null;
+      if (c.subjectSlug && !subject) {
+        console.warn(`  ⚠  Certification "${c.title}": subject "${c.subjectSlug}" not found`);
+        continue;
+      }
+
+      let slug = generateSlug(c.slug ?? c.title, 140);
+      while (!slug || await ctRepo.findOne({ where: { slug } })) {
+        slug = generateUniqueSlug(c.title, 140, 6);
+      }
+
+      await ctRepo.save(ctRepo.create({
+        title: c.title,
+        slug,
+        description: c.description,
+        content: c.content ?? null,
+        subjectId: subject?.id ?? null,
+        passThreshold: c.passThreshold ?? null,
+        isPublished: c.isPublished ?? true,
+      }));
       ctCreated++;
+    } else if (!exists.content && c.content) {
+      // Backfill only — never overwrite content an admin may have already crafted for this track.
+      await ctRepo.save({ ...exists, content: c.content });
+      ctContentBackfilled++;
     }
   }
 
@@ -117,7 +143,7 @@ export async function seedPrograms(
   }
 
   console.log(`  ✔ Job-role subjects        : ${data.jobRoleSubjects.length} declared (${jrsCreated} created, ${jrsUpdated} updated)`);
-  console.log(`  ✔ Certification tracks     : ${certTracks.length} records (${ctCreated} created)`);
+  console.log(`  ✔ Certification tracks     : ${certTracks.length} records (${ctCreated} created, ${ctContentBackfilled} content backfilled)`);
   console.log(`  ✔ Cert-track-job-role links: ${data.certificationTrackJobRoles.length} declared (${ctJobRoleCreated} created)`);
   console.log(`  ✔ Cert-track-subject links : ${data.certificationTrackSubjectTracks.length} declared (${linksCreated} created)`);
 }

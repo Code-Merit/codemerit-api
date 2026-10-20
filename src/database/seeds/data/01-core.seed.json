@@ -6,10 +6,10 @@
       "description": "Design and build end-to-end AI and machine learning systems from data to deployment.",
       "body": "AI/ML engineers work across the full intelligence stack — data preprocessing, model selection and training, evaluation, and production deployment. They bridge data science research and scalable engineering.",
       "scope": "AI & Machine Learning",
-      "orderId": 21,
+      "orderId": 23,
       "image": "",
       "color": "#9333EA",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "All Developer Roles",
@@ -28,18 +28,18 @@
       "description": "Develop native Android applications using Kotlin and the Android SDK.",
       "body": "Android developers build high-quality native apps for the Android platform using Kotlin (or Java), Jetpack libraries, Android SDK, and the Google Play publishing workflow.",
       "scope": "Mobile Development",
-      "orderId": 15,
+      "orderId": 21,
       "image": "",
       "color": "#3DDC84",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Angular Developer",
       "slug": "angular-developer",
-      "description": "Build enterprise-scale web applications using Angular, TypeScript, and RxJS.",
-      "body": "Angular developers work within Angular's opinionated framework, using TypeScript, dependency injection, RxJS observables, and the Angular CLI to build structured, maintainable large-scale apps.",
+      "description": "Frontend Engineer scope plus the Angular framework core.",
+      "body": "Angular Developers apply their frontend fundamentals to Angular — components, modules, routing and the core framework — building real Angular applications.",
       "scope": "JavaScript Ecosystem",
-      "orderId": 11,
+      "orderId": 6,
       "image": "",
       "color": "#DD0031",
       "isPublished": true
@@ -50,10 +50,10 @@
       "description": "Build the server-side logic, APIs, and data layers that power web and mobile applications.",
       "body": "Backend developers design and implement the server side of applications — RESTful and GraphQL APIs, database schemas, authentication, business logic, and infrastructure integration.",
       "scope": "Web Development",
-      "orderId": 7,
+      "orderId": 11,
       "image": "",
       "color": "#68A063",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Cloud Engineer",
@@ -61,10 +61,10 @@
       "description": "Design and manage provider-agnostic cloud infrastructure for scalable, secure systems. Not aligned to AWS, Azure, or GCP.",
       "body": "Cloud engineers architect and operate vendor-neutral cloud environments — provisioning compute, storage, and networking resources, designing for high availability, and optimising cost and security across major cloud platforms.",
       "scope": "Cloud & Infrastructure",
-      "orderId": 19,
+      "orderId": 18,
       "image": "",
       "color": "#FF9900",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Data Engineer",
@@ -75,17 +75,17 @@
       "orderId": 20,
       "image": "",
       "color": "#FF6B35",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "DevOps Engineer",
       "slug": "devops-engineer",
-      "description": "Automate software delivery pipelines, manage infrastructure, and ensure production reliability.",
-      "body": "DevOps engineers bridge development and operations — building CI/CD pipelines, managing infrastructure as code (Terraform, Ansible), containerising workloads with Docker and Kubernetes, and running reliable production systems.",
+      "description": "DevOps Engineer Trainee scope plus observability and reliability practices.",
+      "body": "DevOps Engineers add observability and reliability practices on top of the DevOps foundation — understanding how production systems are kept visible and healthy.",
       "scope": "Infrastructure & DevOps",
-      "orderId": 18,
+      "orderId": 14,
       "image": "",
-      "color": "#EE0000",
+      "color": "#0284C7",
       "isPublished": true
     },
     {
@@ -94,20 +94,20 @@
       "description": "Build the user-facing layer of web applications using HTML, CSS, JavaScript, and modern frameworks.",
       "body": "Frontend developers translate designs into interactive web interfaces. They work with HTML, CSS, and JavaScript frameworks (React, Angular, Vue), focusing on performance, accessibility, and user experience.",
       "scope": "Web Development",
-      "orderId": 6,
+      "orderId": 8,
       "image": "",
       "color": "#61DAFB",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Full Stack Developer",
       "slug": "full-stack-developer",
-      "description": "Work across the entire web stack — from UI and APIs to databases and deployment.",
-      "body": "Full stack developers own the complete application lifecycle, building both client-side interfaces and server-side services. They bridge frontend and backend to deliver end-to-end product features.",
+      "description": "A capstone role composing Frontend Engineer and Backend Architect (Node.js) — no new scope of its own.",
+      "body": "Full Stack Developers combine the complete Frontend Engineer track with the complete Backend Architect (Node.js) track — every subject and level from both, nothing declared twice.",
       "scope": "Web Development",
-      "orderId": 8,
+      "orderId": 12,
       "image": "",
-      "color": "#7B68EE",
+      "color": "#7C3AED",
       "isPublished": true
     },
     {
@@ -119,7 +119,7 @@
       "orderId": 23,
       "image": "",
       "color": "#8B5CF6",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "iOS Developer",
@@ -130,10 +130,10 @@
       "orderId": 16,
       "image": "",
       "color": "#147EFB",
-      "isPublished": true
+      "isPublished": false
     },
     {
-      "title": "Java / Spring Boot Developer",
+      "title": "Backend Engineer (Java/SpringBoot)",
       "slug": "java-springboot-developer",
       "description": "Design and build enterprise-grade Java applications using the Spring Boot framework.",
       "body": "Java Spring Boot developers build scalable enterprise systems and microservices — RESTful APIs, database integration with Spring Data, security with Spring Security, and deployment via containerisation.",
@@ -141,7 +141,7 @@
       "orderId": 14,
       "image": "",
       "color": "#F89820",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "ML Engineer",
@@ -149,10 +149,10 @@
       "description": "Productionise machine learning models and build the infrastructure to serve them at scale.",
       "body": "ML engineers focus on the engineering side of machine learning — model serving, monitoring, feature stores, A/B testing pipelines, and scalable ML infrastructure. Distinct from data scientists who focus on experimentation.",
       "scope": "AI & Machine Learning",
-      "orderId": 22,
+      "orderId": 24,
       "image": "",
       "color": "#7C3AED",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Mobile App Developer",
@@ -160,10 +160,10 @@
       "description": "Build cross-platform mobile applications that run on both iOS and Android.",
       "body": "Mobile app developers create apps using cross-platform frameworks like Flutter or React Native, delivering consistent experiences across Android and iOS from a shared codebase.",
       "scope": "Mobile Development",
-      "orderId": 17,
+      "orderId": 22,
       "image": "",
       "color": "#5856D6",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Program Manager",
@@ -174,7 +174,7 @@
       "orderId": 26,
       "image": "",
       "color": "#6B7280",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Programmer Level 1",
@@ -185,7 +185,7 @@
       "orderId": 4,
       "image": "",
       "color": "#FBBF24",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Python Developer",
@@ -193,10 +193,10 @@
       "description": "Build web backends, APIs, automation tools, and data pipelines using Python.",
       "body": "Python developers leverage Python's versatility across web frameworks (Django, FastAPI, Flask), scripting, data processing, and automation. Python is the dominant language in data science and AI tooling.",
       "scope": "Python & Data",
-      "orderId": 13,
+      "orderId": 20,
       "image": "",
       "color": "#3776AB",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "QA Engineer",
@@ -204,10 +204,10 @@
       "description": "Own the quality strategy — from test planning and automation to CI integration and defect management.",
       "body": "QA engineers design comprehensive test strategies, write automated test suites (Selenium, Playwright, Cypress), manage regression pipelines, and collaborate closely with developers to catch defects before release.",
       "scope": "Quality Assurance",
-      "orderId": 24,
+      "orderId": 25,
       "image": "",
       "color": "#10B981",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Software Tester",
@@ -218,7 +218,7 @@
       "orderId": 25,
       "image": "",
       "color": "#059669",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Trainee Software Engineer",
@@ -229,7 +229,7 @@
       "orderId": 3,
       "image": "",
       "color": "#F59E0B",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Web Developer",
@@ -237,24 +237,24 @@
       "description": "Create websites and web applications with a strong grasp of core web standards and technologies.",
       "body": "Web developers build everything from marketing sites to dynamic web apps, working with HTML, CSS, JavaScript, and a CMS or web framework. They may work frontend-only or across the stack.",
       "scope": "Web Development",
-      "orderId": 9,
+      "orderId": 7,
       "image": "",
       "color": "#4A90D9",
-      "isPublished": true
+      "isPublished": false
     },
     {
-      "title": "React Developer",
+      "title": "Frontend Engineer (React)",
       "slug": "react-developer",
-      "description": "Build fast, component-based UIs and single-page applications using React and its ecosystem.",
-      "body": "React developers specialise in building UI components with React.js, using hooks, state management libraries (Redux, Zustand), and integration patterns with REST or GraphQL APIs.",
+      "description": "Frontend Engineer scope plus React — published later once a React question bank exists.",
+      "body": "React Developers apply frontend fundamentals to the React ecosystem — components, hooks and state. Kept unpublished until React has an active question bank (0 questions today, the deepest content gap of any subject in this catalog).",
       "scope": "JavaScript Ecosystem",
-      "orderId": 10,
+      "orderId": 8,
       "image": null,
-      "color": "#00D8FF",
-      "isPublished": true
+      "color": "#61DAFB",
+      "isPublished": false
     },
     {
-      "title": "Node.js Developer",
+      "title": "Backend Engineer (Node/Express)",
       "slug": "nodejs-developer",
       "description": "Build server-side services and APIs using Node.js and the JavaScript/TypeScript backend ecosystem.",
       "body": "Node.js developers build performant backend services, REST APIs, and microservices using Node.js with frameworks like Express, Fastify, and NestJS, often in a TypeScript-first environment.",
@@ -262,7 +262,7 @@
       "orderId": 12,
       "image": null,
       "color": "#5FA04E",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Software Engineer",
@@ -273,7 +273,7 @@
       "orderId": 5,
       "image": null,
       "color": "#6366F1",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Digital Literacy",
@@ -284,7 +284,7 @@
       "orderId": 1,
       "image": null,
       "color": "#06B6D4",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Office Professional",
@@ -295,6 +295,171 @@
       "orderId": 2,
       "image": null,
       "color": "#0EA5E9",
+      "isPublished": false
+    },
+    {
+      "title": "Site Reliability Engineer",
+      "slug": "site-reliability-engineer",
+      "description": "Keep production systems reliable, observable, and fast to recover from failure.",
+      "body": "Site Reliability Engineers (SREs) blend software engineering and operations to keep systems available, performant, and resilient. They own uptime, automate toil, and build the monitoring and incident-response practices that let teams sleep at night.",
+      "scope": "Site Reliability",
+      "orderId": 27,
+      "image": null,
+      "color": "#14B8A6",
+      "isPublished": false
+    },
+    {
+      "title": "Web Designer",
+      "slug": "web-designer",
+      "description": "Crafts the visual layer of websites — layout, styling and responsive design — without deep JavaScript engineering.",
+      "body": "Web Designers go beyond the basics into professional HTML structure and responsive CSS layout, turning visual designs into pages that hold up across devices.",
+      "scope": "Web Development",
+      "orderId": 2,
+      "image": "",
+      "color": "#FF6F91",
+      "isPublished": true
+    },
+    {
+      "title": "Backend Engineer (Nest JS)",
+      "slug": "nestjs-developer",
+      "description": "Build structured, typed backend services and APIs using NestJS on top of Node.js.",
+      "body": "NestJS backend engineers use TypeScript, dependency injection, and NestJS's modular architecture to build maintainable REST APIs and services, drawing on the same Node.js runtime and HTTP fundamentals as other backend roles.",
+      "scope": "JavaScript Ecosystem",
+      "orderId": 13,
+      "image": "",
+      "color": "#E0234E",
+      "isPublished": false
+    },
+    {
+      "title": "Full Stack Engineer (Angular/Nest)",
+      "slug": "fullstack-angular-nest-developer",
+      "description": "Build complete applications end to end using Angular on the frontend and NestJS on the backend, sharing TypeScript across the stack.",
+      "body": "This role pairs Angular's structured frontend framework with NestJS's structured backend framework, both TypeScript-first, to build cohesive full-stack applications with consistent patterns from UI to API.",
+      "scope": "Web Development",
+      "orderId": 16,
+      "image": "",
+      "color": "#7B2FF7",
+      "isPublished": false
+    },
+    {
+      "title": "Web Design Trainee",
+      "slug": "web-design-trainee",
+      "description": "Entry point into web development: structuring pages with HTML and styling them with CSS.",
+      "body": "Web Design Trainees learn to build simple, well-structured pages — semantic HTML markup and foundational CSS layout and styling — the base every other web role builds on.",
+      "scope": null,
+      "orderId": 1,
+      "image": "",
+      "color": "#38BDF8",
+      "isPublished": true
+    },
+    {
+      "title": "Web Programmer",
+      "slug": "web-programmer",
+      "description": "The first programming-track role: professional HTML/CSS plus foundational JavaScript.",
+      "body": "Web Programmers add scripting to the web-foundations base — enough JavaScript to make pages interactive — as the on-ramp into frontend and backend engineering tracks.",
+      "scope": null,
+      "orderId": 3,
+      "image": "",
+      "color": "#F59E0B",
+      "isPublished": true
+    },
+    {
+      "title": "Frontend Engineer Trainee",
+      "slug": "frontend-engineer-trainee",
+      "description": "Deepens CSS and JavaScript beyond the basics, on the way to full frontend engineering.",
+      "body": "Frontend Engineer Trainees build on Web Programmer with intermediate JavaScript and responsive CSS layout, preparing for framework-level frontend work.",
+      "scope": null,
+      "orderId": 4,
+      "image": "",
+      "color": "#22C55E",
+      "isPublished": true
+    },
+    {
+      "title": "Frontend Engineer",
+      "slug": "frontend-engineer",
+      "description": "Full command of HTML, CSS and JavaScript — ready for framework specialization.",
+      "body": "Frontend Engineers complete the core web stack — advanced CSS and advanced JavaScript — the shared foundation every framework specialization (Angular, React, ...) builds on.",
+      "scope": null,
+      "orderId": 5,
+      "image": "",
+      "color": "#16A34A",
+      "isPublished": true
+    },
+    {
+      "title": "Angular Architect",
+      "slug": "angular-architect",
+      "description": "Angular Developer scope plus advanced component patterns and application architecture.",
+      "body": "Angular Architects share nearly all of an Angular Developer's scope and add the deeper end of the ladder — intermediate patterns, advanced component design, and application-scale architecture concerns.",
+      "scope": null,
+      "orderId": 7,
+      "image": "",
+      "color": "#B10021",
+      "isPublished": true
+    },
+    {
+      "title": "Backend Engineer Trainee",
+      "slug": "backend-engineer-trainee",
+      "description": "First step into server-side development with foundational Node.js.",
+      "body": "Backend Engineer Trainees pair their JavaScript foundation with the basics of Node.js — the server-side runtime every backend role in this track builds on.",
+      "scope": null,
+      "orderId": 9,
+      "image": "",
+      "color": "#84CC16",
+      "isPublished": true
+    },
+    {
+      "title": "Backend Engineer",
+      "slug": "backend-engineer",
+      "description": "Intermediate JavaScript and professional Node.js — building real backend services.",
+      "body": "Backend Engineers grow into intermediate JavaScript and professional-level Node.js, capable of building and maintaining real server-side services.",
+      "scope": null,
+      "orderId": 10,
+      "image": "",
+      "color": "#65A30D",
+      "isPublished": true
+    },
+    {
+      "title": "Backend Architect (Node.js)",
+      "slug": "backend-architect-nodejs",
+      "description": "Backend Engineer scope plus advanced JavaScript, real-time Node.js, and deployment awareness.",
+      "body": "Backend Architects share almost all of a Backend Engineer's scope and add advanced JavaScript, real-time/WebSocket Node.js, and a working awareness of DevOps for how their services actually get deployed.",
+      "scope": null,
+      "orderId": 11,
+      "image": "",
+      "color": "#3F6212",
+      "isPublished": true
+    },
+    {
+      "title": "DevOps Engineer Trainee",
+      "slug": "devops-engineer-trainee",
+      "description": "Entry point into DevOps: core practices bridging development and operations.",
+      "body": "DevOps Engineer Trainees learn the foundational practices that bridge writing software and running it reliably in production.",
+      "scope": null,
+      "orderId": 13,
+      "image": "",
+      "color": "#0EA5E9",
+      "isPublished": true
+    },
+    {
+      "title": "Senior DevOps Engineer",
+      "slug": "senior-devops-engineer",
+      "description": "DevOps Engineer scope plus scripting awareness via JavaScript fundamentals.",
+      "body": "Senior DevOps Engineers share a DevOps Engineer's full scope and add baseline scripting awareness. Infrastructure-as-Code will be added here once that subject track has real content — it is currently an empty shell.",
+      "scope": null,
+      "orderId": 15,
+      "image": "",
+      "color": "#075985",
+      "isPublished": true
+    },
+    {
+      "title": "AI Fundamentals Practitioner",
+      "slug": "ai-fundamentals-practitioner",
+      "description": "Standalone AI literacy role: practical AI/LLM fundamentals and responsible use.",
+      "body": "AI Fundamentals Practitioners cover the full AI Fundamentals ladder — core concepts, applied AI/LLM usage, and judgment/responsibility — the first job role built around this subject.",
+      "scope": null,
+      "orderId": 16,
+      "image": "",
+      "color": "#8B5CF6",
       "isPublished": true
     }
   ],
@@ -302,9 +467,9 @@
     {
       "title": "HTML",
       "slug": "html",
-      "description": "Markup language for creating web pages",
-      "body": "This subject covers markup language for creating web pages.",
-      "scope": "",
+      "description": "HTML is the language that gives every web page its structure — headings, paragraphs, images, links, and forms. It's the very first thing anyone learns before styling a page with CSS or making it interactive with JavaScript. If you want to build for the web at all, HTML is where you start.",
+      "body": "Every website you've ever visited is built on HTML. It's not a programming language — it's a markup language, meaning you use simple tags to tell the browser what each piece of content is: this is a heading, this is a paragraph, this is a picture, this is a button. Learning HTML means learning to think in structure. You'll start with the basic building blocks — text, links, images, lists — and move on to forms that collect user input, tables that organise data, and the newer semantic tags (like header, nav, and article) that make pages easier for search engines and screen readers to understand. HTML rarely works alone. Once you know it, CSS adds visual styling and JavaScript adds behaviour, and together the three form the foundation of every website and web app. Whether your goal is frontend development, full-stack engineering, or just understanding how the web works, HTML is the non-negotiable first step. It's forgiving to learn, immediately visible in the browser, and every other web skill builds directly on top of it. You'll also build a small multi-page site of your own, giving you a finished, working project rather than isolated exercises.",
+      "scope": null,
       "image": "assets/images/tech/html.png",
       "color": "#E44D26",
       "isPublished": true
@@ -312,9 +477,9 @@
     {
       "title": "CSS",
       "slug": "css",
-      "description": "Styles and layouts for web pages",
-      "body": "This subject covers styles and layouts for web pages.",
-      "scope": "",
+      "description": "CSS is what turns a plain HTML page into something people actually want to look at — colours, layout, spacing, fonts, and responsive design that works on any screen size. If HTML is the skeleton of a web page, CSS is everything that makes it look and feel like a real product.",
+      "body": "CSS (Cascading Style Sheets) controls how a web page looks: colours, fonts, spacing, borders, and where everything sits on the screen. Without it, every website would look like a plain document with no visual design at all. This subject starts with the fundamentals — selectors, the box model, colours, and typography — then moves into real layout tools like Flexbox and Grid, which are how modern websites arrange content cleanly across different screen sizes. You'll learn responsive design, so a page looks right on a phone and a desktop monitor alike, plus practical skills like animations, transitions, and working with design systems. CSS has a reputation for being tricky because small rules can interact in unexpected ways — this subject is built to make those interactions predictable rather than mysterious. By the end, you'll be able to take a bare HTML page and turn it into a polished, responsive layout without relying on a framework. That skill matters even if you later use a utility library like Tailwind, because understanding raw CSS is what makes those tools make sense. You'll also get comfortable using browser developer tools to inspect and adjust styles live, a habit every working frontend developer relies on daily.",
+      "scope": null,
       "image": "assets/images/tech/css.png",
       "color": "#212529",
       "isPublished": true
@@ -322,9 +487,9 @@
     {
       "title": "JavaScript",
       "slug": "javascript",
-      "description": "Scripting language for web interactivity",
-      "body": "This subject covers scripting language for web interactivity.",
-      "scope": "",
+      "description": "JavaScript is the programming language that makes web pages interactive — button clicks, form validation, dynamic content, and everything that responds to a user in real time. It runs in every browser and, via Node.js, on servers too, making it one of the most widely used languages in software.",
+      "body": "JavaScript is what turns a static web page into an application. Every time you click a button and something happens instantly, without the page reloading, that's JavaScript at work. This subject starts with the fundamentals shared by every programming language — variables, functions, loops, and conditionals — then moves into what makes JavaScript distinctive: how it works with the browser, handles asynchronous operations like network requests, and manipulates a page's content on the fly through the DOM. You'll also cover modern JavaScript (ES6+) features like arrow functions, destructuring, and promises, which are used in virtually every professional codebase today. JavaScript's reach goes far beyond the browser. With Node.js, the same language runs on servers; with React, Angular, or Vue, it powers entire applications; and it's the backbone of nearly every modern web framework. Learning it well means you're not just learning one skill — you're unlocking frontend development, backend development, and mobile app development, all built on the same foundation. It's a language with some genuine quirks, but this subject focuses on the patterns that show up constantly in real code, not obscure edge cases. You'll also spend real time in the browser console and developer tools, since comfortable debugging is just as important as writing the code in the first place.",
+      "scope": null,
       "image": "assets/images/tech/javascript.png",
       "color": "#212529",
       "isPublished": true
@@ -332,9 +497,9 @@
     {
       "title": "TypeScript",
       "slug": "typescript",
-      "description": "Typed superset of JavaScript",
-      "body": "This subject covers typed superset of javascript.",
-      "scope": "",
+      "description": "TypeScript adds type safety to JavaScript, catching mistakes before your code ever runs. It's become the standard choice for professional JavaScript projects because it makes large codebases easier to maintain, refactor, and understand — especially when working on a team where code needs to be predictable.",
+      "body": "TypeScript is JavaScript with an extra layer: types. Instead of finding out at runtime that you passed the wrong kind of data into a function, TypeScript tells you immediately, while you're still writing the code. This might sound like a small thing, but at any real scale it changes everything — fewer bugs slip through, your editor can autocomplete and warn you accurately, and refactoring a large codebase becomes far less risky because the compiler checks your work as you go. This subject assumes you already know JavaScript and builds directly on that foundation, introducing type annotations, interfaces, generics, and the type-checking rules that catch entire categories of bugs before they happen. You'll also learn how TypeScript integrates with the tools you'll actually use — configuring a project, working with third-party libraries that may or may not have type definitions, and understanding compiler settings that control how strict the checking is. Nearly every major frontend framework (Angular, React, Vue) and most professional backend Node.js projects use TypeScript today, which makes it one of the highest-leverage skills you can add on top of JavaScript. You'll also practise converting an existing JavaScript file to TypeScript, which is one of the most common real-world tasks teams ask new hires to help with.",
+      "scope": null,
       "image": "assets/images/tech/typescript.png",
       "color": "#3178C6",
       "isPublished": true
@@ -342,9 +507,9 @@
     {
       "title": "Angular",
       "slug": "angular",
-      "description": "Framework for scalable web apps",
-      "body": "This subject covers framework for scalable web apps.",
-      "scope": "",
+      "description": "Angular is a complete framework for building large, structured web applications in TypeScript. Backed by Google and used heavily in enterprise software, it gives you everything out of the box — routing, forms, HTTP handling, and dependency injection — so teams can build consistent, maintainable apps at scale.",
+      "body": "Angular is a full-featured framework, not just a library — meaning it comes with strong opinions and built-in tools for nearly everything a real application needs: routing between pages, handling forms, making HTTP requests, and managing state, all designed to work together consistently. This subject starts with components and templates, the building blocks of every Angular app, then covers data binding and directives, which let your UI react automatically to changes in your data. From there, you'll learn services and dependency injection — Angular's approach to sharing logic across an app cleanly — along with routing, reactive forms, and integrating with backend APIs using RxJS and Observables. Angular is TypeScript-first by design, so a solid grasp of TypeScript makes everything here click faster. It's especially common in larger organisations and enterprise software, where its structure and conventions help many developers work on the same large codebase without stepping on each other. By the end of this subject, you'll be able to build a real, working Angular application from scratch — not just follow a tutorial, but structure, style, and connect one to a live backend the way it's done in production teams.",
+      "scope": null,
       "image": "assets/images/tech/angular.png",
       "color": "#DD0031",
       "isPublished": true
@@ -352,9 +517,9 @@
     {
       "title": "React",
       "slug": "react",
-      "description": "JavaScript library for UIs",
-      "body": "This subject covers javascript library for uis.",
-      "scope": "",
+      "description": "React is the most widely used library for building user interfaces, letting you construct a UI from small, reusable components. Backed by Meta and adopted across the industry, it's often the first framework developers learn after JavaScript, and the most requested skill in frontend job listings today.",
+      "body": "React changed how the web industry thinks about building interfaces: instead of one big page, you build small, independent components — a button, a form, a card — and compose them together into a full application. This subject starts with exactly that idea: what a component is, how to pass data into one with props, and how to give a component its own memory using state. From there, you'll learn the hooks that power modern React — useState for data that changes, useEffect for reacting to those changes, and the patterns experienced developers reach for to avoid common bugs like unnecessary re-renders. You'll also cover handling events, rendering lists, conditional rendering, and fetching data from an API, which together cover the vast majority of what real React apps actually do day to day. React itself is intentionally minimal — it's a UI library, not a full framework — so this subject also touches on the ecosystem around it: routing with React Router and the general shape of a real project structure. Because React is everywhere, from startups to major tech companies, this is one of the most transferable, in-demand skills you can build.",
+      "scope": null,
       "image": "assets/images/tech/react.png",
       "color": "#61DAFB",
       "isPublished": true
@@ -362,9 +527,9 @@
     {
       "title": "Express.js",
       "slug": "expressjs",
-      "description": "Web framework for Node.js",
-      "body": "This subject covers web framework for node.js.",
-      "scope": "",
+      "description": "Express.js is the most widely used web framework for Node.js, giving you a simple, unopinionated way to build APIs and web servers. If you're writing backend JavaScript, Express is very likely the first framework you'll reach for — it's lightweight, flexible, and everywhere in real production code.",
+      "body": "Express.js sits directly on top of Node.js and handles the repetitive parts of building a web server for you — routing requests to the right code, parsing incoming data, and sending responses back — so you can focus on your application's actual logic instead of low-level networking details. This subject starts with setting up a basic server and defining routes, then moves into middleware, which is Express's core concept: small functions that run in sequence to handle things like logging, authentication, and error handling before a request reaches its final destination. You'll learn to build a real REST API — handling GET, POST, PUT, and DELETE requests, working with request bodies and parameters, and connecting to a database to persist data. Error handling and validation are covered in depth too, since a server that fails silently or crashes on bad input is a serious real-world problem, not just a theoretical one. Express is intentionally minimal compared to more opinionated frameworks like Nest.js, which means you have more freedom in how you structure a project — a tradeoff this subject helps you navigate with practical, battle-tested patterns rather than guesswork. You'll also build a complete small project — a working API with a handful of routes and a connected database — to bring every concept together in one place.",
+      "scope": null,
       "image": "assets/images/tech/rest-api.png",
       "color": "#000000",
       "isPublished": true
@@ -372,9 +537,9 @@
     {
       "title": "NestJS",
       "slug": "nest-js",
-      "description": "Efficient Node.js server framework",
-      "body": "This subject covers efficient node.js server framework.",
-      "scope": "",
+      "description": "Nest.js is a structured, enterprise-style framework for building Node.js backends in TypeScript, inspired by Angular's architecture. Where Express gives you freedom, Nest.js gives you convention — modules, controllers, and services organised in a consistent way that scales well as a backend team and codebase grow.",
+      "body": "Nest.js takes the flexibility of Node.js and Express and wraps it in a structured, opinionated architecture — one clearly influenced by Angular, with modules, controllers, providers, and dependency injection all working together in a predictable pattern. This subject starts with that core architecture: how a Nest.js application is organised into modules, how controllers handle incoming requests, and how services (providers) hold your actual business logic, injected wherever they're needed rather than manually wired up. From there, you'll cover building REST APIs the Nest.js way, validating incoming data with decorators, handling errors consistently across an entire application, and connecting to databases using tools like TypeORM. Because Nest.js is built entirely in TypeScript, everything here assumes and reinforces strong typing habits, which pays off enormously as a project grows in size and team members. Nest.js is especially popular for larger backend teams and enterprise applications, precisely because its structure means a new developer joining the team can find their way around a Nest.js codebase far faster than an unstructured Express one. If you've learned Express and want to see how a backend scales in a real company, this is the natural next step.",
+      "scope": null,
       "image": "assets/images/tech/nest.png",
       "color": "#E0234E",
       "isPublished": true
@@ -382,9 +547,9 @@
     {
       "title": "Java",
       "slug": "java",
-      "description": "Object-oriented programming language",
-      "body": "This subject covers object-oriented programming language.",
-      "scope": "",
+      "description": "Java is one of the most widely used programming languages in enterprise software, known for its strict structure, strong typing, and 'write once, run anywhere' portability. It's the backbone of countless banking systems, Android apps, and large-scale backend services, and remains one of the most in-demand skills.",
+      "body": "Java has been a dominant force in professional software development for decades, and for good reason: it's strongly typed, object-oriented, and designed to run consistently across different operating systems through the Java Virtual Machine. This subject starts with the fundamentals every Java developer needs — variables, data types, control flow, and methods — then moves into what makes Java distinctive: classes, objects, inheritance, interfaces, and the object-oriented design principles that structure real applications. You'll also cover collections (like lists and maps), exception handling, and enough of Java's standard library to write genuinely useful programs, not just textbook exercises. Java's ecosystem is enormous — it powers everything from Android apps to massive banking and insurance systems to the backend of countless enterprise applications, often through frameworks like Spring Boot. Because Java enforces strict typing and a particular structure, code written by different developers tends to look similar and stay maintainable even as a team and codebase grow over years, which is exactly why large, risk-averse industries lean on it so heavily. Learning Java well gives you a foundation that transfers directly into enterprise backend development, Android development, and general object-oriented programming skills.",
+      "scope": null,
       "image": "assets/images/tech/java.png",
       "color": "#007396",
       "isPublished": true
@@ -392,9 +557,9 @@
     {
       "title": "Spring Boot",
       "slug": "spring-boot",
-      "description": "Java framework for backend APIs",
-      "body": "This subject covers java framework for backend apis.",
-      "scope": "",
+      "description": "Spring Boot is the standard framework for building Java backend applications and microservices, handling configuration, dependency injection, and boilerplate so developers can focus on business logic. It's the framework behind a huge share of enterprise Java systems, from banking platforms to large-scale internal company tools.",
+      "body": "Spring Boot takes the power of the wider Spring ecosystem — dependency injection, configuration management, and a huge library of production-ready tools — and packages it into something you can actually get started with quickly, without days of manual setup. This subject starts with how a Spring Boot application is structured: components, dependency injection, and configuration, then moves into building REST APIs, one of Spring Boot's most common real-world uses. You'll learn to handle HTTP requests, validate incoming data, connect to relational databases using Spring Data JPA, and manage application configuration across different environments. Error handling, testing, and structuring a project so it stays maintainable as it grows are all covered too, since these are exactly the skills that separate a working prototype from a production-ready backend. Spring Boot is deeply embedded in enterprise software — banks, insurance companies, and large corporations often run entire fleets of Spring Boot microservices — which makes it one of the highest-value frameworks to know if enterprise or backend Java development is your goal. This subject assumes a working knowledge of Java and builds from there into real, deployable backend applications. You'll also work through building a small but complete API project, tying validation, persistence, and error handling together the way a real assignment would.",
+      "scope": null,
       "image": "assets/images/tech/spring.png",
       "color": "#6DB33F",
       "isPublished": true
@@ -402,9 +567,9 @@
     {
       "title": "DevOps",
       "slug": "devops",
-      "description": "Dev and ops collaboration practice",
-      "body": "This subject covers dev and ops collaboration practice.",
-      "scope": "",
+      "description": "DevOps is the set of practices that connects software development and IT operations, focused on releasing software faster and more reliably. It covers automation, collaboration between teams, and the mindset shift from 'throw it over the wall' to teams owning their software from code to production.",
+      "body": "DevOps isn't a single tool — it's a set of practices and a mindset for how software gets built, tested, and released. Historically, developers wrote code and a separate operations team deployed and ran it, which created friction, slow releases, and finger-pointing when things broke. DevOps closes that gap by having teams take shared responsibility for the whole lifecycle, supported by automation at every step. This subject covers the core practices that make that possible: continuous integration and continuous delivery (CI/CD), which automate testing and deployment so changes reach production safely and often; infrastructure as code, which treats server configuration like software you can version and review; and monitoring, which tells you how your system is actually behaving once it's live. You'll also cover containerisation concepts, collaboration practices like blameless postmortems, and the cultural principles (like the well-known 'you build it, you run it') that separate high-performing engineering teams from slower, more siloed ones. DevOps skills apply across nearly every engineering role today — even if your title isn't 'DevOps Engineer', understanding these practices makes you more effective as a developer, because you understand what happens to your code after you write it.",
+      "scope": null,
       "image": "assets/images/tech/devops.png",
       "color": "#FF6C37",
       "isPublished": true
@@ -412,9 +577,9 @@
     {
       "title": "Docker",
       "slug": "docker",
-      "description": "App containerization platform",
-      "body": "This subject covers app containerization platform.",
-      "scope": "",
+      "description": "Docker packages an application and everything it needs to run into a portable container, so it behaves the same on your laptop as it does on a server. It's become the standard way to ship software, solving the age-old 'it works on my machine' problem across the industry.",
+      "body": "Docker solves a problem every developer has run into: code that works perfectly on your machine but breaks somewhere else because of a different operating system, missing dependency, or slightly different configuration. A Docker container packages your application together with everything it needs — the runtime, libraries, and settings — into a single, portable unit that runs identically anywhere Docker is installed. This subject starts with core concepts: what a container actually is, how it differs from a full virtual machine, and how images (the blueprint) relate to containers (the running instance). From there, you'll write Dockerfiles to define how an image is built, learn to run and manage containers from the command line, and use Docker Compose to coordinate multiple containers — like an app and its database — running together as one system. You'll also cover practical, everyday skills: managing container networking, persisting data with volumes, and debugging a container that isn't behaving as expected. Docker is now foundational to how modern software is built and deployed, whether you're working solo or on a large team, and it's a prerequisite for understanding Kubernetes and most modern cloud deployment pipelines.",
+      "scope": null,
       "image": "assets/images/tech/docker.png",
       "color": "#0db7ed",
       "isPublished": true
@@ -422,9 +587,9 @@
     {
       "title": "Kubernetes",
       "slug": "kubernetes",
-      "description": "Container orchestration system",
-      "body": "This subject covers container orchestration system.",
-      "scope": "",
+      "description": "Kubernetes is the industry-standard system for running containers at scale — automatically deploying, scaling, and healing applications across a cluster of machines. If Docker packages one container, Kubernetes is how you reliably run hundreds of them together in production without constant manual intervention.",
+      "body": "Once you're running more than a handful of containers, managing them by hand becomes impractical — you need something to decide which machine runs which container, restart failed containers automatically, and scale up when traffic increases. That's exactly what Kubernetes does. This subject starts with the core building blocks: pods (the smallest deployable unit), deployments (which manage groups of identical pods), and services (which expose your application to the network reliably even as individual pods come and go). From there, you'll learn how Kubernetes handles scaling applications up and down based on demand, how it automatically restarts or replaces failing containers to keep your system healthy, and how configuration and secrets are managed separately from your application code. You'll also get hands-on with kubectl, the command-line tool used to interact with a cluster day to day, and learn to read and write the YAML configuration files that describe what you want your system to look like. Kubernetes has a genuine learning curve, but it's become the de facto standard for running containerised applications at any real scale, and is used across nearly every major cloud provider and large engineering organisation today.",
+      "scope": null,
       "image": "assets/images/tech/kubernetes.png",
       "color": "#326CE5",
       "isPublished": true
@@ -432,9 +597,9 @@
     {
       "title": "CI/CD",
       "slug": "ci-cd",
-      "description": "Automated app integration and delivery",
-      "body": "This subject covers automated app integration and delivery.",
-      "scope": "",
+      "description": "CI/CD (Continuous Integration and Continuous Delivery) automates the process of testing and releasing code, so changes reach production quickly and safely instead of through slow, risky, manual releases. It's one of the defining practices of modern software teams, from startups to large enterprises.",
+      "body": "CI/CD is the automation backbone behind how modern teams ship software. Continuous Integration means every code change is automatically tested and merged frequently, so problems are caught within minutes rather than discovered weeks later during a stressful, high-risk release. Continuous Delivery (and its stricter cousin, Continuous Deployment) takes this further, automatically packaging and releasing code that passes those tests, sometimes all the way to production with no manual step at all. This subject covers how a real CI/CD pipeline is built: triggering automated tests on every code change, running builds consistently in a clean environment, and deploying to different stages (like staging and production) with appropriate safeguards at each step. You'll learn the concepts behind popular tools like Jenkins, GitHub Actions, and GitLab CI, along with practical patterns like rolling back a bad deployment quickly, and using feature flags to release code safely without immediately exposing it to every user. Teams that do this well can release multiple times a day with confidence; teams without it often dread releases entirely. Understanding CI/CD is essential for any developer who wants their code to actually reach users reliably, not just work on their own machine.",
+      "scope": null,
       "image": "assets/images/tech/cicd.png",
       "color": "#FF5722",
       "isPublished": true
@@ -442,9 +607,9 @@
     {
       "title": "Relational Databases",
       "slug": "relational-databases",
-      "description": "Relational open-source database",
-      "body": "This subject covers relational open-source database.",
-      "scope": "",
+      "description": "Relational databases store structured data in tables and let you query it with SQL, the language behind nearly every business application. This subject takes you from your first SELECT to designing schemas, writing advanced queries and keeping a production database fast, correct and secure.",
+      "body": "Relational databases organise data into tables of rows and columns, and SQL (Structured Query Language) is how you work with them, whether that means finding every customer who ordered last month or safely updating thousands of records at once. The subject is built as four tracks you take in order. SQL Foundations covers how tables and keys work, single-table queries, NULL handling and expressions, aggregation, joins across related tables, and inserting, updating and deleting data without collateral damage. Database Design teaches you to define tables and constraints, model real business domains as entities and relationships, and normalise schemas while knowing when to denormalise on purpose. Advanced SQL adds subqueries and set operations, common table expressions and recursive queries, window functions for rankings and running totals, and database-side views, procedures and triggers. Performance & Production covers what keeps a real database healthy: indexes and execution plans, transactions and concurrency control, security and SQL injection defence, and backup, replication and scaling. Examples use standard SQL, with notes wherever PostgreSQL and MySQL differ. Relational databases such as PostgreSQL, MySQL, SQL Server and Oracle remain the backbone of most business software, which makes SQL one of the most durable skills a developer, analyst or data engineer can have.",
+      "scope": null,
       "image": "assets/images/tech/rdbms.png",
       "color": "#336791",
       "isPublished": true
@@ -452,9 +617,9 @@
     {
       "title": "MongoDB",
       "slug": "mongodb",
-      "description": "Scalable NoSQL document database",
-      "body": "This subject covers scalable nosql document database.",
-      "scope": "",
+      "description": "MongoDB is a leading NoSQL database that stores data as flexible JSON-like documents instead of rigid tables. It's a popular choice when your data doesn't fit neatly into rows and columns, or when you need to move fast without redesigning a strict schema every time requirements change.",
+      "body": "MongoDB takes a different approach to storing data than a traditional relational database: instead of tables with a fixed set of columns, you store documents — flexible, JSON-like structures that can vary in shape from one record to the next. This subject starts with that core idea: what a document and a collection are, and how MongoDB's flexible schema differs from the strict structure of SQL databases. From there, you'll learn to perform the core operations every application needs — creating, reading, updating, and deleting documents — along with MongoDB's powerful query language for filtering and searching data. You'll also cover how to model relationships between data in a document database (a genuinely different mental model from SQL joins), when to embed related data directly inside a document versus referencing it separately, and how indexes work to keep queries fast as your data grows. MongoDB is especially popular for applications with evolving, semi-structured data — content management systems, product catalogues, and applications built with the Node.js/JavaScript ecosystem, where working with JSON-like documents feels natural throughout the whole stack. You'll also work through a realistic example — modelling a blog or product catalogue — comparing how naturally it fits a document structure compared to a relational one.",
+      "scope": null,
       "image": "assets/images/tech/mongodb.png",
       "color": "#47A248",
       "isPublished": true
@@ -462,29 +627,29 @@
     {
       "title": "GraphQL",
       "slug": "graphql",
-      "description": "Flexible query language for APIs",
-      "body": "This subject covers flexible query language for apis.",
-      "scope": "",
+      "description": "GraphQL is a query language for APIs that lets clients request exactly the data they need — no more, no less — in a single request. It's a modern alternative to traditional REST APIs, popular for applications where flexible, efficient data fetching genuinely matters to performance and developer experience.",
+      "body": "With a traditional REST API, you often get either too much data or not enough, and have to make several separate requests to gather everything a screen actually needs. GraphQL flips this: the client describes exactly what data it wants, in what shape, and the server returns precisely that, in a single request. This subject starts with the fundamentals of a GraphQL schema — the contract that defines what data is available and how it's structured — and queries, how a client actually asks for that data. From there, you'll cover mutations, which handle creating and updating data, and resolvers, the server-side functions that actually fetch the data a query asks for. You'll also learn about GraphQL's type system, which makes APIs self-documenting and lets tools validate requests automatically before they even reach the server. GraphQL isn't a replacement for REST in every situation, and this subject covers the real tradeoffs — including added complexity on the server side — so you can judge when GraphQL is genuinely the right choice, rather than just a trendy one. It's widely used at companies with complex, data-heavy frontends where flexible fetching provides a real, measurable benefit.",
+      "scope": null,
       "image": "",
       "color": "#E10098",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Next.js",
       "slug": "nextjs",
-      "description": "React framework with SSR support",
-      "body": "This subject covers react framework with ssr support.",
-      "scope": "",
+      "description": "Next.js is a production-ready framework built on top of React, adding server-side rendering, routing, and performance optimisations out of the box. It's the framework most commonly reached for when a React app needs to be fast, SEO-friendly, and ready for real users from day one.",
+      "body": "React itself is a UI library, deliberately unopinionated about routing, data fetching, or how a project should be structured for production. Next.js fills in those gaps, adding conventions and built-in tools on top of React so you don't have to assemble everything yourself. This subject starts with Next.js's file-based routing, where the folder structure of your project automatically defines your app's URL structure, then covers the different rendering strategies Next.js offers: server-side rendering (generating a page fresh on each request), static generation (building a page once at build time), and client-side rendering, each suited to different kinds of content. You'll learn why this matters for real applications — faster initial page loads, better search engine visibility, and a smoother experience for users on slower connections. From there, you'll cover API routes (letting you build simple backend endpoints right inside your Next.js project), image and font optimisation, and deployment, since Next.js is built with production readiness as a first-class concern. If you already know React and want to build something real — not just a tutorial project — Next.js is very often the natural next step, and is used heavily across the industry for exactly that reason.",
+      "scope": null,
       "image": "",
       "color": "#000000",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Redux",
       "slug": "redux",
-      "description": "State management for React apps",
-      "body": "This subject covers state management for react apps.",
-      "scope": "",
+      "description": "Redux is a predictable state management library commonly used with React, keeping all of an app's shared data in one central store that updates in a clear, traceable way. It's especially valuable in larger applications where many components need to read and update the same data.",
+      "body": "As a React application grows, passing data between components can turn into a tangled mess — a piece of state needed in one corner of the app has to be threaded through several unrelated components just to get there. Redux solves this by keeping all shared application state in one central store, with a strict, predictable process for how that state can change. This subject starts with Redux's core concepts: the store (where state lives), actions (plain objects describing what happened, like 'user logged in'), and reducers (pure functions that take the current state and an action, and return the new state). From there, you'll learn how this pattern makes state changes traceable and debuggable — you can literally see every action that led to the current state, which is invaluable when tracking down a bug in a complex app. You'll also cover Redux Toolkit, the modern, recommended way to write Redux that cuts down significantly on repetitive boilerplate code, and how Redux integrates with React components through hooks. Redux isn't needed for every app — this subject is honest about when it adds real value versus unnecessary complexity — but in larger, data-heavy applications, it remains one of the most battle-tested state management patterns in the industry.",
+      "scope": null,
       "image": "assets/images/tech/redux.png",
       "color": "#764ABC",
       "isPublished": true
@@ -492,9 +657,9 @@
     {
       "title": "REST APIs",
       "slug": "rest-apis",
-      "description": "Standard interface for backend services",
-      "body": "This subject covers standard interface for backend services.",
-      "scope": "",
+      "description": "REST APIs are the standard way applications talk to each other over the web, using simple HTTP methods and URLs to create, read, update, and delete data. Whether you're building a mobile app's backend or integrating with a third-party service, REST is the pattern you'll meet constantly.",
+      "body": "Nearly every app you use talks to a server somewhere, and the most common way that conversation happens is through a REST API — a set of URLs and HTTP methods (GET, POST, PUT, DELETE) that let a client request or change data on a server. This subject starts with REST's core principles: how resources are modelled as URLs, how HTTP methods and status codes communicate what happened, and how to design request and response bodies that are consistent and easy for other developers to work with. From there, you'll move into real production concerns: authentication and authorization (including OAuth 2.0 and social login with providers like Google and LinkedIn), pagination for large datasets, versioning an API without breaking existing clients, and validating input properly so bad data never reaches your business logic. You'll also cover what separates a working API from a production-grade one — rate limiting to prevent abuse, caching strategies to reduce load, and building in resilience so a flaky network doesn't cause duplicate charges or lost data. By the end, you'll understand REST API design well enough to build one that other developers can integrate with confidently, and to consume one from any client — web, mobile, or another backend service.",
+      "scope": null,
       "image": "assets/images/tech/server.png",
       "color": "#2196F3",
       "isPublished": true
@@ -502,9 +667,9 @@
     {
       "title": "Python",
       "slug": "python",
-      "description": "High-level, general-purpose language",
-      "body": "This subject covers high-level, general-purpose language.",
-      "scope": "",
+      "description": "Python is a readable, beginner-friendly language used everywhere from web development to data science and AI. Its simple syntax makes it one of the easiest languages to start with, while its huge ecosystem of libraries makes it powerful enough for serious, large-scale professional software.",
+      "body": "Python was designed with readability in mind, which is exactly why it's such a popular first programming language — its syntax reads almost like plain English, letting you focus on solving problems rather than fighting the language itself. This subject starts with the core fundamentals: variables, data types, control flow, functions, and Python's especially clean approach to lists, dictionaries, and other data structures. From there, you'll move into object-oriented programming, working with files, and handling errors gracefully, along with enough of Python's standard library and package ecosystem (via pip) to write genuinely useful programs rather than toy examples. Python's real strength is its versatility: the same core language you learn here is used to build web applications (with frameworks like Django and Flask), automate repetitive tasks, analyse data, and build AI and machine learning systems — often the exact same syntax across wildly different domains. That versatility is a big part of why Python consistently ranks among the most in-demand and widely taught programming languages, whether someone's goal is web development, data science, automation, or a way into AI and machine learning. You'll also write a handful of small, complete programs — including a simple automation script — to see Python's practical usefulness beyond isolated syntax exercises.",
+      "scope": null,
       "image": "assets/images/tech/python.png",
       "color": "#3776AB",
       "isPublished": true
@@ -512,8 +677,8 @@
     {
       "title": "AI Fundamentals",
       "slug": "ai-fundamentals",
-      "description": "Basics of AI and reasoning",
-      "body": "This subject covers basics of ai and reasoning.",
+      "description": "AI Fundamentals introduces the core concepts behind artificial intelligence — what machine learning actually is, how large language models work, and how AI is genuinely being used in real products today. It's designed to build real understanding, cutting through hype to explain what AI can and can't do.",
+      "body": "Artificial intelligence is talked about constantly, but genuine understanding of how it actually works is much rarer than the buzzwords suggest. This subject is built to close that gap, starting with the basic distinction between AI, machine learning, and deep learning — terms that are often used interchangeably but mean genuinely different things. From there, you'll cover how machine learning models actually learn from data, what a neural network is at a conceptual level, and how large language models (like the ones behind modern chatbots) are trained and how they generate responses. You'll also explore practical, current AI applications: how prompt engineering works when interacting with an LLM, how AI is being integrated into everyday software products, and where AI genuinely excels versus where it still falls short and requires human oversight. This subject deliberately avoids requiring heavy mathematics or a machine learning research background — the goal is conceptual fluency, so you can reason clearly about AI capabilities, have informed conversations about it at work, and know enough to make good decisions about when and how to use AI tools in your own work, regardless of your specific technical role.",
       "scope": null,
       "image": "assets/images/tech/ai.png",
       "color": "#A9A9A9",
@@ -522,8 +687,8 @@
     {
       "title": "Machine Learning",
       "slug": "machine-learning",
-      "description": "Training models with data",
-      "body": "This subject covers training models with data.",
+      "description": "Learn machine learning step by step: how models learn, how to prepare data and test models honestly, supervised and unsupervised methods, deep learning for images, text and LLMs, and how to run models responsibly in production.",
+      "body": "This subject covers the end-to-end machine-learning workflow using Python: framing a problem, preparing data, selecting models, and evaluating results. Study regression, classification, unsupervised learning, neural networks, embeddings, and LLM applications. Then learn to deploy and monitor models, detect changing data, and address privacy, fairness, security, and operational risks. The focus is on choosing suitable methods, measuring performance honestly, and understanding model limitations.",
       "scope": null,
       "image": "assets/images/tech/analytics.png",
       "color": "#FFB74D",
@@ -532,9 +697,9 @@
     {
       "title": "Git",
       "slug": "git",
-      "description": "Version control for codebases",
-      "body": "This subject covers version control for codebases.",
-      "scope": "",
+      "description": "Git is the version control system used by virtually every software team to track changes to code, collaborate without overwriting each other's work, and safely experiment through branches. It's a non-negotiable skill for any developer — used daily, regardless of language, framework, or company.",
+      "body": "Every professional codebase, from a solo side project to a massive company's core product, is tracked using Git. It records every change ever made, lets multiple people work on the same codebase simultaneously without stepping on each other, and gives you the confidence to experiment because you can always go back to a previous working state. This subject starts with the fundamentals: initialising a repository, tracking changes, and committing them with meaningful messages that explain what changed and why. From there, you'll learn branching — creating an isolated space to work on a new feature without touching the main codebase — and merging that work back in safely, including how to resolve conflicts when two people changed the same part of a file. You'll also cover working with remote repositories like GitHub, pushing and pulling changes, and the collaboration workflows real teams use, like pull requests and code review. Beyond the basics, this subject covers practical recovery skills too — undoing mistakes, viewing history, and using tools like stash and rebase — because knowing how to fix a Git mistake confidently is just as important as knowing how to use Git correctly in the first place.",
+      "scope": null,
       "image": "assets/images/tech/git.png",
       "color": "#F1502F",
       "isPublished": true
@@ -542,9 +707,9 @@
     {
       "title": "Jira",
       "slug": "jira",
-      "description": "Project and issue management tool",
-      "body": "This subject covers project and issue management tool.",
-      "scope": "",
+      "description": "Jira is the most widely used tool for tracking software projects — organising work into tickets, sprints, and boards so teams can plan, prioritise, and see progress clearly. If you'll ever work on a software team, you will almost certainly use Jira or something very like it.",
+      "body": "Jira turns the chaos of 'who's working on what, and what's left to do' into a structured, visible system that an entire team can see and trust. This subject starts with the basics: what a ticket (or issue) is, how tickets are organised into projects, and the common issue types — bugs, tasks, and user stories — that represent different kinds of work. From there, you'll learn how teams use boards (Kanban and Scrum) to visualise work moving from 'to do' through 'in progress' to 'done', and how sprints structure work into fixed time periods with clear goals, a core practice in Agile software development. You'll also cover practical daily-use skills: writing clear tickets that describe what needs to happen and why, using labels and priorities to keep a backlog organised, and reading reports like burndown charts that show whether a team is on track. Jira is used across the software industry regardless of company size or specific methodology, which makes fluency in it a practical, immediately useful skill whether you're a developer, tester, product manager, or anyone else working closely with a software team. You'll also walk through a full simulated sprint cycle, from initial planning through to completion, seeing how the pieces genuinely connect day to day.",
+      "scope": null,
       "image": "assets/images/tech/jira.png",
       "color": "#0052CC",
       "isPublished": true
@@ -552,9 +717,9 @@
     {
       "title": "Jenkins",
       "slug": "jenkins",
-      "description": "CI/CD automation server",
-      "body": "This subject covers ci/cd automation server.",
-      "scope": "",
+      "description": "Jenkins is a widely used automation server for building CI/CD pipelines — automatically testing, building, and deploying code whenever changes are pushed. It's one of the most established tools in the DevOps toolkit, and understanding it gives you a strong foundation for CI/CD tools in general.",
+      "body": "Jenkins automates the repetitive but critical steps between writing code and getting it running in production: running tests, building the application, and deploying it, all without a person manually doing each step by hand. This subject starts with Jenkins' core concept, the pipeline — a defined sequence of steps that runs automatically, typically triggered whenever code is pushed to a repository. You'll learn to write pipelines using Jenkinsfiles, which describe the build process as code that lives alongside your project, making it version-controlled and reviewable just like any other part of your codebase. From there, you'll cover practical, everyday concerns: running automated tests as part of a pipeline, building and packaging an application, deploying to different environments (like staging and production), and setting up notifications so the team knows immediately if a build fails. You'll also explore Jenkins' plugin ecosystem, which is enormous and lets it integrate with almost any tool in a modern development stack. While newer tools like GitHub Actions have gained ground in recent years, Jenkins remains deeply embedded in many established companies, and the pipeline concepts you learn here transfer directly to whichever CI/CD tool you encounter next.",
+      "scope": null,
       "image": "assets/images/tech/jenkins.png",
       "color": "#D24939",
       "isPublished": true
@@ -562,9 +727,9 @@
     {
       "title": "Software Testing",
       "slug": "software-testing",
-      "description": "Testing strategies and types",
-      "body": "This subject covers testing strategies and types.",
-      "scope": "",
+      "description": "Software Testing covers the principles and practices behind verifying that software actually works as intended — functional testing, test case design, and the mindset of finding bugs before users do. It's foundational for anyone in QA, and genuinely useful for developers who want to write more reliable code.",
+      "body": "Good testing isn't just clicking around an app and hoping nothing's broken — it's a structured discipline with its own principles, techniques, and vocabulary. This subject starts with the fundamentals: what makes a good test case, the difference between functional and non-functional testing, and core testing types like unit, integration, and end-to-end testing, each catching different kinds of problems at different levels of a system. From there, you'll cover manual testing techniques, including exploratory testing, where a skilled tester actively hunts for edge cases and unexpected behaviour rather than just following a fixed script. You'll also learn how to write clear, useful bug reports that give developers exactly what they need to reproduce and fix an issue quickly, along with test planning — deciding what to test, how thoroughly, and in what order, given real-world constraints like limited time before a release. This subject builds the foundational mindset behind quality assurance: thinking critically about how software could fail, not just whether it works under ideal conditions. It's the essential first step before moving into test automation tools like Selenium or Cypress, and valuable on its own for anyone who wants software they build or use to actually be reliable.",
+      "scope": null,
       "image": "assets/images/tech/tester.png",
       "color": "#607D8B",
       "isPublished": true
@@ -572,9 +737,9 @@
     {
       "title": "Java Selenium",
       "slug": "java-selenium",
-      "description": "Browser testing using Selenium",
-      "body": "This subject covers browser testing using selenium.",
-      "scope": "",
+      "description": "Selenium with Java is the traditional, industry-standard combination for automating browser-based testing — programmatically clicking buttons, filling forms, and verifying page behaviour instead of doing it by hand. It remains a core skill for test automation roles across countless established enterprise QA teams.",
+      "body": "Manually testing a web application by clicking through it again and again for every release doesn't scale, and that's exactly the problem Selenium solves: it lets you write code that controls a real browser, clicking, typing, and verifying page content automatically. This subject pairs Selenium with Java, one of the most common and enterprise-friendly combinations in test automation. You'll start with Selenium WebDriver fundamentals — locating elements on a page, interacting with them, and writing assertions that check whether the page behaved as expected. From there, you'll cover the Page Object Model, a design pattern that keeps test code organised and maintainable as a test suite grows into the hundreds or thousands of test cases, along with handling common real-world challenges like waiting for elements to load and dealing with dynamic content. You'll also learn how Selenium tests integrate into a broader testing framework (like TestNG or JUnit) and how they fit into a CI/CD pipeline, running automatically on every code change. Selenium with Java remains deeply established in large enterprise QA teams, particularly in industries like banking and insurance, making this a durable, widely recognised skill in test automation.",
+      "scope": null,
       "image": "assets/images/tech/placeholder.png",
       "color": "#43B02A",
       "isPublished": false
@@ -582,29 +747,29 @@
     {
       "title": "Android",
       "slug": "android",
-      "description": "Android apps using Kotlin or Java",
-      "body": "This subject covers android apps using kotlin or java.",
-      "scope": "",
+      "description": "Android development teaches you to build native mobile apps for the world's most widely used mobile operating system. Covering the Android SDK, app architecture, and real device behaviour, this subject prepares you to build, test, and publish apps that run on billions of devices globally.",
+      "body": "Android powers the majority of smartphones worldwide, and building for it natively means working directly with the Android SDK to create apps that feel fast, responsive, and properly integrated with the device — notifications, permissions, and hardware features included. This subject starts with the fundamentals of an Android app's structure: activities and fragments (the building blocks of an app's screens), the Android lifecycle (which governs how an app behaves as a user switches between apps or rotates their phone), and building user interfaces with modern Android UI tools. From there, you'll cover navigating between screens, handling user input, storing data locally on the device, and making network requests to a backend API — the core skills behind nearly every real Android app. You'll also learn about Android's permission system, background work, and the practical realities of testing across different device sizes and Android versions, since fragmentation is a genuine, ongoing challenge in Android development. By the end, you'll understand not just how to write Android code, but how to structure an app that behaves correctly across the wide range of real-world conditions an Android app actually encounters once it's in users' hands.",
+      "scope": null,
       "image": "assets/images/tech/android.png",
       "color": "#3DDC84",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "iOS",
       "slug": "ios",
-      "description": "Build iOS apps using Swift",
-      "body": "This subject covers build ios apps using swift.",
-      "scope": "",
+      "description": "iOS development teaches you to build native apps for Apple's mobile platform using Swift and SwiftUI, covering everything from building interfaces to working with device features. It's the path into building apps for one of the most lucrative and widely used app ecosystems in the world.",
+      "body": "Building natively for iOS means working within Apple's own tools and conventions to create apps that feel genuinely at home on an iPhone or iPad — fast, polished, and properly integrated with the platform's design language and hardware. This subject starts with Swift, Apple's modern programming language, and SwiftUI, the declarative framework used to build interfaces by describing what a screen should look like rather than manually managing every UI update yourself. You'll learn the fundamentals of app structure — views, navigation between screens, and state management within SwiftUI — along with handling user input, storing data locally using tools like Core Data, and making network requests to communicate with a backend. You'll also cover working with common device features, understanding the iOS app lifecycle, and the realities of testing on both the simulator and real devices, since subtle behaviour differences do exist between them. iOS development has a reputation for strong tooling and design consistency, backed by Apple's own frameworks, and remains one of the most in-demand and well-compensated specialisations in mobile development today. You'll also build a small, complete app from scratch, tying views, state, and networking together into one working project rather than isolated exercises.",
+      "scope": null,
       "image": "",
       "color": "#FA7343",
-      "isPublished": true
+      "isPublished": false
     },
     {
       "title": "Cloud Basics",
       "slug": "cloud-basics",
-      "description": "Intro to cloud platforms",
-      "body": "This subject covers intro to cloud platforms.",
-      "scope": "",
+      "description": "Cloud Basics introduces the core concepts behind cloud computing — virtual servers, storage, networking, and the pay-as-you-go model that's replaced most on-premise infrastructure. It's the essential foundation before diving into a specific provider like AWS, and genuinely useful for any modern engineering role.",
+      "body": "Cloud computing changed how nearly every company builds and runs software, replacing physical servers a business had to buy and maintain with virtual infrastructure you rent from a provider, scaling up or down as needed. This subject starts with the fundamental building blocks common to virtually every cloud provider: virtual machines (renting computing power), storage (keeping files and data reliably), and networking (connecting everything together securely). From there, you'll cover core cloud concepts like scalability — automatically handling more traffic without manual intervention — and the shared responsibility model, which clarifies what the cloud provider secures versus what you're responsible for securing yourself. You'll also learn about different service models (infrastructure, platform, and software as a service) and why a company might choose one over another for a given need, along with basic cost management, since cloud bills can spiral quickly without understanding how pricing actually works. This subject is intentionally provider-agnostic, building the conceptual foundation that applies whether you end up working with AWS, Azure, or Google Cloud — making it the right starting point before specialising in any one platform. You'll also work through realistic scenarios weighing cloud costs and tradeoffs, building genuine judgement rather than just memorising terminology.",
+      "scope": null,
       "image": "assets/images/tech/cloud.png",
       "color": "#4285F4",
       "isPublished": true
@@ -612,9 +777,9 @@
     {
       "title": "RxJS",
       "slug": "rxjs",
-      "description": "Reactive programming with streams",
-      "body": "This subject covers reactive programming with streams.",
-      "scope": "",
+      "description": "RxJS is a library for working with asynchronous data streams using Observables, heavily used in Angular applications for handling HTTP requests, user events, and complex timing logic. It brings a powerful but genuinely different way of thinking about data that changes over time.",
+      "body": "Most JavaScript developers are used to thinking about asynchronous code one operation at a time — a single API call, a single event. RxJS introduces a different mental model: Observables, which represent streams of values over time, whether that's a sequence of user clicks, a series of values from a WebSocket, or the eventual result of an HTTP request. This subject starts with what an Observable actually is and how it differs from a Promise, then covers subscribing to Observables and the operators — RxJS's real power — that let you transform, filter, combine, and time-control these streams in a declarative way. You'll learn commonly used operators like map, filter, switchMap, and debounceTime, understanding not just their syntax but the real problems each one solves, like preventing a search box from firing an API request on every single keystroke. Because Angular's HttpClient and reactive forms are built directly on Observables, understanding RxJS well is essential to writing idiomatic, bug-free Angular code — and the same reactive programming concepts transfer to other reactive libraries you may encounter elsewhere in the JavaScript ecosystem. You'll also refactor a small real example combining several asynchronous operations, seeing directly how much cleaner the RxJS version reads compared to nested callbacks.",
+      "scope": null,
       "image": "assets/images/tech/rxjs.png",
       "color": "#B7178C",
       "isPublished": true
@@ -622,9 +787,9 @@
     {
       "title": "Node.js",
       "slug": "nodejs",
-      "description": "JavaScript for server‑side programming",
-      "body": "This subject covers javascript for server‑side programming.",
-      "scope": "",
+      "description": "Node.js lets you run JavaScript outside the browser, most commonly to build backend servers and APIs. It brought JavaScript to the server side, meaning developers can use one language across an entire application, and it powers a huge share of modern web backends and command-line tools.",
+      "body": "Before Node.js, JavaScript only ran inside a browser. Node.js changed that by letting JavaScript run directly on a server or your own machine, opening the door to building entire backend systems in the same language many developers already use on the frontend. This subject starts with Node.js's core runtime concepts: the event loop, which explains how Node.js handles many operations at once without traditional multi-threading, and asynchronous programming patterns like callbacks, promises, and async/await, which are essential to writing correct, non-blocking Node.js code. From there, you'll cover Node's built-in modules for working with files, networking, and the operating system, along with npm, the package manager that gives you access to the enormous ecosystem of reusable JavaScript libraries. You'll also build a basic HTTP server from scratch to understand what's actually happening under the hood before frameworks like Express add convenience on top. Node.js underpins a huge portion of the modern web — from APIs and microservices to build tools and command-line utilities — making it one of the most practical, widely applicable skills for anyone already comfortable with JavaScript. By the end, running 'node script.js' from a terminal and understanding exactly what happens next will feel completely natural.",
+      "scope": null,
       "image": "assets/images/tech/node.png",
       "color": "#68A063",
       "isPublished": true
@@ -632,9 +797,9 @@
     {
       "title": "Tailwind CSS",
       "slug": "tailwind",
-      "description": "Utility-first CSS framework for rapidly building custom user interfaces directly in your markup.",
-      "body": "This subject covers cross-platform ui framework.",
-      "scope": "",
+      "description": "Tailwind CSS is a utility-first framework that lets you style a webpage directly in your markup using small, composable classes, instead of writing separate CSS files. It's become the dominant styling choice in modern JavaScript frameworks because of how fast and consistent it makes building UIs.",
+      "body": "Traditional CSS means naming a class, writing a separate rule for it, and switching back and forth between your markup and your stylesheet. Tailwind takes a different approach: small, single-purpose utility classes like flex, p-4, or text-blue-500 that you apply directly in your HTML or JSX, building up complex designs by composing simple pieces. This subject starts with that core philosophy and Tailwind's most commonly used utilities — spacing, typography, colour, flexbox, and grid — showing how a fully styled, responsive component comes together without ever leaving your markup. From there, you'll cover responsive design in Tailwind's system, using simple breakpoint prefixes to adapt a layout across screen sizes, along with hover, focus, and other interactive states, and Tailwind's configuration file, which lets you customise the whole design system — colours, spacing scale, fonts — to match a specific brand. You'll also learn practical workflow patterns, like extracting repeated utility combinations into reusable components rather than duplicating long class lists everywhere. Tailwind's speed and consistency have made it the default styling choice across React, Vue, and Angular projects industry-wide, particularly on teams that value shipping quickly without sacrificing visual polish. You'll also convert a small existing page from raw CSS into Tailwind, feeling directly how the workflow and tradeoffs differ between the two approaches.",
+      "scope": null,
       "image": "assets/images/tech/tailwind.png",
       "color": "#3880FF",
       "isPublished": true
@@ -642,9 +807,9 @@
     {
       "title": "Capacitor",
       "slug": "capacitor",
-      "description": "Bridge native with web apps",
-      "body": "This subject covers bridge native with web apps.",
-      "scope": "",
+      "description": "Capacitor lets you take a web application and package it as a native iOS or Android app, giving web developers a path into mobile without learning a completely separate native toolkit. It's especially popular for hybrid apps that need access to native device features.",
+      "body": "Capacitor bridges the gap between web development and native mobile apps, letting you take an existing web app — built with plain JavaScript, React, Angular, or Vue — and wrap it so it runs as a genuine native app on iOS and Android, complete with access to native device features. This subject starts with how a Capacitor project is structured, and how your existing web code becomes a native app shell that behaves like any other app on a user's device. From there, you'll cover Capacitor's plugin system, which gives your web code access to native capabilities that wouldn't normally be available in a browser — the camera, GPS location, push notifications, and local file storage, among others. You'll also learn the practical workflow of building, testing, and running a Capacitor app on both a simulator and a real device, along with the tradeoffs involved in a hybrid approach versus fully native development — where hybrid genuinely shines, and where it starts to show its limits for very performance-intensive or deeply platform-specific apps. Capacitor is a strong option for teams that already have web development skills and want to reach mobile users without building and maintaining two completely separate native codebases.",
+      "scope": null,
       "image": "assets/images/tech/capacitor.png",
       "color": "#2C2C2E",
       "isPublished": true
@@ -652,9 +817,9 @@
     {
       "title": "Cypress",
       "slug": "cypress",
-      "description": "Web testing automation tool",
-      "body": "This subject covers web testing automation tool.",
-      "scope": "",
+      "description": "Cypress is a modern end-to-end testing framework for web applications, letting you write tests that run directly in the browser and interact with your app the way a real user would. It's become the go-to choice for JavaScript teams who want fast, reliable, developer-friendly test automation.",
+      "body": "Cypress was built specifically to fix the frustrations developers had with older testing tools — flaky tests, slow feedback, and debugging that felt like guesswork. It runs directly inside the browser alongside your application, which means it can see exactly what's happening in real time and automatically wait for elements to be ready, rather than relying on fragile, manually-added delays. This subject starts with writing your first Cypress test: visiting a page, finding elements, interacting with them (clicking, typing), and asserting that the result is what you expect. From there, you'll cover more realistic testing scenarios — filling out and submitting forms, handling asynchronous behaviour like API calls, and structuring a growing test suite so it stays maintainable rather than becoming a tangled mess. You'll also learn Cypress's excellent debugging tools, including its time-travel feature that lets you see exactly what the page looked like at every step of a test, which dramatically speeds up figuring out why a test failed. Cypress has become especially popular on modern JavaScript teams (React, Vue, Angular) because it's approachable for developers, not just dedicated QA specialists, and its tests are often written in the same language as the application itself.",
+      "scope": null,
       "image": "assets/images/tech/cypress.png",
       "color": "#17202C",
       "isPublished": true
@@ -662,19 +827,19 @@
     {
       "title": "NgRX",
       "slug": "ngrx",
-      "description": "A framework for building reactive applications in Angular",
-      "body": "NgRx provides state management, isolation of side effects, entity collection management, router bindings, code generation, and developer tools that enhance developers experience when building many different types of applications.",
-      "scope": "",
-      "image": "",
+      "description": "NgRx brings Redux-style, predictable state management to Angular applications, using RxJS Observables at its core. It's the go-to choice for large, enterprise-scale Angular apps where many components need to share and react to the same data in a consistent, traceable way.",
+      "body": "As an Angular application grows large and enterprise-scale, managing shared state across many components purely through services can become difficult to trace and debug. NgRx solves this the same way Redux does for React: a single, central store holding your application's state, changed only through a strict, predictable process. This subject starts with NgRx's core building blocks — actions (describing what happened), reducers (pure functions that compute new state from actions), and selectors (which efficiently read specific pieces of state from the store) — and how these fit together within Angular's architecture. From there, you'll cover effects, NgRx's answer to handling side effects like HTTP calls, keeping your reducers pure while still allowing your app to talk to a backend and react to the results. You'll also learn the NgRx DevTools, which let you see every action and state change your app has ever made, making genuinely difficult bugs far easier to track down. Because NgRx builds directly on RxJS, which Angular already uses throughout its HTTP and forms modules, it fits naturally into an Angular codebase rather than feeling like a bolted-on addition, which is a big part of why it remains the standard choice for state management in large Angular applications. You'll also refactor a small existing Angular app from services into NgRx, feeling directly the moment where the extra structure starts to genuinely pay off.",
+      "scope": null,
+      "image": "assets/images/tech/upskill.png",
       "color": "#0052CC",
       "isPublished": true
     },
     {
       "title": "UI Engineering",
       "slug": "ui-engineering",
-      "description": "Enterprise UI Engineering practices, libraries and tools",
-      "body": "This subject covers enterprise level UI Engineering practices, libraries and tools like Architecture patterns, AEM, Storybook etc.",
-      "scope": "",
+      "description": "UI Engineering focuses on building consistent, accessible, and reusable user interfaces at scale — design systems, component architecture, and accessibility. It's the discipline that bridges design and frontend development, ensuring an interface is not just visually correct but genuinely usable by everyone.",
+      "body": "Building one good-looking screen is very different from building an interface system that stays consistent, accessible, and maintainable across dozens of screens and multiple teams. UI Engineering is that discipline. This subject starts with design systems — shared libraries of reusable components (buttons, inputs, modals) with consistent styling and behaviour — and why they matter enormously once more than one or two people are building an interface together. From there, you'll cover component architecture: how to design a component's API (its props and behaviour) so it's flexible enough to reuse in different contexts, without becoming so configurable that it's confusing to use. Accessibility is a core focus throughout — building interfaces that work properly with screen readers, keyboard navigation, and sufficient colour contrast, not as an afterthought but as a fundamental requirement, since a genuinely well-built interface works for everyone, not just users without disabilities. You'll also cover responsive and adaptive design patterns, and the practical realities of working alongside designers, translating a design file into a real, working, accessible component. This subject sits at the intersection of frontend development and design, and is increasingly its own recognised specialisation as products scale. You'll also build a small reusable component library from scratch, testing it for accessibility rather than assuming it works correctly by default.",
+      "scope": null,
       "image": "assets/images/tech/placeholder.png",
       "color": "#0052CC",
       "isPublished": false
@@ -682,18 +847,18 @@
     {
       "title": "Nx",
       "slug": "nx-monorepo",
-      "description": "Smart Monorepo tool for node projects",
-      "body": "Learn what Nx is and how it helps manage the continuos integration of growing node repository, keeping things fast and organized.",
-      "scope": "",
-      "image": "assets/images/tech/placeholder.png",
+      "description": "Nx is a build system and toolkit for managing monorepos — multiple related applications and libraries living in a single repository. It's widely used in larger Angular, React, and Node.js codebases where sharing code and coordinating builds across many projects becomes genuinely complex.",
+      "body": "As an organisation grows, it often ends up with many related applications and shared libraries — a web app, a mobile app, a backend, and common utilities used by all of them. Managing these as entirely separate repositories creates real friction: shared code gets duplicated or awkwardly published as separate packages just to be reused. Nx solves this by supporting a monorepo — one repository containing multiple projects — with tooling specifically built to make that manageable at scale. This subject starts with how an Nx workspace is structured, organising applications and libraries so code can be shared cleanly between them. From there, you'll cover Nx's standout feature: intelligent, cached builds and tests that only rerun for the parts of the codebase actually affected by a change, which becomes a massive time-saver as a monorepo grows into dozens of projects. You'll also learn Nx's dependency graph visualisation, which shows exactly how projects relate to and depend on each other, and generators, which scaffold new applications or libraries following consistent, established conventions. Nx is especially common in larger Angular and React organisations that need to coordinate many related projects without the overhead and duplication of maintaining them as fully separate repositories. You'll also set up a small working monorepo with two applications and a shared library, seeing firsthand how Nx's tooling behaves as it grows.",
+      "scope": null,
+      "image": "assets/images/tech/starred.png",
       "color": "#0052CC",
       "isPublished": true
     },
     {
       "title": "Vue.js",
       "slug": "vuejs",
-      "description": "Progressive JavaScript framework for building reactive user interfaces and single-page applications.",
-      "body": null,
+      "description": "Vue.js is an approachable, flexible frontend framework for building user interfaces, often praised for being easier to pick up than React or Angular while still being powerful enough for large applications. It's a popular alternative across the industry, especially valued for its gentle learning curve.",
+      "body": "Vue.js was designed with approachability as a core goal, which shows immediately: you can add it incrementally to a single page, or use it to build a full, large-scale application, without a steep initial learning curve either way. This subject starts with Vue's template syntax, which looks close to plain HTML with a few added directives, making it genuinely readable even to someone new to the framework. From there, you'll cover components, props, and reactive data — Vue's system for automatically updating the UI whenever your underlying data changes, without you having to manually track and trigger those updates yourself. You'll also learn the Composition API, Vue's modern approach to organising component logic that scales better in larger, more complex components than the older Options API, along with routing between pages using Vue Router and basic state management patterns for sharing data across components. Vue has built a genuinely passionate community and is especially popular in parts of the industry (notably across much of Asia and Europe) as a lighter-weight, more approachable alternative to React and Angular, while remaining fully capable of powering serious, production-scale applications. You'll also build a small multi-component application from scratch, comparing how the experience feels against equivalent work in React or Angular.",
       "scope": null,
       "image": null,
       "color": null,
@@ -702,8 +867,8 @@
     {
       "title": "React Native",
       "slug": "react-native",
-      "description": "Cross-platform mobile app development using React ? one codebase for iOS and Android.",
-      "body": null,
+      "description": "React Native lets you build genuinely native iOS and Android apps using React and JavaScript, sharing a huge amount of code between platforms instead of building two separate native apps. It's the most widely used cross-platform mobile framework, backed by Meta and a massive open-source community.",
+      "body": "Building separate native apps for iOS and Android traditionally meant learning two entirely different toolkits and often maintaining two separate codebases in parallel. React Native changes that by letting you write your app once, using React and JavaScript, while still rendering genuine native UI components on each platform, not a webpage wrapped to look like an app. This subject starts with React Native's core components — View, Text, and others that map to real native UI elements — and how they differ subtly but importantly from their web equivalents. From there, you'll cover navigation between screens, handling touch gestures and platform-specific behaviour, styling with React Native's Flexbox-based system, and connecting to backend APIs, much like you would in a web React app. You'll also learn to access native device features like the camera and location, and the practical realities of testing on both a simulator and real devices, along with understanding where platform differences between iOS and Android genuinely require separate handling. Because it reuses your existing React knowledge, React Native is often the fastest path for a web developer to start building real, published mobile apps without starting completely from scratch.",
       "scope": null,
       "image": null,
       "color": null,
@@ -712,8 +877,8 @@
     {
       "title": "Computer Fundamentals",
       "slug": "computer-fundamentals",
-      "description": "Hardware, operating systems, file management, and basic computer operations for everyday use.",
-      "body": null,
+      "description": "Computer Fundamentals covers the essential building blocks everyone should understand before using a computer confidently — hardware basics, how Windows works, files and folders, and simple troubleshooting. It's the true starting point for anyone new to computers, with no assumptions about prior experience.",
+      "body": "Before learning any specific software or programming skill, it genuinely helps to understand the computer itself — what its main parts do, how the operating system organises everything, and how to navigate confidently instead of clicking around hoping for the best. This subject starts with the basics of hardware: what the CPU, RAM, and storage actually do, and how they work together every time you use a computer. From there, you'll learn to navigate Windows comfortably — the desktop, taskbar, and Start Menu — along with essential keyboard and mouse skills that make everyday tasks noticeably faster once they become second nature. You'll also cover file and folder management, understanding how files are organised and how to keep your own work tidy and easy to find, plus basics of storage and memory, working with everyday applications, and connecting devices like printers. A dedicated section on basic troubleshooting and network and security basics rounds things out, covering what to do when something goes wrong and how to stay reasonably safe online. This subject assumes absolutely no prior experience and is built for genuine beginners who want real, practical confidence using a computer for work, study, or everyday life.",
       "scope": null,
       "image": null,
       "color": null,
@@ -722,8 +887,8 @@
     {
       "title": "Internet & Digital Skills",
       "slug": "internet-digital",
-      "description": "Web browsing, email, cloud storage, video conferencing, and staying safe online.",
-      "body": null,
+      "description": "Internet & Digital Basics covers how the internet actually works, safe and effective browsing, email, and everyday digital communication tools. It's built for anyone who wants genuine confidence using the internet safely and productively, without assuming any prior technical background.",
+      "body": "The internet is something almost everyone uses daily, but real understanding of how it works — and how to use it safely and effectively — is often patchy at best. This subject starts with the basics of what the internet actually is and how a web browser connects you to websites around the world, then covers practical browsing skills: using tabs, bookmarks, and search effectively, and recognising the difference between reliable and unreliable information online. From there, you'll cover email fundamentals — writing clear, professional messages, managing an inbox, and understanding email etiquette that applies whether you're communicating for work or personal reasons. A significant portion of this subject focuses on digital safety: recognising phishing attempts and scams, understanding why strong, unique passwords matter, and practising safe habits around personal information online. You'll also cover everyday digital communication tools, like video calls and messaging platforms, that have become essential parts of modern work and life. This subject is designed for genuine beginners and assumes no prior technical background, focused entirely on practical, everyday confidence rather than technical depth. By the end, you'll browse, communicate, and stay safe online with genuine, everyday confidence.",
       "scope": null,
       "image": null,
       "color": null,
@@ -732,8 +897,8 @@
     {
       "title": "Microsoft Office",
       "slug": "microsoft-office",
-      "description": "Word, Excel, and PowerPoint ? the core productivity tools of the modern workplace.",
-      "body": null,
+      "description": "Microsoft Office covers the essential productivity tools used in virtually every office job — Word for documents, Excel for spreadsheets, and PowerPoint for presentations. This subject builds real, practical fluency in the tools most workplaces expect every employee to already know how to use.",
+      "body": "Word, Excel, and PowerPoint remain the default productivity toolkit across most workplaces, and genuine fluency with them is one of the most universally useful professional skills there is, regardless of industry or job title. This subject starts with Word: formatting documents cleanly, using styles and templates consistently, and working with features like tables and mail merge that come up constantly in real office work. From there, you'll move into Excel, likely the most powerful and most underused tool of the three — organising data, writing formulas and functions, building charts, and using features like pivot tables to summarise and analyse data quickly instead of manually sorting through it. You'll also cover PowerPoint, focusing on building presentations that communicate clearly rather than just look busy, using slide design principles that keep an audience engaged rather than overwhelmed with text. Throughout, this subject emphasises practical, everyday use over obscure features — the skills that actually come up in real meetings, reports, and day-to-day office tasks. Whether you're starting your first office job or want to genuinely level up beyond the basics you've picked up informally, this subject is built to make you noticeably faster and more capable across all three tools. You'll also complete a small realistic project in each application, mirroring the actual tasks a new office employee is commonly asked to handle in their first weeks.",
       "scope": null,
       "image": null,
       "color": null,
@@ -742,11 +907,71 @@
     {
       "title": "Data Entry & Productivity",
       "slug": "data-entry",
-      "description": "Touch typing, data accuracy, keyboard shortcuts, and managing data efficiently in the workplace.",
-      "body": null,
+      "description": "Data Entry builds the speed, accuracy, and organisational habits needed to enter and manage data efficiently and correctly. Covering typing skills, spreadsheet basics, and data quality practices, this subject is practical training for any role where accurate, fast data handling genuinely matters.",
+      "body": "Data entry might sound simple, but doing it well — quickly, accurately, and consistently over long stretches of work — is a genuine, practical skill that many roles depend on. This subject starts with typing fundamentals, building both speed and accuracy through proper technique, since typos in data entry can cause real downstream problems, from incorrect records to costly business mistakes. From there, you'll cover spreadsheet basics as they apply specifically to data entry: organising data into clean, consistent columns, using basic validation to catch errors before they're saved, and simple formulas that help verify data looks correct as you go. You'll also learn practical habits that experienced data entry professionals rely on — double-checking work systematically rather than randomly, spotting common patterns that indicate an error (like a misplaced decimal or duplicate entry), and organising your own workflow to stay accurate even during repetitive, high-volume tasks. This subject is intentionally practical and hands-on, focused on the real skills that make someone genuinely reliable and fast at data entry work, which remains a real and valued skill across office administration, research, and countless operational roles. By the end, you'll be noticeably faster and more accurate than when you started, with habits that hold up under real workload pressure.",
       "scope": null,
       "image": null,
       "color": null,
+      "isPublished": true
+    },
+    {
+      "title": "Linux & Shell Scripting",
+      "slug": "linux-shell-scripting",
+      "description": "Linux & Shell Scripting covers command-line fluency, file systems, permissions, and writing shell scripts to automate repetitive tasks. It's an essential skill for anyone working with servers, DevOps tooling, or any environment where the command line — not a graphical interface — is how real work gets done.",
+      "body": "A huge share of the world's servers, and most professional development and deployment tooling, run on Linux, which means genuine command-line fluency isn't optional for many technical roles — it's a daily requirement. This subject starts with navigating the Linux filesystem confidently: moving between directories, finding and viewing files, and understanding how Linux organises everything as files, even things that don't feel like traditional files at first. From there, you'll cover permissions — who can read, write, or execute a given file, and why getting this wrong is a common source of both bugs and real security issues — along with managing processes, understanding what's actually running on a system at any given moment. You'll also learn shell scripting itself: writing scripts that automate repetitive command-line tasks, using variables, loops, and conditionals within a shell script, and combining commands together using pipes to build powerful one-line solutions to real problems. This subject is essential groundwork for DevOps, cloud engineering, and backend development roles, where working comfortably in a terminal, rather than a graphical interface, is simply how day-to-day technical work gets done. By the end, a terminal prompt will feel like a genuinely useful tool rather than an intimidating black box.",
+      "scope": null,
+      "image": null,
+      "color": "#FCC624",
+      "isPublished": true
+    },
+    {
+      "title": "Monitoring & Observability",
+      "slug": "monitoring-observability",
+      "description": "Monitoring & Observability covers how teams know what's actually happening inside a running system — metrics, logs, traces, and alerting that catch real problems before users notice them. It's a core practice behind reliable software, and essential for anyone working in DevOps or site reliability roles.",
+      "body": "Once software is running in production, you genuinely need to know what it's actually doing — is it slow, is it failing for some users, is something about to break — and that visibility is exactly what monitoring and observability provide. This subject starts with metrics: numerical measurements over time, like response times or error rates, and how to build dashboards that make a system's health visible at a glance rather than something you have to dig for. From there, you'll cover structured logging, which turns scattered, hard-to-search log messages into organised, queryable records that make investigating an issue dramatically faster than searching through raw text files. You'll also learn distributed tracing basics, which help you follow a single request as it moves through multiple services in a modern, distributed system — invaluable when a slowdown could be happening in any one of several places. A significant part of this subject covers designing effective alerts: catching genuinely important problems early, without generating so much noise that a team starts ignoring alerts altogether, a real and common failure mode. Together, these practices are what separates teams who find out about outages from angry customers from teams who catch and fix problems before most users ever notice.",
+      "scope": null,
+      "image": null,
+      "color": "#F46800",
+      "isPublished": true
+    },
+    {
+      "title": "AWS Cloud",
+      "slug": "aws",
+      "description": "AWS (Amazon Web Services) is the largest cloud platform in the world, and this subject covers its core services — compute, storage, databases, and security — aligned with the AWS Certified Cloud Practitioner exam. It's the practical, hands-on follow-up to understanding cloud concepts in general.",
+      "body": "Amazon Web Services is the market-leading cloud platform, and knowing your way around its core services is one of the most practically valuable skills in modern software and infrastructure roles. This subject builds on general cloud computing concepts and gets specific: EC2 for virtual servers, S3 for scalable storage, and RDS for managed relational databases, covering not just what each service does but when and why you'd actually choose it for a real project. You'll learn AWS's approach to security and access control through IAM (Identity and Access Management), how billing and cost management work in practice, and how core AWS services fit together into a working, reliable architecture. This subject is aligned with the domains covered in the AWS Certified Cloud Practitioner exam, making it a strong foundation whether your goal is that certification specifically or just genuine, practical AWS competence for a cloud or DevOps-adjacent role. Given how dominant AWS is across the industry — from startups to the majority of Fortune 500 companies — this is one of the highest-leverage, most transferable cloud skills you can build, and a common entry point into cloud engineering and DevOps career paths.",
+      "scope": null,
+      "image": "assets/images/tech/aws.png",
+      "color": "#C96A1E",
+      "isPublished": true
+    },
+    {
+      "title": "Web Foundation",
+      "slug": "web-foundation",
+      "description": "Every website relies on the same invisible machinery: a request travels from your browser to a server and a response comes back. This subject demystifies that machinery — HTTP, domains, DNS, hosting, SSL, and databases — so you understand how the web works, and can put a website online yourself.",
+      "body": "The web feels like magic until you understand its plumbing. This subject starts with the fundamentals every developer, and every curious user, should know: what happens when you type a URL and press enter, why HTTPS matters, what a domain and subdomain actually are, and what your browser is really doing when you open a private or incognito window. None of this requires writing code — it's the conceptual foundation that makes everything else about the web make sense.\n\nFrom there, the subject moves into the practical side: actually putting a website online. You'll learn how hosting works — the difference between shared hosting, a VPS, and cloud platforms — how DNS records point a domain to a server, how SSL certificates secure a connection, and why browsers block certain cross-origin requests through CORS. You'll also cover the basics of setting up a database for a live site, and when a CMS like WordPress makes more sense than custom code.\n\nBy the end, you'll be able to explain how the web works to someone else, and — more importantly — actually take a website from a folder of code to a live, secured, publicly reachable URL. This is foundational knowledge for developers, and hands-on operational skill for anyone who ends up responsible for keeping a site running.",
+      "scope": null,
+      "image": "assets/images/tech/web-foundation.png",
+      "color": "#14919B",
+      "isPublished": true
+    },
+    {
+      "title": "Communication Skills",
+      "slug": "communication-skills",
+      "description": "Communication Skills covers the English grammar, vocabulary, and everyday communication habits that make you clearly understood at work — from basic sentence structure to writing a professional email and explaining a technical idea without jargon. Built for genuine beginners through intermediate learners, with no assumptions about prior grammar knowledge.",
+      "body": "Being technically skilled isn't enough if you can't explain your thinking clearly — in an email, a meeting, or a quick chat with a teammate. This subject starts at the true beginning: the parts of speech, basic sentence structure, and the verb tenses that make up correct, everyday English, along with the vocabulary you need to express yourself without constantly searching for the right word. From there, you'll tighten up the details that trip up even confident speakers — prepositions, articles, punctuation, and the small grammar mistakes that quietly undermine how professional your writing sounds. Once the fundamentals are solid, this subject moves into practical, workplace-specific communication: writing clear and well-toned professional emails, listening actively and asking good clarifying questions, contributing confidently in meetings, and explaining a technical idea to someone who doesn't share your background — without over-explaining or drowning them in jargon. A final section covers the etiquette of remote and cross-cultural communication, since most modern teams collaborate asynchronously, in writing, and across different backgrounds and time zones. This subject assumes no prior grammar training and is built for learners at genuinely beginner through intermediate levels, with the goal of making you clearly, confidently understood — in writing and in person — regardless of your role.",
+      "scope": "Covers foundational English grammar and vocabulary (parts of speech, sentence structure, verb tenses, prepositions, articles, punctuation) and practical workplace communication (professional email writing, active listening, meeting participation, explaining technical ideas simply, remote and cross-cultural etiquette). Does not cover advanced or academic English (essay writing, literary analysis), spoken-accent or pronunciation training, or public-speaking/presentation-design skills in depth — those would be separate subjects. Learners also work through realistic workplace scenarios — rewriting an unclear email, choosing the professional response in a meeting, and simplifying a technical explanation for a non-technical audience — to build practical, applied confidence rather than abstract grammar rules.",
+      "image": "assets/images/tech/communication.png",
+      "color": "#8E44AD",
+      "isPublished": true
+    },
+    {
+      "title": "Financial Literacy for Non-Finance Roles",
+      "slug": "financial-literacy",
+      "description": "Financial Literacy for Non-Finance Roles teaches business analysts and other non-finance professionals to read a P&L, balance sheet, and cash flow statement, think in terms of margin and cost structure, build and defend a budget, and judge whether an investment or business case actually makes financial sense — without needing an accounting background.",
+      "body": "Business analysts sit between the business and the numbers every day — reviewing a budget variance, sanity-checking a business case, or explaining why a 'profitable' initiative still needs cash — yet most were never formally taught how to read a financial statement or judge a financial argument. This subject starts with the three statements every company runs on: the profit & loss statement, the balance sheet, and the cash flow statement, and the core vocabulary that ties them together — revenue, margin, assets, liabilities, equity, and EBITDA. From there it moves into applied thinking: distinguishing fixed from variable costs, calculating a break-even point, building and defending a budget, and explaining a variance without hand-waving. The final section covers financial decision-making at the level a business analyst actually needs it: evaluating an investment with ROI, payback period, and NPV/IRR at a conceptual level, and building or critiquing a business case using sensitivity analysis and honest risk framing. No accounting coursework, journal entries, or tax law — just the financial fluency to read a statement, question an assumption, and hold your own in a numbers conversation.",
+      "scope": "Covers reading and interpreting the P&L, balance sheet, and cash flow statement; core financial vocabulary (revenue, margin, assets, liabilities, equity, EBITDA); profitability and cost-structure analysis (fixed vs. variable costs, break-even); budgeting, forecasting, and variance analysis; and investment/business-case judgment (ROI, payback period, NPV/IRR, sensitivity analysis, financial risk framing) for non-finance roles such as business analysts, product managers, and project managers. Does not cover bookkeeping, journal entries, tax law, or formal accounting certification (CPA/CFA-level) material — those would be separate, specialist subjects.",
+      "image": null,
+      "color": "#16A34A",
       "isPublished": true
     }
   ]

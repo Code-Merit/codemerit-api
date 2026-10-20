@@ -28,6 +28,20 @@ export async function seedQuestions(dataSource: DataSource, subjects: Subject[],
   const subjectBySlug = new Map(subjects.map((s) => [s.slug, s]));
   const topicBySlug = new Map(topics.map((t) => [t.slug, t]));
 
+  // The "already exists" check below matches by slug, and TypeORM's findOne({ slug: null }) does not
+  // filter at all — it returns the first question in the table. So a record without a slug (or with
+  // a duplicate one) would be silently skipped. Refuse to seed until every slug is present and unique.
+  const missingSlug = data.filter((q) => !q.slug);
+  const seen = new Set<string>();
+  const duplicateSlugs = data.filter((q) => q.slug && (seen.has(q.slug) || !seen.add(q.slug))).map((q) => q.slug);
+  if (missingSlug.length || duplicateSlugs.length) {
+    throw new Error(
+      `04-questions.seed.json: ${missingSlug.length} question(s) without a slug, ` +
+        `${duplicateSlugs.length} duplicate slug(s)${duplicateSlugs.length ? ` (e.g. ${duplicateSlugs.slice(0, 3).join(', ')})` : ''}. ` +
+        'Every question needs a unique slug.',
+    );
+  }
+
   let created = 0;
   let skipped = 0;
   let optionsCreated = 0;
