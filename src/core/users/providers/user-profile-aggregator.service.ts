@@ -7,6 +7,7 @@ import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QualityReview } from 'src/common/typeorm/entities/quality-review.entity';
+import { UserLessonTracker } from 'src/common/typeorm/entities/user-lesson-tracker.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
 import { UserPreference } from 'src/common/typeorm/entities/user-preference.entity';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
@@ -159,6 +160,7 @@ export class UserProfileAggregatorService {
     approvalRate: number | null;
     avgRatingGiven: number | null;
     reviewedThisWeek: number;
+    lastReviewedAt: Date | null;
   }> {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const row = await this.dataSource
@@ -169,6 +171,7 @@ export class UserProfileAggregatorService {
       .addSelect('SUM(CASE WHEN r.outcome = :rejected THEN 1 ELSE 0 END)', 'rejectedCount')
       .addSelect('AVG(r.grade)', 'avgGrade')
       .addSelect('SUM(CASE WHEN r.updatedAt >= :weekAgo THEN 1 ELSE 0 END)', 'reviewedThisWeek')
+      .addSelect('MAX(r.updatedAt)', 'lastReviewedAt')
       .from(QualityReview, 'r')
       .where('r.resourceType = :resourceType', { resourceType: QualityResourceTypeEnum.Question })
       .andWhere('r.reviewerId = :reviewerId', { reviewerId: targetUserId })
@@ -189,6 +192,7 @@ export class UserProfileAggregatorService {
       approvalRate: reviewedTotal > 0 ? Number((approvedCount / reviewedTotal).toFixed(2)) : null,
       avgRatingGiven: row?.avgGrade != null ? Number(Number(row.avgGrade).toFixed(1)) : null,
       reviewedThisWeek: Number(row?.reviewedThisWeek) || 0,
+      lastReviewedAt: row?.lastReviewedAt ? new Date(row.lastReviewedAt) : null,
     };
   }
 
@@ -264,6 +268,8 @@ export class UserProfileAggregatorService {
       (p) => p.permissionName === UserPermissionEnum.LmsManager || p.permissionName === UserPermissionEnum.QuestionReview,
     );
     const reviewerStats = canViewContactInfo && isReviewer ? await this.getReviewerStats(user.id) : null;
+    // Admin-only engagement snapshot for the About card — never queried for anyone else.
+    const adminActivity = viewer.role === UserRoleEnum.ADMIN ? await this.getAdminActivity(user.id) : null;
 
     return {
       ...user,
@@ -314,6 +320,36 @@ export class UserProfileAggregatorService {
       completedGeneralQuestions,
       attemptsSummary,
       reviewerStats,
+      adminActivity,
+    };
+  }
+
+  /** Last-active / last-practice / last-reading timestamps and API usage windows, for an
+   * Admin viewing a profile. Last active = the latest authenticated request (api_usage). */
+  private async getAdminActivity(userId: number) {
+    const [usage, practice, reading] = await Promise.all([
+      this.apiUsageService.usageSummary(userId),
+      this.dataSource
+        .createQueryBuilder()
+        .select('MAX(qa.createdAt)', 'at')
+        .from(QuestionAttempt, 'qa')
+        .innerJoin('qa.question', 'q')
+        .where('qa.userId = :userId', { userId })
+        .andWhere('q.questionType = :trivia', { trivia: QuestionTypeEnum.Trivia })
+        .getRawOne(),
+      this.dataSource
+        .createQueryBuilder()
+        .select('MAX(t.updatedAt)', 'at')
+        .from(UserLessonTracker, 't')
+        .where('t.userId = :userId', { userId })
+        .getRawOne(),
+    ]);
+    const toDate = (v: any) => (v ? new Date(v) : null);
+    return {
+      lastActiveAt: usage.lastHitAt,
+      lastPracticeAt: toDate(practice?.at),
+      lastReadingAt: toDate(reading?.at),
+      apiUsage: { total: usage.total, week: usage.week, today: usage.today },
     };
   }
 
