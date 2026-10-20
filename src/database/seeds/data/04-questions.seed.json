@@ -19894,7 +19894,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "TypeScript enhances Angular development by offering *type safety, autocompletion, and compile-time error checking*, leading to fewer bugs and cleaner code.\n",
+    "answer": "TypeScript adds type safety, autocompletion and compile-time error checking, which means fewer bugs and clearer code. Angular itself is written in TypeScript, and its compiler uses the types to check templates too.",
     "hint": "It catches errors at compile time.",
     "orderId": 1,
     "topicSlugs": [
@@ -20099,7 +20099,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": " Angular uses the Router module to navigate between components without reloading the entire page, keeping the SPA fast and responsive.",
+    "answer": "The Angular Router maps URLs to components and swaps them into a <router-outlet> without reloading the page. In a standalone app it is set up with provideRouter(routes) in app.config.ts.",
     "hint": "Navigation without reload.",
     "orderId": 1,
     "topicSlugs": [
@@ -20107,22 +20107,22 @@
     ],
     "options": [
       {
-        "option": "By reloading full pages",
+        "option": "By loading a new HTML page from the server for each URL",
         "correct": false,
         "comment": null
       },
       {
-        "option": "By replacing the backend router",
+        "option": "By forwarding every URL change to the backend router",
         "correct": false,
         "comment": null
       },
       {
-        "option": "By using Angular Router module",
+        "option": "Through the Angular Router, configured with provideRouter()",
         "correct": true,
         "comment": null
       },
       {
-        "option": "By relying on jQuery plugins",
+        "option": "By swapping templates through jQuery plugins",
         "correct": false,
         "comment": null
       }
@@ -20172,7 +20172,7 @@
   {
     "slug": "angular-applications-are-mainly-structured-into",
     "title": "",
-    "question": "Angular applications are mainly structured into ____.",
+    "question": "Angular applications are mainly structured as a tree of ____.",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 1,
@@ -20181,15 +20181,15 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Angular apps are made of components (UI + logic) grouped into modules, which organize and manage dependencies for better maintainability.\n",
-    "hint": "Building blocks and containers.",
+    "answer": "An Angular app is a tree of components, each pairing a TypeScript class with a template and styles, and standalone by default since v19. NgModules can still group components in older apps, but they're optional.",
+    "hint": "Think of the UI as nested building blocks.",
     "orderId": 1,
     "topicSlugs": [
       "getting-started-with-angular"
     ],
     "options": [
       {
-        "option": "Components and Modules",
+        "option": "Components",
         "correct": true,
         "comment": null
       },
@@ -20217,12 +20217,12 @@
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
-    "marks": 1,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Angular (2+) is a complete rewrite using TypeScript and component-based architecture, while AngularJS (1.x) used JavaScript and MVC*pattern.",
+    "answer": "Angular (version 2 and later) is a complete rewrite in TypeScript with a component-based architecture, while AngularJS (1.x) used plain JavaScript and an MVC-style pattern with controllers and $scope. AngularJS reached end of life in January 2022.",
     "hint": "The older one came first, back in 2010.",
     "orderId": 1,
     "topicSlugs": [
@@ -20582,7 +20582,7 @@
   {
     "slug": "which-option-allows-adding-routing-when-creating-a-new-angular-project",
     "title": "",
-    "question": "Which option allows adding routing when creating a new Angular project?",
+    "question": "Which ng new flag controls whether routing is set up in a new project?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 1,
@@ -20591,8 +20591,8 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ng new my-app --routing sets up Angular’s router by default in the project.",
-    "hint": "Use -- to pass additional configuration flags.",
+    "answer": "--routing (on by default since v17) adds app.routes.ts and provideRouter() to the new project; --routing=false skips it.",
+    "hint": "The flag is simply named after the feature.",
     "orderId": 1,
     "topicSlugs": [
       "setting-up-your-angular-workspace"
@@ -20708,13 +20708,13 @@
     "question": "Which file is the entry point for Angular application bootstrapping?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "main.ts bootstraps the AppModule, making it the starting point of the Angular app execution.",
+    "answer": "main.ts is the entry point. In a standalone app it calls bootstrapApplication(AppComponent, appConfig); in an NgModule app it calls platformBrowserDynamic().bootstrapModule(AppModule).",
     "hint": "It's the first TypeScript file that runs, and it's the one that calls the bootstrap function.",
     "orderId": 1,
     "topicSlugs": [
@@ -20732,7 +20732,7 @@
         "comment": null
       },
       {
-        "option": "polyfills.ts",
+        "option": "app.config.ts",
         "correct": false,
         "comment": null
       },
@@ -21115,16 +21115,16 @@
   {
     "slug": "which-of-the-following-allows-parent-to-child-communication",
     "title": "",
-    "question": "Which of the following allows parent-to-child communication?",
+    "question": "Which API passes data from a parent component down to a child?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@Input() decorator is used for binding data from a parent component into a child component.",
+    "answer": "A child declares an input with input() (or the older @Input() decorator), and the parent binds to it with [name]=\"value\". output() and EventEmitter send events the other way, and inject() is for dependency injection.",
     "hint": "Think of passing data downward.",
     "orderId": 1,
     "topicSlugs": [
@@ -21132,12 +21132,12 @@
     ],
     "options": [
       {
-        "option": "@Output()",
+        "option": "output()",
         "correct": false,
         "comment": null
       },
       {
-        "option": "@Input() ",
+        "option": "input()",
         "correct": true,
         "comment": null
       },
@@ -21147,7 +21147,7 @@
         "comment": null
       },
       {
-        "option": "@Inject",
+        "option": "inject()",
         "correct": false,
         "comment": null
       }
@@ -21200,13 +21200,13 @@
     "question": "How can a child component notify the parent about an event?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "With @Output() and EventEmitter, child components can emit events to the parent, enabling interaction.",
+    "answer": "The child declares an output, such as saved = output<Item>(), and calls this.saved.emit(item); the parent listens with (saved)=\"onSaved($event)\". The older form is @Output() saved = new EventEmitter<Item>().",
     "hint": "Think child to parent communication.",
     "orderId": 1,
     "topicSlugs": [
@@ -21214,12 +21214,12 @@
     ],
     "options": [
       {
-        "option": "By binding a value down from parent using @Input()",
+        "option": "By setting a value on one of its own inputs",
         "correct": false,
         "comment": null
       },
       {
-        "option": "By emitting an event through @Output() and EventEmitter",
+        "option": "By emitting through an output() the parent listens to",
         "correct": true,
         "comment": null
       },
@@ -21368,7 +21368,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "ngIf adds or removes elements from the DOM based on a boolean condition.",
     "hint": "Think if condition.",
@@ -21692,13 +21692,13 @@
     "question": "Which directive is essential for two-way data binding in Angular forms?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ngModel enables two-way data binding, syncing form input with a component property. You must import FormsModule in your module to use it.",
+    "answer": "ngModel provides two-way binding in template-driven forms, keeping an input and a component property in sync. It comes from FormsModule, which goes in the standalone component's imports (or an NgModule's imports in older apps).",
     "hint": "It belongs to the FormsModule.",
     "orderId": 1,
     "topicSlugs": [
@@ -21812,7 +21812,7 @@
   {
     "slug": "what-must-you-import-in-an-angular-module-to-use-ngmodel-for-two-way-binding",
     "title": "",
-    "question": "What must you import in an Angular module to use [(ngModel)] for two-way binding?",
+    "question": "What must a standalone component import to use [(ngModel)] for two-way binding?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 1,
@@ -21821,7 +21821,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "To use [(ngModel)], you must import FormsModule from @angular/forms. Without it, Angular will throw an unknown directive error.",
+    "answer": "FormsModule from @angular/forms, listed in the component's imports array. Without it the template fails to compile because Angular doesn't recognize ngModel. ReactiveFormsModule is for formControl and formGroup instead.",
     "hint": " It belongs to template-driven forms.",
     "orderId": 1,
     "topicSlugs": [
@@ -22185,12 +22185,12 @@
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 1,
-    "marks": 3,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Child components use @Output() with EventEmitter for event binding to notify parent components about changes.",
+    "answer": "A child notifies its parent through an output: it declares saved = output<T>() (or the older @Output() with an EventEmitter) and calls emit(), and the parent listens with event binding, (saved)=\"...\".",
     "hint": " It emits data upward.",
     "orderId": 1,
     "topicSlugs": [
@@ -23051,7 +23051,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "DI is a design pattern where Angular automatically provides required service instances to classes that declare them as constructor parameters.",
+    "answer": "DI is a design pattern where Angular creates the services a class needs and hands them over, instead of the class building them itself. A class asks for a dependency with inject() or as a constructor parameter.",
     "hint": "Think about who creates the objects your class needs — the class itself, or something else.",
     "orderId": 1,
     "topicSlugs": [
@@ -23059,7 +23059,7 @@
     ],
     "options": [
       {
-        "option": "Manually copying dependency code into each class",
+        "option": "Copying each dependency's code into every class that uses it",
         "correct": false,
         "comment": null
       },
@@ -23069,7 +23069,7 @@
         "comment": null
       },
       {
-        "option": "A way Angular loads external JavaScript libraries",
+        "option": "A way for Angular to load external JavaScript libraries at runtime",
         "correct": false,
         "comment": null
       },
@@ -23783,13 +23783,13 @@
     "question": "Which guard determines if a route can be activated?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "CanActivate checks whether navigation to a particular route is allowed, typically based on authentication or permissions.\n",
+    "answer": "CanActivate decides whether navigation to a route is allowed, typically based on authentication or permissions. Today guards are usually written as plain functions (CanActivateFn) and listed in the route's canActivate array.",
     "hint": "It runs before navigation to a route.",
     "orderId": 1,
     "topicSlugs": [
@@ -23812,7 +23812,7 @@
         "comment": null
       },
       {
-        "option": " CanLoad",
+        "option": "CanDeactivateChild",
         "correct": false,
         "comment": null
       }
@@ -24969,11 +24969,11 @@
   {
     "slug": "what-does-updateon-blur-in-formcontrol-configuration-do",
     "title": "",
-    "question": "What does updateOn: blur in FormControl configuration do?",
+    "question": "What does updateOn: 'blur' do in a FormControl's options?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -25505,8 +25505,8 @@
     "question": "How can you observe full HTTP response including headers and status?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -25519,7 +25519,7 @@
     ],
     "options": [
       {
-        "option": "observe: response",
+        "option": "observe: 'response'",
         "correct": true,
         "comment": null
       },
@@ -25529,12 +25529,12 @@
         "comment": null
       },
       {
-        "option": "observe: body",
+        "option": "observe: 'body'",
         "correct": false,
         "comment": null
       },
       {
-        "option": "responseType: full",
+        "option": "responseType: 'full'",
         "correct": false,
         "comment": null
       }
@@ -26413,8 +26413,8 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ngOnChanges() runs every time an @Input() property’s value changes. It’s often used to react to changes in data passed from a parent component.\n",
-    "hint": "Think about parent-to-child data flow.",
+    "answer": "ngOnChanges() runs when a bound input changes value, including the first time inputs are set, and receives a SimpleChanges object. It works for both input() signals and @Input() properties, though with signal inputs computed() or effect() is usually the simpler way to react.",
+    "hint": "Think about data flowing from parent to child.",
     "orderId": 1,
     "topicSlugs": [
       "angular-lifecycle-and-change-detection"
@@ -26426,7 +26426,7 @@
         "comment": null
       },
       {
-        "option": "When a bound @Input property's value changes",
+        "option": "When one of the component's bound inputs changes value",
         "correct": true,
         "comment": null
       },
@@ -26659,7 +26659,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ngAfterViewInit() is used to access @ViewChild elements safely after the component’s view initialization.",
+    "answer": "ngAfterViewInit() runs once the component's view and its child views are created, so @ViewChild references are ready there. A viewChild() signal query needs no hook at all: reading it returns the element once it exists.",
     "hint": "It’s about child views and DOM access.",
     "orderId": 1,
     "topicSlugs": [
@@ -65386,7 +65386,7 @@
   {
     "slug": "which-module-provides-ngif-ngfor-and-ngclass-directives",
     "title": null,
-    "question": "Which module provides NgIf, NgFor, and NgClass directives?",
+    "question": "In an NgModule-based app, which module supplies NgClass, NgStyle and pipes like DatePipe to declared components?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -65395,8 +65395,8 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "CommonModule exports the most commonly used directives including NgIf, NgFor, NgSwitch, NgClass, NgStyle, and more.",
-    "hint": "It's the module you import in every feature module.",
+    "answer": "CommonModule exports the common directives and pipes, such as NgClass, NgStyle, NgTemplateOutlet and DatePipe. Standalone components can import these individually instead, and the built-in @if/@for blocks need no import at all.",
+    "hint": "It's what feature modules import instead of BrowserModule.",
     "orderId": 1,
     "topicSlugs": [
       "angular-modules"
@@ -65468,17 +65468,17 @@
   {
     "slug": "in-modern-angular-v14-what-can-replace-ngmodule-for-standalone-components",
     "title": null,
-    "question": "In modern Angular (v14+), what can replace NgModule for standalone components?",
+    "question": "Without an NgModule, how does a component declare what its template uses?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Standalone components (standalone: true) can import other components, directives, and modules directly in @Component, removing the need for NgModule.",
-    "hint": "Angular 14 introduced an alternative to the module system.",
+    "answer": "A standalone component (the default since v19) lists the components, directives, pipes or NgModules its template uses in its own imports array, so no NgModule is needed to declare it.",
+    "hint": "Each standalone component carries its own list of dependencies.",
     "orderId": 1,
     "topicSlugs": [
       "angular-modules"
@@ -65490,7 +65490,7 @@
         "comment": null
       },
       {
-        "option": "Standalone components that declare imports in @Component itself",
+        "option": "It lists them in the imports array of its own @Component",
         "correct": true,
         "comment": null
       },
@@ -65693,34 +65693,34 @@
   {
     "slug": "where-must-a-custom-pipe-be-declared-to-be-usable-in-a-components-template",
     "title": null,
-    "question": "Where must a custom pipe be declared to be usable in a component's template?",
+    "question": "Where does a standalone custom pipe need to be listed so a component's template can use it?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Custom pipes must be listed in the declarations array of the NgModule that owns the component using it, or imported directly if the pipe is standalone.",
-    "hint": "Same rule as components and directives.",
+    "answer": "A standalone pipe (the default since v19) is listed in the imports array of each component that uses it. In NgModule apps, a non-standalone pipe goes in the declarations of its NgModule instead.",
+    "hint": "Same rule as standalone components and directives.",
     "orderId": 1,
     "topicSlugs": [
       "custom-pipes"
     ],
     "options": [
       {
-        "option": "In the providers array of the AppModule",
+        "option": "In the providers array of the component",
         "correct": false,
         "comment": null
       },
       {
-        "option": "In the declarations array of its NgModule",
+        "option": "In the imports array of that component",
         "correct": true,
         "comment": null
       },
       {
-        "option": "In the imports array of the AppModule",
+        "option": "In the app config's providers, once for the whole app",
         "correct": false,
         "comment": null
       },
@@ -65860,13 +65860,13 @@
     "question": "What CLI command generates a custom pipe named 'truncate'?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ng generate pipe truncate (or ng g p truncate) creates the pipe class and spec file and auto-declares it in the nearest NgModule.",
+    "answer": "ng generate pipe truncate (or ng g p truncate) creates a standalone pipe class and its spec file; components that use it list it in their imports.",
     "hint": "Use g p as the shorthand.",
     "orderId": 1,
     "topicSlugs": [
@@ -65939,7 +65939,7 @@
   {
     "slug": "what-is-the-risk-of-using-an-impure-pipe-inside-ngfor-on-a-large-list",
     "title": null,
-    "question": "What is the risk of using an impure pipe inside *ngFor on a large list?",
+    "question": "What is the risk of using an impure pipe inside an @for loop over a large list?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -65966,7 +65966,7 @@
         "comment": null
       },
       {
-        "option": "Angular disables the pipe automatically in *ngFor",
+        "option": "Angular disables the pipe automatically in @for loops",
         "correct": false,
         "comment": null
       },
@@ -66164,7 +66164,7 @@
   {
     "slug": "which-route-property-enables-lazy-loading-of-a-feature-module",
     "title": null,
-    "question": "Which route property enables lazy loading of a feature module?",
+    "question": "Which route property lazy-loads a group of routes, such as a feature's routes file?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -66173,7 +66173,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "loadChildren accepts a dynamic import function that returns a module. Angular creates a separate bundle for that module.",
+    "answer": "loadChildren accepts a function returning a dynamic import, usually of a routes file such as () => import('./admin.routes'), or of an NgModule in older apps. The build puts that code in its own chunk.",
     "hint": "It takes a function with a dynamic import().",
     "orderId": 1,
     "topicSlugs": [
@@ -66951,7 +66951,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "A smart component manages data fetching, state, and business logic. It passes data down to presentational components via @Input and listens to their @Output events.",
+    "answer": "A smart component handles data fetching, state and business logic. It passes data down to presentational components through their inputs and reacts to their outputs.",
     "hint": "It knows about services and state; its children do not.",
     "orderId": 1,
     "topicSlugs": [
@@ -66964,7 +66964,7 @@
         "comment": null
       },
       {
-        "option": "A component that owns state and logic, passing data down to display components",
+        "option": "A component that owns the state and passes data to display components",
         "correct": true,
         "comment": null
       },
@@ -66992,7 +66992,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "BehaviorSubject holds the last emitted value and replays it to any new subscriber immediately, making it ideal for state that must always have a current value.",
+    "answer": "BehaviorSubject holds the last emitted value and replays it to every new subscriber immediately, which suits state that must always have a current value. In signal-based code, a signal() plays the same role.",
     "hint": "New subscribers need to know the current state right away.",
     "orderId": 1,
     "topicSlugs": [
@@ -67033,7 +67033,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Keep the BehaviorSubject private and expose it as an Observable via asObservable(), preventing external code from calling next() on the subject directly.",
+    "answer": "Keep the BehaviorSubject private and expose it through asObservable(), so outside code can subscribe but not call next(). The signal equivalent is a private writable signal exposed with asReadonly().",
     "hint": "asObservable() strips the ability to emit.",
     "orderId": 1,
     "topicSlugs": [
@@ -67270,7 +67270,7 @@
   {
     "slug": "how-does-takeuntil-help-manage-subscriptions-in-a-component",
     "title": null,
-    "question": "How does takeUntil help manage subscriptions in a component?",
+    "question": "In a component, what does takeUntilDestroyed() do for an Observable subscription?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -67279,30 +67279,30 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "takeUntil(this.destroy$) completes a subscription when destroy$ emits. You call destroy$.next() in ngOnDestroy to automatically unsubscribe all piped observables.",
-    "hint": "It unsubscribes when the component is destroyed.",
+    "answer": "takeUntilDestroyed() (from @angular/core/rxjs-interop) ends the subscription when the component, directive or service is destroyed, using DestroyRef. It replaced the older pattern of a destroy$ Subject with takeUntil(this.destroy$) and destroy$.next() in ngOnDestroy. Outside an injection context it needs a DestroyRef argument.",
+    "hint": "It ties the subscription to the component's lifetime.",
     "orderId": 1,
     "topicSlugs": [
       "component-state-patterns"
     ],
     "options": [
       {
-        "option": "It limits each observable to one emission",
+        "option": "It limits the observable to a single emission",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It auto-unsubscribes when a destroy signal subject emits",
+        "option": "It completes the subscription when the component is destroyed",
         "correct": true,
         "comment": "private destroy$ = new Subject<void>(); ngOnDestroy() { this.destroy$.next(); }"
       },
       {
-        "option": "It pauses an observable until an event fires",
+        "option": "It pauses the observable while the component is hidden",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It is only needed for HTTP observables",
+        "option": "It is only needed for HTTP observables, which never complete",
         "correct": false,
         "comment": null
       }
@@ -67539,13 +67539,13 @@
     "question": "What is an NgRx Effect?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "An Effect listens for specific actions, performs side effects (like HTTP calls), and dispatches a new action with the result, keeping reducers pure.",
+    "answer": "An effect listens for actions, performs side effects such as HTTP calls, and dispatches new actions with the results, which keeps reducers pure. Effects are created with createEffect(), either as properties of an injectable class or, since NgRx 15.2, as standalone functional effects.",
     "hint": "Effects handle side effects so reducers stay pure.",
     "orderId": 1,
     "topicSlugs": [
@@ -67553,17 +67553,17 @@
     ],
     "options": [
       {
-        "option": "A lifecycle hook that runs after each state change",
+        "option": "A lifecycle hook that runs after each state change in the store",
         "correct": false,
         "comment": null
       },
       {
-        "option": "A class that handles side effects and dispatches result actions",
+        "option": "A function that handles side effects and dispatches result actions",
         "correct": true,
         "comment": "Effects use RxJS operators like switchMap to handle async work outside reducers."
       },
       {
-        "option": "An animation trigger bound to store events",
+        "option": "An animation trigger that plays whenever store events fire",
         "correct": false,
         "comment": null
       },
@@ -67662,13 +67662,13 @@
     "question": "How do you select a slice of state in a component using NgRx?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Use store.select(mySelector) which returns an Observable. Combine with the async pipe in the template to subscribe and unsubscribe automatically.",
+    "answer": "store.select(mySelector) returns an Observable, usually read with the async pipe. Since NgRx 16, store.selectSignal(mySelector) returns a signal instead, which a template reads by calling it.",
     "hint": "store.select() returns an Observable of the slice.",
     "orderId": 1,
     "topicSlugs": [
@@ -69809,16 +69809,16 @@
   {
     "slug": "what-is-route-guard-used-for-in-a-security-context",
     "title": null,
-    "question": "What is route guard used for in a security context?",
+    "question": "What is a route guard used for in a security context?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Route guards (CanActivate, CanLoad) protect routes from unauthorised access by checking authentication or permissions before allowing navigation and optionally redirecting to login.",
+    "answer": "Route guards such as canActivate and canMatch check authentication or permissions before navigation goes ahead, and can redirect to a login page. canMatch can also stop a lazy route's code from downloading. Guards only protect the UI, so the server must still enforce access.",
     "hint": "They are Angular's access control layer for routes.",
     "orderId": 1,
     "topicSlugs": [
@@ -69914,14 +69914,14 @@
     "question": "What does TestBed.configureTestingModule() do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "It sets up the Angular testing module by declaring components/pipes, importing modules, and providing services — mirroring how a real NgModule is configured.",
-    "hint": "Think of it as @NgModule for your test.",
+    "answer": "It configures the testing environment for a spec: standalone components go in imports, along with any providers or mocks the test needs, much like configuring a small app. NgModule-based components go in declarations instead.",
+    "hint": "Think of it as setting up a tiny app for your test.",
     "orderId": 1,
     "topicSlugs": [
       "testing-5"
@@ -69993,17 +69993,17 @@
   {
     "slug": "what-is-httpclienttestingmodule-used-for",
     "title": null,
-    "question": "What is HttpClientTestingModule used for?",
+    "question": "What do provideHttpClientTesting() and HttpTestingController let a test do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "HttpClientTestingModule replaces HttpClient with a testing backend. You use HttpTestingController to intercept requests, verify URLs/methods, and flush mock responses.",
-    "hint": "It lets you test HTTP calls without a real server.",
+    "answer": "provideHttpClient() plus provideHttpClientTesting() in the test providers swap the real backend for a testing one, and HttpTestingController lets the test expect requests, check their URL and method, and flush mock responses. HttpClientTestingModule is the older, deprecated way to do the same.",
+    "hint": "They let you test HTTP calls without a real server.",
     "orderId": 1,
     "topicSlugs": [
       "testing-5"
@@ -70262,14 +70262,14 @@
     "question": "How do you pass inputs to a dynamically created component?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Access componentRef.instance and set the @Input properties directly, then call componentRef.changeDetectorRef.detectChanges() to render the updated values.",
-    "hint": "Set properties on instance and trigger change detection.",
+    "answer": "componentRef.setInput('name', value) sets an input by its public name and marks the component for check, so it works with OnPush and signal inputs. Since v20 you can also pass bindings: [inputBinding('name', signal)] to createComponent().",
+    "hint": "There's a ComponentRef method made for exactly this.",
     "orderId": 1,
     "topicSlugs": [
       "dynamic-components"
@@ -70281,7 +70281,7 @@
         "comment": null
       },
       {
-        "option": "Set properties on componentRef.instance then call detectChanges()",
+        "option": "Call componentRef.setInput('name', value) for each input",
         "correct": true,
         "comment": "componentRef.setInput('title', 'Hello') is the newer API available from Angular 14+."
       },
@@ -70341,16 +70341,16 @@
   {
     "slug": "when-would-you-use-dynamic-component-loading-over-a-conditional-ngif",
     "title": null,
-    "question": "When would you use dynamic component loading over a conditional *ngIf?",
+    "question": "When would you create a component dynamically instead of using @if in the template?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Dynamic loading is preferred when the component type itself is unknown at compile time, when components are loaded from a configuration or plugin system, or when managing memory explicitly with create/destroy.",
+    "answer": "Dynamic creation fits when the component type isn't known at compile time, for example when it comes from configuration or a plugin system. For choosing among known components in a template, NgComponentOutlet (with ngComponentOutletInputs) is a declarative middle ground.",
     "hint": "Use dynamic loading when the component type is not known at compile time.",
     "orderId": 1,
     "topicSlugs": [
@@ -70689,7 +70689,7 @@
   {
     "slug": "what-cli-flag-generates-a-standalone-component",
     "title": null,
-    "question": "What CLI flag generates a standalone component?",
+    "question": "Since standalone became the default, how do you generate a component that belongs to an NgModule instead?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -70698,8 +70698,8 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ng generate component name --standalone generates a component with standalone: true and no NgModule declaration.",
-    "hint": "Pass --standalone to ng generate component.",
+    "answer": "ng generate component name --standalone false writes standalone: false and declares the component in the nearest NgModule. Without the flag the CLI generates a standalone component, the default since v17 (and the decorator default since v19).",
+    "hint": "You're turning the default off, not on.",
     "orderId": 1,
     "topicSlugs": [
       "standalone-components"
@@ -70711,17 +70711,17 @@
         "comment": null
       },
       {
-        "option": "--standalone",
+        "option": "--standalone false",
         "correct": true,
         "comment": "In Angular 17+ projects, standalone is the default — no flag needed in new projects."
       },
       {
-        "option": "--independent",
+        "option": "--module-only",
         "correct": false,
         "comment": null
       },
       {
-        "option": "--skip-module",
+        "option": "--skip-standalone",
         "correct": false,
         "comment": null
       }
@@ -71385,7 +71385,7 @@
   {
     "slug": "what-is-contentchild-used-for",
     "title": null,
-    "question": "What is ContentChild used for?",
+    "question": "What do ContentChild and contentChild() query?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -71394,7 +71394,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@ContentChild queries the first matching element or directive from projected content (what the parent passes between the component tags), available from ngAfterContentInit.",
+    "answer": "They query the first matching element, component or directive in the projected content, meaning what the parent puts between the component's tags. @ContentChild is ready from ngAfterContentInit; contentChild() is the signal version and needs no lifecycle hook.",
     "hint": "It queries projected content, not the component's own template.",
     "orderId": 1,
     "topicSlugs": [
@@ -71742,7 +71742,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@HostListener('event') decorates a method that Angular calls when the specified event fires on the directive's host element.",
+    "answer": "@HostListener('click') marks a method that Angular calls when that event fires on the directive's host element. The style guide now prefers the host metadata property for this, for example host: { '(click)': 'onClick()' }.",
     "hint": "Listen to DOM events on the host element from inside the directive.",
     "orderId": 1,
     "topicSlugs": [
@@ -71783,7 +71783,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@HostBinding('property') binds a directive class property to a property or attribute on the host element. Changing the class property automatically updates the DOM.",
+    "answer": "@HostBinding('class.active') binds a directive property to a property, attribute or class on the host element, so changing the property updates the DOM. The style guide now prefers the host metadata property, for example host: { '[class.active]': 'isActive()' }.",
     "hint": "Bind a directive property to the host element's attribute or style.",
     "orderId": 1,
     "topicSlugs": [
@@ -71815,17 +71815,17 @@
   {
     "slug": "how-do-you-pass-a-value-to-a-custom-attribute-directive",
     "title": null,
-    "question": "How do you pass a value to a custom attribute directive?",
+    "question": "How do you pass a value into a custom attribute directive?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Declare an @Input property on the directive. If the input name matches the selector, the parent can pass it as [appHighlight]='color'. Otherwise use the input name separately.",
-    "hint": "Use @Input — the same way as passing to a component.",
+    "answer": "Declare an input, such as color = input<string>(), and bind it like any property. Aliasing it to the selector name, input('', { alias: 'appHighlight' }), lets the template write [appHighlight]=\"'yellow'\" in a single attribute.",
+    "hint": "The same way you pass a value into a component.",
     "orderId": 1,
     "topicSlugs": [
       "custom-directives"
@@ -71837,7 +71837,7 @@
         "comment": null
       },
       {
-        "option": "Declare an @Input and bind it from the parent",
+        "option": "Declare an input() and bind it from the template",
         "correct": true,
         "comment": "@Input('appHighlight') color = 'yellow'; — usage: <p [appHighlight]='\"red\"'>text</p>"
       },
@@ -71982,13 +71982,13 @@
     "question": "What CLI command generates a directive named 'highlight'?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ng generate directive highlight (or ng g d highlight) creates highlight.directive.ts and its spec file, auto-declaring the directive in the nearest NgModule.",
+    "answer": "ng generate directive highlight (or ng g d highlight) creates a standalone highlight.directive.ts and its spec file; components that use it list it in their imports.",
     "hint": "The shorthand is ng g d.",
     "orderId": 1,
     "topicSlugs": [
@@ -72029,7 +72029,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@HostBinding('class.active') isActive = false ties a boolean property directly to the host's CSS class. Angular keeps them in sync automatically, without Renderer2 or direct DOM access.",
+    "answer": "Binding the class with @HostBinding('class.active'), or with host: { '[class.active]': 'isActive()' }, keeps the CSS class in sync with the directive's state declaratively, without Renderer2 or touching the DOM yourself.",
     "hint": "Declarative class binding vs. imperative DOM manipulation.",
     "orderId": 1,
     "topicSlugs": [
@@ -72336,7 +72336,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Use formArrayName directive in the template and cast it to FormArray in the component property. Iterate with *ngFor and use formGroupName or formControlName with the index.",
+    "answer": "Put formArrayName=\"phones\" on a wrapper element, loop with @for (ctrl of phones.controls; track ctrl; let i = $index), and bind each input with [formControlName]=\"i\" (or [formGroupName]=\"i\" for groups of fields). A getter typed as FormArray keeps the template simple.",
     "hint": "formArrayName + index in the template.",
     "orderId": 1,
     "topicSlugs": [
@@ -72344,17 +72344,17 @@
     ],
     "options": [
       {
-        "option": "Use formArray.value directly inside *ngFor",
+        "option": "Use formArray.value directly inside @for",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Use formArrayName with *ngFor and index-based formControlName",
+        "option": "Use formArrayName with @for, binding each control by its index",
         "correct": true,
         "comment": "<div *ngFor='let ctrl of items.controls; let i=index' [formGroupName]='i'>"
       },
       {
-        "option": "Bind each control with [(ngModel)] and an array index",
+        "option": "Bind each item with [(ngModel)] and its position in the array",
         "correct": false,
         "comment": null
       },
@@ -72725,8 +72725,8 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "withComponentInputBinding() (Angular 16+) automatically maps route params, query params, and resolved data to @Input() properties on the routed component, eliminating ActivatedRoute injection.",
-    "hint": "Route params become component @Input properties automatically.",
+    "answer": "withComponentInputBinding() makes the router set matching route params, query params and resolved data as the routed component's inputs, so it can declare id = input<string>() instead of injecting ActivatedRoute. It works with input() signals and with @Input().",
+    "hint": "Route values become component inputs automatically.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -72738,7 +72738,7 @@
         "comment": null
       },
       {
-        "option": "Maps route params and resolved data to component @Input properties",
+        "option": "Sets route params and resolved data as the component's inputs",
         "correct": true,
         "comment": "provideRouter(routes, withComponentInputBinding()) — @Input() id!: string gets the :id param."
       },
@@ -72748,7 +72748,7 @@
         "comment": null
       },
       {
-        "option": "Connects router navigation to the @Output of a component",
+        "option": "Connects router navigation to a component's outputs",
         "correct": false,
         "comment": null
       }
@@ -126974,8 +126974,8 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Angular directives extend HTML by adding custom logic, like loops and conditions, directly in templates.",
-    "hint": "Think ngFor or ngIf.",
+    "answer": "Directives attach behaviour to elements: attribute directives like ngClass change how an element looks or behaves, and you can write your own, such as a highlight directive. Conditions and loops are now built-in control flow (@if, @for) rather than directives.",
+    "hint": "Think of attributes like ngClass, or a custom highlight you could add to any element.",
     "orderId": 1,
     "topicSlugs": [
       "getting-started-with-angular"
@@ -127498,7 +127498,7 @@
   {
     "slug": "what-is-the-main-difference-between-if",
     "title": "",
-    "question": "What is the main difference between @if and ngIf in Angular 17?",
+    "question": "What is the main difference between @if and *ngIf?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 1,
@@ -127507,7 +127507,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@if is the newer Angular 17 block syntax built into templates; *ngIf is the older structural directive syntax. Both do the same job of conditionally showing content.",
+    "answer": "@if is the built-in control-flow block (v17+), compiled into the template with no import; *ngIf is the older structural directive from CommonModule. They do the same job, but *ngIf has been deprecated since v20, and ng generate @angular/core:control-flow migrates templates.",
     "hint": "@if introduces a cleaner template block.",
     "orderId": 1,
     "topicSlugs": [
@@ -127515,12 +127515,12 @@
     ],
     "options": [
       {
-        "option": "@if is the newer block syntax; *ngIf is the structural-directive syntax",
+        "option": "@if is built-in block syntax; *ngIf is a structural directive",
         "correct": true,
         "comment": null
       },
       {
-        "option": "*ngIf is deprecated and no longer works in any Angular version",
+        "option": "*ngIf was removed and no longer compiles in current Angular",
         "correct": false,
         "comment": null
       },
@@ -127747,36 +127747,36 @@
     "question": "What is a common pattern for managing shared state in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "A common pattern is to use a service containing an RxJS BehaviorSubject or Subject to share reactive state between components.",
-    "hint": "Think about a reactive, subscribable source that multiple components can share.",
+    "answer": "A common pattern is a service that holds the shared state, today usually as signals (computed() for derived values, asReadonly() for read-only access), or as an RxJS BehaviorSubject in older code. Components inject the service and read the same state.",
+    "hint": "Think about a reactive source that several components can share.",
     "orderId": 1,
     "topicSlugs": [
       "services-dependency-injection-and-stat"
     ],
     "options": [
       {
-        "option": "Storing shared state directly in localStorage",
+        "option": "Storing shared state directly in localStorage and rereading it",
         "correct": false,
         "comment": null
       },
       {
-        "option": "A shared service holding RxJS state, like a BehaviorSubject",
+        "option": "A shared service holding signals or an RxJS BehaviorSubject",
         "correct": true,
         "comment": null
       },
       {
-        "option": "Passing state through template reference variables",
+        "option": "Passing state through template reference variables between pages",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Storing shared state as static class properties",
+        "option": "Keeping it in static class properties on each component",
         "correct": false,
         "comment": null
       }
@@ -127826,39 +127826,39 @@
   {
     "slug": "which-angular-module-provides-routing-fu",
     "title": "",
-    "question": "Which Angular module provides routing functionality?",
+    "question": "In a standalone app, how is the Angular Router set up?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "The RouterModule from @angular/router provides all routing features. You configure routes by importing it via RouterModule.forRoot(routes) in the root module.",
-    "hint": "It must be imported using forRoot() in the root module.",
+    "answer": "provideRouter(routes) in app.config.ts registers the router app-wide, and components that use routerLink or <router-outlet> import RouterLink and RouterOutlet. RouterModule.forRoot(routes) is the NgModule-era equivalent.",
+    "hint": "Standalone apps configure app-wide features with provide… functions.",
     "orderId": 1,
     "topicSlugs": [
       "routing-and-navigation"
     ],
     "options": [
       {
-        "option": "FormsModule",
+        "option": "Import RouterModule into every component that navigates",
         "correct": false,
         "comment": null
       },
       {
-        "option": "CommonModule",
+        "option": "Import CommonModule and the routes array in main.ts",
         "correct": false,
         "comment": null
       },
       {
-        "option": "RouterModule",
+        "option": "Pass provideRouter(routes) in the app config's providers",
         "correct": true,
         "comment": null
       },
       {
-        "option": "HttpClientModule",
+        "option": "Add a routes property to the root component's decorator",
         "correct": false,
         "comment": null
       }
@@ -128690,13 +128690,13 @@
     "question": "Why is it considered a best practice to fetch data from an API in ngOnInit rather than the constructor?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 30,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "In the constructor, Angular hasn't set @Input() values yet, so fetching data there can use incomplete data. ngOnInit runs after inputs are set, making it the safe place for API calls.",
+    "answer": "In the constructor, Angular hasn't set the component's inputs yet, whether they're input() signals or @Input() properties, so a fetch started there can use missing values. ngOnInit runs after the first input values are set. With signal inputs, a computed() or resource() that reads them is another option.",
     "hint": "Think about what Angular has and hasn't set up on your component by the time its constructor runs.",
     "orderId": 1,
     "topicSlugs": [
@@ -128709,7 +128709,7 @@
         "comment": null
       },
       {
-        "option": "Input properties (@Input) haven't been set yet in the constructor",
+        "option": "Inputs haven't received their values yet in the constructor",
         "correct": true,
         "comment": null
       },
@@ -131320,7 +131320,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "A presentational component receives data via @Input and emits events via @Output. It has no service injections and is purely concerned with how things look.",
+    "answer": "A presentational component gets its data through inputs (input()) and reports user actions through outputs (output()). It injects no data services and only decides how things look, which makes it easy to reuse and test.",
     "hint": "Pure display — no services, no state management.",
     "orderId": 1,
     "topicSlugs": [
@@ -131333,7 +131333,7 @@
         "comment": null
       },
       {
-        "option": "A component that only receives @Input and emits @Output",
+        "option": "A component that only receives inputs and emits outputs",
         "correct": true,
         "comment": "Dumb components are highly reusable and easy to test because they have no side effects."
       },
@@ -131343,7 +131343,7 @@
         "comment": null
       },
       {
-        "option": "A component using the Default change detection strategy",
+        "option": "A component that uses the Eager change detection strategy",
         "correct": false,
         "comment": null
       }
@@ -131393,7 +131393,7 @@
   {
     "slug": "a-which-rxjs-operator-is-best-for",
     "title": null,
-    "question": "Which RxJS operator is best for deriving a computed value from a state observable?",
+    "question": "In RxJS-based state, which operators derive a computed value from a state Observable?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -131402,7 +131402,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "map() transforms each emitted value into a derived result. Combined with distinctUntilChanged(), the derived view only updates when the computed value actually changes.",
+    "answer": "map() turns each state value into the derived value, and distinctUntilChanged() stops repeat emissions when that derived value is the same. With signal-based state, computed() does this job and only recalculates when its inputs change.",
     "hint": "Think transformation without side effects.",
     "orderId": 1,
     "topicSlugs": [
@@ -131853,7 +131853,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "TransferState serialises server-fetched data into the HTML response. On the client, Angular reads this data instead of making duplicate HTTP calls during hydration.",
+    "answer": "TransferState serializes data fetched on the server into the HTML, so the client reads it during hydration instead of fetching it again. HttpClient GET requests get this automatically through the HTTP transfer cache that provideClientHydration() enables; TransferState itself is for other data computed on the server.",
     "hint": "Avoids making the same HTTP call twice — once on server, once on client.",
     "orderId": 1,
     "topicSlugs": [
@@ -131861,7 +131861,7 @@
     ],
     "options": [
       {
-        "option": "Transfers component state between route navigations",
+        "option": "Carries component state across route navigations in the browser",
         "correct": false,
         "comment": null
       },
@@ -131871,7 +131871,7 @@
         "comment": "HttpClient in Angular 16+ automatically handles TransferState caching with provideClientHydration()."
       },
       {
-        "option": "Transfers Angular module state to a Web Worker",
+        "option": "Moves application state into a Web Worker for faster rendering",
         "correct": false,
         "comment": null
       },
@@ -132630,7 +132630,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Resolve<T> from @angular/router. The class must implement a resolve(route, state) method returning Observable<T>, Promise<T>, or T directly.",
     "hint": "The interface name mirrors the concept — Resolve.",
@@ -177718,7 +177718,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ng test starts the configured test runner (Karma by default in many Angular versions) and executes the project's unit tests.",
+    "answer": "ng test runs the unit tests with the configured runner: Vitest in projects created with v21 or later, and Karma with Jasmine in older projects.",
     "hint": "It's the short, obvious command name you'd guess for running tests.",
     "orderId": 1,
     "topicSlugs": [
@@ -178365,7 +178365,7 @@
   {
     "slug": "what-does-viewchild-let-a-component-do",
     "title": null,
-    "question": "What does @ViewChild let a component do?",
+    "question": "What do viewChild() and the older @ViewChild let a component do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -178374,7 +178374,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@ViewChild lets the component class reach into its own template and grab a reference to something rendered there, like a child component instance, so you can call methods on it directly.",
+    "answer": "They give the component class a reference to something rendered in its own template, such as an element or a child component. viewChild() returns a signal that updates when the element appears or disappears; @ViewChild sets a property that is ready by ngAfterViewInit.",
     "hint": "Think of it as the component reaching into its own rendered template from the TypeScript side.",
     "orderId": 1,
     "topicSlugs": [
@@ -178392,7 +178392,7 @@
         "comment": null
       },
       {
-        "option": "Watch for changes to the component's own @Input values",
+        "option": "Watch for changes to the component's own inputs",
         "correct": false,
         "comment": null
       },
@@ -178702,7 +178702,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ng-container is never rendered to the DOM itself, so it's useful when you need to apply something like *ngIf to a group of elements without wrapping them in a real, styleable div you didn't want.",
+    "answer": "ng-container never renders a DOM element, so it can group elements or host a directive such as ngTemplateOutlet without adding a wrapper you'd then have to style around. With @if and @for blocks, grouping for conditions and loops no longer needs it at all.",
     "hint": "It exists purely at the template level and leaves no trace in the actual rendered HTML.",
     "orderId": 1,
     "topicSlugs": [
@@ -178710,7 +178710,7 @@
     ],
     "options": [
       {
-        "option": "It improves CSS selector specificity for its children",
+        "option": "It raises the CSS specificity of every element placed inside it",
         "correct": false,
         "comment": null
       },
@@ -178720,7 +178720,7 @@
         "comment": null
       },
       {
-        "option": "It automatically applies shared styles to its children",
+        "option": "It applies the parent's styles to everything placed inside it",
         "correct": false,
         "comment": null
       },
@@ -179595,16 +179595,16 @@
   {
     "slug": "can-a-directive-be-declared-as-standalone-standalone-true-like-a-component",
     "title": null,
-    "question": "Can a directive be declared as standalone (standalone: true) like a component?",
+    "question": "Can directives be standalone, like components?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Standalone isn't just for components — directives and pipes can be standalone too, meaning they can be imported directly into a component's imports array without being declared in any NgModule.",
+    "answer": "Yes. Directives and pipes can be standalone too, and since v19 they are by default, so a component imports them directly without any NgModule.",
     "hint": "Components got this feature first, but ask whether it stayed exclusive to them.",
     "orderId": 1,
     "topicSlugs": [
@@ -179612,12 +179612,12 @@
     ],
     "options": [
       {
-        "option": "No, only components support the standalone: true flag",
+        "option": "No, only components can be standalone",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Yes, directives (and pipes) can also be standalone and imported directly where needed",
+        "option": "Yes, and they're standalone by default, imported where needed",
         "correct": true,
         "comment": null
       },
@@ -179889,7 +179889,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Each * structural directive desugars to its own ng-template wrapping the element, so having two on the same element is ambiguous and Angular rejects it — they need to be nested, often with ng-container, instead.",
     "hint": "Remember that each * is really shorthand for wrapping the element in its own template — can one element be wrapped twice at once unambiguously?",
@@ -180384,19 +180384,19 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "provideClientHydration() turns on Angular's hydration support, so when the client-side app boots up on an SSR-rendered page, it attaches to the existing DOM instead of wiping it out and rebuilding it.",
-    "hint": "The name describes exactly what it switches on for the client side.",
+    "hint": "Think about what the browser does with HTML the server already rendered.",
     "orderId": 1,
     "topicSlugs": [
       "server-side-rendering"
     ],
     "options": [
       {
-        "option": "It's what actually enables server-side rendering itself",
+        "option": "It's the setting that enables server-side rendering itself",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It lets the client reuse and attach to the existing server-rendered DOM",
+        "option": "The client reuses the server-rendered DOM instead of rebuilding it",
         "correct": true,
         "comment": null
       },
@@ -180406,7 +180406,7 @@
         "comment": null
       },
       {
-        "option": "It only configures TransferState caching, not hydration",
+        "option": "It only configures caching of HTTP responses, not hydration",
         "correct": false,
         "comment": null
       }
@@ -180415,7 +180415,7 @@
   {
     "slug": "why-would-you-use-afternextrender-or-afterrender-instead-of-putting-browser-only-code",
     "title": null,
-    "question": "Why would you use afterNextRender() or afterRender() instead of putting browser-only code directly in a constructor or ngOnInit?",
+    "question": "Why use afterNextRender() or afterEveryRender() instead of putting browser-only code directly in a constructor or ngOnInit?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 3,
@@ -180424,7 +180424,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "afterNextRender() and afterRender() are specifically designed to only execute in a browser context after rendering, making them a safe place for DOM or browser-API code that would otherwise crash during server-side rendering.",
+    "answer": "afterNextRender() and afterEveryRender() (called afterRender before v20) run only in the browser, after Angular has rendered, so they are a safe place for DOM or browser-API code that would crash during server-side rendering.",
     "hint": "Think about which lifecycle hooks run on the server too, versus ones designed to run only in the browser.",
     "orderId": 1,
     "topicSlugs": [
@@ -180752,7 +180752,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Without @Optional(), Angular throws an error when it can't resolve a dependency. With it, Angular just injects null instead.",
+    "answer": "Without @Optional(), Angular throws when it can't resolve a dependency; with it, Angular injects null instead. The inject() equivalent is inject(Logger, { optional: true }), which returns null when nothing is provided.",
     "hint": "It tells Angular \"it's fine if this isn't there.\"",
     "orderId": 1,
     "topicSlugs": [
@@ -180793,7 +180793,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@SkipSelf() tells Angular to bypass the local injector and look for the dependency starting from the parent injector upward.",
+    "answer": "@SkipSelf() makes Angular skip the current injector and start looking from the parent injector upward. The inject() equivalent is inject(Token, { skipSelf: true }), a common way for a component to find a parent's instance instead of its own.",
     "hint": "\"Skip me, go ask my parent.\"",
     "orderId": 1,
     "topicSlugs": [
@@ -180828,13 +180828,13 @@
     "question": "What does @Host() restrict a dependency lookup to?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 3,
+    "marks": 3,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "@Host() stops the search once it reaches the component hosting the current template, instead of continuing further up the injector tree.",
+    "answer": "@Host() stops the lookup at the component hosting the current template instead of continuing up the injector tree. The inject() equivalent is inject(Token, { host: true }).",
     "hint": "Think of \"host\" as the outer wall of the current view.",
     "orderId": 1,
     "topicSlugs": [
@@ -180847,12 +180847,12 @@
         "comment": null
       },
       {
-        "option": "Only the single root injector at the top of the app",
+        "option": "Only the single root injector at the very top of the application",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Only injectors belonging to sibling components",
+        "option": "Only the injectors belonging to sibling components in the view",
         "correct": false,
         "comment": null
       },
@@ -182595,7 +182595,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "ComponentStore offers the same reactive state-management style as NgRx's Store, but scoped to one component or feature, so you don't have to route everything through one global store.",
     "hint": "Same idea as a big store, just sized for one feature.",
@@ -183654,7 +183654,7 @@
   {
     "slug": "why-would-a-test-module-import-noopanimationsmodule-instead-of-browseranimationsmodule",
     "title": null,
-    "question": "Why would a test module import NoopAnimationsModule instead of BrowserAnimationsModule?",
+    "question": "Why would a test use provideNoopAnimations() (or the older NoopAnimationsModule)?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -183663,7 +183663,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "NoopAnimationsModule provides the animation APIs without actually running timed animations, so tests complete immediately instead of waiting on animation durations or becoming flaky from timing.",
+    "answer": "It provides the animation APIs without running timed animations, so tests finish immediately instead of waiting on durations or flaking on timing. It applies to apps still using the @angular/animations package, which has been deprecated since v20.2 in favour of the native animate.enter and animate.leave.",
     "hint": "It's the animations module's stand-in for tests, present, but does nothing timed.",
     "orderId": 1,
     "topicSlugs": [
@@ -183686,7 +183686,7 @@
         "comment": null
       },
       {
-        "option": "NoopAnimationsModule and BrowserAnimationsModule behave identically",
+        "option": "The noop and real animation providers behave identically",
         "correct": false,
         "comment": null
       }
@@ -184770,7 +184770,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Angular's two-way binding syntax is really just sugar for a property binding plus an event binding - the output name must be the input name plus 'Change'.",
+    "answer": "model() creates a writable signal input: the parent binds [(value)]=\"x\", and the child reads value() and calls value.set() to send changes back. Under the hood [(value)] is a [value] binding plus a (valueChange) event, which is why the older pattern pairs @Input() value with @Output() valueChange.",
     "hint": "The banana-in-a-box syntax is secretly two bindings glued together.",
     "orderId": 1,
     "topicSlugs": [
@@ -184778,22 +184778,22 @@
     ],
     "options": [
       {
-        "option": "Pair @Input() value with @Output() valueChange",
+        "option": "Declare it with model(), which pairs value with valueChange",
         "correct": true,
         "comment": null
       },
       {
-        "option": "Use ngModel directly with no extra code",
+        "option": "Use ngModel inside the component, with nothing else needed",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Any @Input automatically supports two-way binding",
+        "option": "Any input() automatically supports [(value)] two-way binding",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Declare the property as public",
+        "option": "Declare the property public so the parent can write to it",
         "correct": false,
         "comment": null
       }
@@ -185253,17 +185253,17 @@
   {
     "slug": "a-child-component-defines-output-itemselected-new-eventemitter-how-does-a-parent-template",
     "title": null,
-    "question": "A child component defines @Output() itemSelected = new EventEmitter<Item>(). How does a parent template react when that event fires?",
+    "question": "A child component declares itemSelected = output<Item>(). How does a parent template react when it emits?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Custom outputs are consumed exactly like native DOM events in the template - Angular treats a component's @Output the same way as a click or input event.",
-    "hint": "A custom @Output looks just like any built-in event to the parent template.",
+    "answer": "Outputs are consumed like native DOM events: (itemSelected)=\"onSelect($event)\", where $event is the emitted Item. It works the same for output() and for the older @Output() EventEmitter.",
+    "hint": "A custom output looks like any built-in event to the parent template.",
     "orderId": 1,
     "topicSlugs": [
       "data-binding-and-event-handling"
@@ -185275,7 +185275,7 @@
         "comment": null
       },
       {
-        "option": "Uses [(itemSelected)] with no matching @Input",
+        "option": "Uses [(itemSelected)] with no matching input",
         "correct": false,
         "comment": null
       },
@@ -185367,7 +185367,7 @@
         "comment": null
       },
       {
-        "option": "A structural directive, like *ngIf on the element",
+        "option": "A control-flow block, like @if around the element",
         "correct": false,
         "comment": null
       }
@@ -186893,7 +186893,7 @@
   {
     "slug": "how-can-code-react-to-an-output-eventemitter-on-a-dynamically-created-component-instance",
     "title": null,
-    "question": "How can code react to an @Output() EventEmitter on a dynamically created component instance?",
+    "question": "How can code react to an output of a dynamically created component?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -186902,7 +186902,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Once you have componentRef, its instance property gives you the actual component object, and its @Output EventEmitters can be subscribed to directly in code.",
+    "answer": "componentRef.instance gives you the component object, and both output() and @Output() EventEmitter expose subscribe(). Since v20 you can also pass bindings: [outputBinding('saved', handler)] when calling createComponent().",
     "hint": "You have the instance in your hand - subscribe to it the normal way.",
     "orderId": 1,
     "topicSlugs": [
@@ -186920,7 +186920,7 @@
         "comment": null
       },
       {
-        "option": "Add an event binding inside createComponent()",
+        "option": "Read the event from componentRef.changeDetectorRef",
         "correct": false,
         "comment": null
       },
@@ -187511,13 +187511,13 @@
     "question": "What's the difference between using ngOnChanges and an @Input() setter to react to input changes in a directive?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ngOnChanges fires once per change-detection cycle with a summary of all changed inputs including previous and current values, while a setter runs immediately as soon as that one specific input is assigned.",
+    "answer": "ngOnChanges fires once per change detection with a summary of every changed input, including previous and current values, while a setter runs as soon as that one input is assigned. With signal inputs, the usual modern approach is neither: derive values with computed(), or react with effect().",
     "hint": "One reacts input-by-input as it happens, the other reports a batch summary afterward.",
     "orderId": 1,
     "topicSlugs": [
@@ -188007,7 +188007,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "No — Angular does not guarantee execution order across multiple directives on the same element based on where they're written in the template.",
     "hint": "Template order looks deterministic, but Angular's internal directive instantiation order isn't a documented contract.",
@@ -189362,7 +189362,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Not by itself — an Observable's error channel needs to be handled with something like catchError, or rethrown so it surfaces to the zone; ErrorHandler mainly catches uncaught synchronous and template errors.",
+    "answer": "Not by itself. An Observable's error travels down its error channel, so it needs catchError or an error callback, or it ends up as an unhandled error. ErrorHandler sees errors thrown during change detection and event handlers; unhandled async errors reach it through Zone.js, or in zoneless apps through provideBrowserGlobalErrorListeners().",
     "hint": "Observable errors travel down a separate channel from regular thrown exceptions.",
     "orderId": 1,
     "topicSlugs": [
@@ -189370,7 +189370,7 @@
     ],
     "options": [
       {
-        "option": "Not automatically — Observable errors need explicit handling like catchError",
+        "option": "No, Observable errors need handling such as catchError",
         "correct": true,
         "comment": null
       },
@@ -189526,7 +189526,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Exponential backoff waits progressively longer between each retry attempt, while retry(3) just retries immediately up to 3 times with no delay in between.",
+    "answer": "Exponential backoff waits progressively longer between retries, while retry(3) retries immediately up to three times. RxJS supports backoff directly: retry({ count: 3, delay: (error, attempt) => timer(2 ** attempt * 1000) }).",
     "hint": "One retries instantly and repeatedly; the other deliberately spaces attempts further apart each time.",
     "orderId": 1,
     "topicSlugs": [
@@ -192141,17 +192141,17 @@
   {
     "slug": "what-does-setting-standalone-true-on-a-pipe-decorator-allow",
     "title": null,
-    "question": "What does setting standalone: true on a @Pipe decorator allow?",
+    "question": "What does it mean that a pipe is standalone, the default since v19?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "A standalone pipe can be added straight to a component's imports array, skipping the need to declare it in an NgModule, matching the standalone-components model.",
-    "hint": "It's the pipe version of a standalone component, no module needed to use it.",
+    "answer": "A standalone pipe can be listed directly in a component's imports array without being declared in an NgModule. Since v19 every pipe is standalone unless it sets standalone: false.",
+    "hint": "It's the pipe version of a standalone component.",
     "orderId": 1,
     "topicSlugs": [
       "custom-pipes"
@@ -192264,7 +192264,7 @@
   {
     "slug": "can-a-custom-pipe-use-angulars-dependency-injection-like-injecting-a-service-into-its",
     "title": null,
-    "question": "Can a custom pipe use Angular's dependency injection, like injecting a service into its constructor?",
+    "question": "Can a custom pipe use Angular's dependency injection, like injecting a service?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -192273,20 +192273,20 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "A pipe class is just another Angular-managed class, so it can declare constructor parameters and have services injected into it the same way a component or directive can.",
-    "hint": "A pipe is a class like any other Angular building block, DI works the same way.",
+    "answer": "A pipe is a class Angular creates, so it can inject services with inject() or through constructor parameters, the same way a component or directive can.",
+    "hint": "A pipe is a class like any other Angular building block.",
     "orderId": 1,
     "topicSlugs": [
       "custom-pipes"
     ],
     "options": [
       {
-        "option": "No, pipe classes can't declare constructor dependencies",
+        "option": "No, pipes can't inject anything, in a constructor or otherwise",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Yes, a pipe class can receive services via its constructor",
+        "option": "Yes, a pipe can inject services, with inject() or its constructor",
         "correct": true,
         "comment": null
       },
@@ -192513,14 +192513,14 @@
     "question": "Why does Angular's style guide generally discourage using a pipe to filter or sort an array directly in a template?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Filtering or sorting can't be done as a pure pipe reliably (since the array reference often doesn't change), so it typically has to be impure, meaning it reruns on every change detection cycle, which is expensive for larger lists. Filtering in the component's TypeScript code is usually the recommended alternative.",
-    "hint": "This is the same performance trap as an impure pipe in *ngFor, applied specifically to filter/sort use cases.",
+    "answer": "A filter or sort pipe can't work reliably as a pure pipe, because the array reference often doesn't change, so it ends up impure and reruns on every change detection. That gets expensive for large lists. The usual alternative today is a computed() signal in the component that filters or sorts, which recalculates only when its inputs change.",
+    "hint": "This is the same performance trap as an impure pipe in a large @for loop.",
     "orderId": 1,
     "topicSlugs": [
       "custom-pipes"
@@ -194030,13 +194030,13 @@
     "question": "Why does trying to read a @ViewChild-queried element inside ngOnInit() often return undefined?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ngOnInit() fires before Angular has fully built the component's own view. The view (and its ViewChild-queried elements) is only guaranteed to be ready by ngAfterViewInit().",
+    "answer": "ngOnInit() runs before Angular has built the component's view, so a @ViewChild reference is usually ready only by ngAfterViewInit() (unless the query uses { static: true } and the element isn't inside @if or @for). The signal query viewChild() avoids the timing question: it returns undefined until the element exists and updates when it does.",
     "hint": "Match the hook name to what it's promising is ready: view stuff needs the view hook.",
     "orderId": 1,
     "topicSlugs": [
@@ -194049,7 +194049,7 @@
         "comment": null
       },
       {
-        "option": "Because the component's own view isn't rendered yet when ngOnInit() runs",
+        "option": "Because the view isn't built yet when ngOnInit() runs",
         "correct": true,
         "comment": null
       },
@@ -194560,7 +194560,7 @@
   {
     "slug": "when-ngif-removes-a-component-from-the-dom-because-its-condition-becomes-false-what",
     "title": null,
-    "question": "When *ngIf removes a component from the DOM because its condition becomes false, what lifecycle hook fires on that removed component?",
+    "question": "When an @if condition turns false and removes a child component, which lifecycle hook runs on that component?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 1,
@@ -194569,8 +194569,8 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "*ngIf actually adds and removes elements from the DOM, unlike a CSS display toggle, so when its condition turns false, Angular fully destroys the component and calls ngOnDestroy() on it.",
-    "hint": "*ngIf doesn't just hide things, it tears them down.",
+    "answer": "@if adds and removes content rather than hiding it, so the child component is destroyed and its ngOnDestroy() runs, along with any DestroyRef.onDestroy() callbacks.",
+    "hint": "@if doesn't just hide things; it tears them down.",
     "orderId": 1,
     "topicSlugs": [
       "angular-lifecycle-and-change-detection"
@@ -194929,7 +194929,7 @@
   {
     "slug": "what-does-the-keyvalue-pipe-let-you-do-thats-useful-with-ngfor",
     "title": null,
-    "question": "What does the keyvalue pipe let you do that's useful with *ngFor?",
+    "question": "What does the keyvalue pipe let you do when looping with @for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -194938,7 +194938,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "*ngFor needs something iterable, but a plain object isn't. The keyvalue pipe converts an object's entries into an array of key/value pairs so you can loop over them in a template.",
+    "answer": "@for needs something iterable, and a plain object isn't. keyvalue turns an object's or Map's entries into an array of { key, value } pairs, sorted by key by default, so you can write @for (entry of settings | keyvalue; track entry.key).",
     "hint": "Objects aren't naturally loop-friendly in templates; this pipe fixes that.",
     "orderId": 1,
     "topicSlugs": [
@@ -195134,7 +195134,7 @@
   {
     "slug": "can-a-pipe-be-used-inside-a-structural-directive-expression-such-as-ngif-value-somepipe",
     "title": null,
-    "question": "Can a pipe be used inside a structural directive expression, such as *ngIf=\"value | somePipe\"?",
+    "question": "Can a pipe be used in an @if condition, such as @if (items$ | async; as list)?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 1,
@@ -195143,7 +195143,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Pipes work in any template expression, including ones passed to structural directives, since they're really just a way of processing a value before it's used.",
+    "answer": "Pipes work in any template expression, including @if and @for conditions and bindings. @if (items$ | async; as list) is a common way to unwrap an Observable once and reuse the value inside the block.",
     "hint": "A pipe is just an expression transformer; it doesn't care which directive reads its result.",
     "orderId": 1,
     "topicSlugs": [
@@ -195156,17 +195156,17 @@
         "comment": null
       },
       {
-        "option": "No, pipes only work inside interpolation braces {{ }}",
+        "option": "No, pipes only work inside interpolation braces {{ }} in text",
         "correct": false,
         "comment": null
       },
       {
-        "option": "No, pipes can only be used with *ngFor, not other directives",
+        "option": "No, pipes can only be used inside @for expressions",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Yes, but only built-in pipes, never custom ones",
+        "option": "Yes, but only built-in pipes, never custom pipes you write",
         "correct": false,
         "comment": null
       }
@@ -195260,13 +195260,13 @@
     "question": "Using the async pipe twice on the same cold Observable in one template can cause its side effects, like an HTTP call, to run twice. What's a common fix?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Each async pipe usage subscribes independently, and a cold Observable restarts its work for every subscriber. Aliasing the piped result once with 'as' subscribes once and shares that value.",
+    "answer": "Each async pipe usage subscribes on its own, and a cold Observable restarts its work for every subscriber. Subscribing once fixes it: @if (data$ | async; as data) { … } reuses data inside the block, or the component can convert the Observable with toSignal().",
     "hint": "The fix is about subscribing once and sharing the result, not avoiding the pipe.",
     "orderId": 1,
     "topicSlugs": [
@@ -195383,8 +195383,8 @@
     "question": "A large table pipes each row's price through the currency pipe, and scrolling feels sluggish with thousands of rows. Given currency is a pure pipe, what's a reasonable fix?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -195407,7 +195407,7 @@
         "comment": null
       },
       {
-        "option": "Remove the currency pipe and do currency math inside *ngFor instead",
+        "option": "Remove the currency pipe and format the price inside the @for loop",
         "correct": false,
         "comment": null
       },
@@ -195594,8 +195594,8 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Built-in pipes like date and currency live in CommonModule, or can be imported individually as standalone pipe classes. A standalone component needs one of these in its imports array.",
-    "hint": "It's the same module that gives you *ngIf and *ngFor.",
+    "answer": "Built-in pipes like DatePipe and CurrencyPipe are standalone classes, so a component imports the ones it uses, or CommonModule to get them all. Unlike @if and @for, pipes are not part of the template syntax and do need an import.",
+    "hint": "Pipes are standalone classes, just like the directives you import.",
     "orderId": 1,
     "topicSlugs": [
       "pipes-and-data-transformation"
@@ -195756,7 +195756,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "forRoot() sets up the router itself, services and root config, and should be called once, typically at the app root. forChild() just registers more routes for a feature module.",
     "hint": "One sets up the router machinery once; the other just adds more routes to it.",
@@ -196118,17 +196118,17 @@
   {
     "slug": "what-does-contentchildren-plural-let-you-query-compared-to-contentchild",
     "title": null,
-    "question": "What does ContentChildren (plural) let you query, compared to ContentChild?",
+    "question": "What do ContentChildren and contentChildren() let you query, compared to ContentChild?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "ContentChild grabs just the first match from projected content. ContentChildren gives you every matching item as a QueryList, so you can loop over all of them.",
-    "hint": "The plural name is the giveaway: one grabs one, the other grabs a collection.",
+    "answer": "ContentChild gets only the first match in the projected content. ContentChildren returns every match as a QueryList you can loop over. The signal-query versions, contentChild() and contentChildren(), return signals that update as projected content changes.",
+    "hint": "Think about what you'd need to loop over several projected tabs.",
     "orderId": 1,
     "topicSlugs": [
       "content-projection"
@@ -196282,7 +196282,7 @@
   {
     "slug": "can-a-component-conditionally-hide-its-own-ng-content-based-on-internal-component-state-for",
     "title": null,
-    "question": "Can a component conditionally hide its own ng-content based on internal component state, for example wrapping it in an *ngIf?",
+    "question": "A component should show its projected content only when expanded() is true. What happens with @if (expanded()) { <ng-content /> }?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 3,
@@ -196291,30 +196291,30 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "You can't put a structural directive straight on ng-content, but you can wrap it with an ng-container that carries the *ngIf, and conditionally show or hide that wrapper instead.",
-    "hint": "You can't decorate ng-content directly, but you can wrap it in something you can decorate.",
+    "answer": "Wrapping <ng-content> in @if controls whether the projected content is displayed, but the parent still creates that content, and any components in it, up front, whether or not it is shown. To create content only when it's needed, the parent passes an <ng-template> and the child renders it with ngTemplateOutlet.",
+    "hint": "Projected content belongs to the parent, which builds it before the child decides anything.",
     "orderId": 1,
     "topicSlugs": [
       "content-projection"
     ],
     "options": [
       {
-        "option": "No, ng-content can never be wrapped in a structural directive",
+        "option": "It fails to compile, since ng-content can't be inside @if",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Yes, wrap ng-content in an ng-container that carries the *ngIf instead",
+        "option": "It hides the content, but the parent still creates it up front",
         "correct": true,
         "comment": null
       },
       {
-        "option": "Yes, by putting *ngIf directly on the ng-content tag itself",
+        "option": "The content is created only when expanded() becomes true",
         "correct": false,
         "comment": null
       },
       {
-        "option": "No, projected content is always shown regardless of component state",
+        "option": "The content is always shown, whatever the condition",
         "correct": false,
         "comment": null
       }
@@ -196364,7 +196364,7 @@
   {
     "slug": "why-cant-you-apply-a-structural-directive-like-ngfor-directly-to-an-ng-content-element",
     "title": null,
-    "question": "Why can't you apply a structural directive like *ngFor directly to an ng-content element?",
+    "question": "Why can't ng-content be repeated inside an @for loop to render the projected content once per item?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 3,
@@ -196373,7 +196373,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Structural directives work by creating and destroying template instances. ng-content isn't a template you can instantiate multiple times, it's a marker for where already-created parent content gets inserted.",
+    "answer": "Projected content is created once by the parent, and <ng-content> only marks where that single copy goes. It isn't a template that can be stamped out repeatedly, so repeating it doesn't create more copies. To render something per item, the parent passes an <ng-template> and the child renders it with ngTemplateOutlet inside @for.",
     "hint": "Structural directives need something they can stamp out repeatedly; ng-content isn't that.",
     "orderId": 1,
     "topicSlugs": [
@@ -196381,12 +196381,12 @@
     ],
     "options": [
       {
-        "option": "ng-content is a placeholder, not a template Angular can instantiate repeatedly",
+        "option": "It marks where one parent-made copy goes, so it can't be stamped out",
         "correct": true,
         "comment": null
       },
       {
-        "option": "Structural directives are deprecated for all use cases",
+        "option": "@for is not allowed inside a component's own template",
         "correct": false,
         "comment": null
       },
@@ -239996,39 +239996,39 @@
   {
     "slug": "standalone-commonmodule-for-structural-directives",
     "title": null,
-    "question": "In a standalone component, what replaces the role an NgModule used to play in making structural directives like NgIf and NgFor available to its template?",
+    "question": "A standalone component's template uses @if, @for, [ngClass] and the date pipe. What must its imports array include?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "The standalone component lists CommonModule (or the specific directives like NgIf/NgFor) directly in its own imports array — there's no wrapping NgModule to supply them implicitly anymore, so each standalone component declares exactly what it needs.",
-    "hint": "Each standalone component now owns its own list of template dependencies.",
+    "answer": "@if and @for are built into the template syntax, so they need no import. NgClass and DatePipe are standalone classes, imported individually or together through CommonModule.",
+    "hint": "Ask which of these are template syntax and which are classes.",
     "orderId": 1,
     "topicSlugs": [
       "standalone-components"
     ],
     "options": [
       {
-        "option": "Nothing is needed — standalone components get all directives globally by default",
+        "option": "Nothing, since every directive and pipe is global",
         "correct": false,
         "comment": null
       },
       {
-        "option": "A global app.config.ts imports array that applies to every component automatically",
+        "option": "CommonModule, which is needed for @if and @for too",
         "correct": false,
         "comment": null
       },
       {
-        "option": "The angular.json build configuration enables them project-wide",
+        "option": "NgIf, NgFor, NgClass and DatePipe, one per feature",
         "correct": false,
         "comment": null
       },
       {
-        "option": "List CommonModule, or just NgIf and NgFor, in the component's imports",
+        "option": "NgClass and DatePipe; @if and @for need no import",
         "correct": true,
         "comment": "Listing CommonModule (or the specific directives) in the component's own imports array."
       }
@@ -241406,7 +241406,7 @@
   {
     "slug": "unidirectional-flow-input-mutation-violation",
     "title": null,
-    "question": "A reusable SearchBoxComponent directly mutates its own @Input() value: string property inside a template event handler, instead of emitting an @Output() for the parent to act on. What does this break, and what's the real risk?",
+    "question": "A reusable SearchBoxComponent declares value = input<string>() and wants to update the value as the user types. Why can't it write to the input, and what should it use instead?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -241415,30 +241415,30 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "It breaks unidirectional data flow — a child should never mutate its own @Input() directly. The parent's source of truth and the child's local copy can silently drift apart, and Angular can produce an ExpressionChangedAfterItHasBeenCheckedError in dev mode when an input is both read and reassigned within the same check cycle.",
-    "hint": "An @Input() is meant to flow in ONE direction only.",
+    "answer": "input() creates a read-only signal with no set(), because the parent owns that value. model() creates a writable input instead: the child calls value.set(), which updates its own value and emits valueChange so a parent using [(value)] stays in sync. With the older @Input(), assigning the property simply drifted out of sync with the parent.",
+    "hint": "Think about who owns the value of an input.",
     "orderId": 1,
     "topicSlugs": [
       "component-state-patterns"
     ],
     "options": [
       {
-        "option": "Nothing, since an @Input() is the child's own property to change",
+        "option": "It can, since value.set() works on any input()",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It only matters for OnPush components, not default change detection",
+        "option": "It can, but only when the component uses OnPush",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It makes the parent's value update too, causing a double render",
+        "option": "It must call ngOnChanges() to push the new value up",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It breaks one-way data flow; the child should emit an @Output() instead",
+        "option": "Inputs are read-only; model() is the writable kind",
         "correct": true,
         "comment": "It breaks unidirectional data flow — the input should never be mutated by the component that receives it."
       }
@@ -241570,7 +241570,7 @@
   {
     "slug": "nested-mutation-breaks-onpush-trackby-combo",
     "title": null,
-    "question": "A state service does state.items[0].done = true directly on the existing state object, then notifies subscribers. A child using OnPush and *ngFor with trackBy doesn't visually update the checked item. What's the root cause?",
+    "question": "A state service does state.items[0].done = true directly on the existing state object, then notifies subscribers. An OnPush child renders the items with @for (item of items; track item.id) and doesn't visually update the checked item. What's the root cause?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 3,
@@ -241587,7 +241587,7 @@
     ],
     "options": [
       {
-        "option": "trackBy reuses the row, so it never re-reads the item's done field",
+        "option": "track reuses the row, so it never re-reads the item's done field",
         "correct": false,
         "comment": null
       },
@@ -241597,7 +241597,7 @@
         "comment": "The in-place mutation keeps every reference identical, so OnPush sees no change at all."
       },
       {
-        "option": "OnPush doesn't support *ngFor at all, regardless of mutation style",
+        "option": "OnPush doesn't support @for at all, regardless of mutation style",
         "correct": false,
         "comment": null
       },
@@ -241753,7 +241753,7 @@
   {
     "slug": "onpush-trigger-combination-dom-event-and-async-pipe",
     "title": null,
-    "question": "A component uses OnPush. Which of these also triggers its change detection, besides a new @Input() reference: (a) a DOM event from within its own template, (b) an async pipe emitting a new value, (c) a parent's change detection running with no new input?",
+    "question": "A component uses OnPush. Which of these also triggers its change detection, besides a new input value: (a) a DOM event from within its own template, (b) an async pipe emitting a new value, (c) a parent's change detection running with no new input?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 3,
@@ -241762,7 +241762,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Both (a) and (b) trigger it — a DOM event dispatched from inside the component's own template runs change detection for that component and its ancestors, and the async pipe internally marks the component for check whenever its Observable/Promise emits. (c) alone does not, unless that parent check happens to also produce a new @Input() reference or trips one of the other triggers.",
+    "answer": "Both (a) and (b) trigger it — a DOM event dispatched from inside the component's own template runs change detection for that component and its ancestors, and the async pipe internally marks the component for check whenever its Observable/Promise emits. (c) alone does not, unless that parent check happens to also produce a new input value or trips one of the other triggers.",
     "hint": "Two of the three genuinely trigger it on their own; one doesn't, by itself.",
     "orderId": 1,
     "topicSlugs": [
@@ -241785,7 +241785,7 @@
         "comment": null
       },
       {
-        "option": "None of them; only a new @Input() reference does",
+        "option": "None of them; only a new input value does",
         "correct": false,
         "comment": null
       }
@@ -241999,7 +241999,7 @@
   {
     "slug": "signal-read-in-template-triggers-onpush-automatically",
     "title": null,
-    "question": "A component uses OnPush and reads a signal() directly in its template (not via @Input()). When that signal changes elsewhere (e.g. a shared service), does the OnPush component still update?",
+    "question": "A component uses OnPush and reads a signal() directly in its template (not through an input). When that signal changes elsewhere (e.g. a shared service), does the OnPush component still update?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
@@ -242008,15 +242008,15 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Yes — reading a signal directly in a template automatically makes Angular track it as a dependency of that view, and when the signal changes, Angular marks the component for check under OnPush too, without needing a new @Input() reference or a manual markForCheck() call.",
-    "hint": "Signals read in a template are tracked automatically, independent of @Input() bindings.",
+    "answer": "Yes — reading a signal directly in a template automatically makes Angular track it as a dependency of that view, and when the signal changes, Angular marks the component for check under OnPush too, without needing a new input value or a manual markForCheck() call.",
+    "hint": "Signals read in a template are tracked automatically, independent of input bindings.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-change-detection"
     ],
     "options": [
       {
-        "option": "No, OnPush views react only to new @Input() references",
+        "option": "No, OnPush views react only to new input values",
         "correct": false,
         "comment": null
       },
@@ -242026,7 +242026,7 @@
         "comment": "Yes — the template's direct signal read is automatically tracked, triggering a check under OnPush."
       },
       {
-        "option": "Only if the signal is also explicitly passed in as an @Input()",
+        "option": "Only if the signal is also passed in as an input",
         "correct": false,
         "comment": null
       },
@@ -242040,7 +242040,7 @@
   {
     "slug": "trackby-avoids-full-dom-recreation-on-new-reference",
     "title": null,
-    "question": "A large *ngFor list without trackBy is refreshed from the server every 30 seconds. Even when only one item changed, every row's DOM is destroyed and recreated. Why does adding trackBy fix this?",
+    "question": "A large list rendered with @for (item of items; track item) is refreshed from the server every 30 seconds. Even when only one item changed, every row's DOM is destroyed and recreated. What fixes it?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 3,
@@ -242049,7 +242049,7 @@
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
-    "answer": "Without trackBy, NgFor tracks items by object identity. Data re-fetched from the server arrives as brand-new objects, so every item looks new and every row is torn down and rebuilt. trackBy (for example returning item.id) gives each item an identity that survives the refresh, so Angular keeps the existing rows and only updates the ones whose data changed. The newer @for block makes this explicit by requiring a track expression.",
+    "answer": "track item tracks rows by object identity, and data re-fetched from the server arrives as brand-new objects, so every row looks new and gets rebuilt. track item.id gives each row an identity that survives the refresh, so Angular keeps the existing rows and only updates the ones whose data changed. In older *ngFor templates, trackBy did the same job.",
     "hint": "Ask how Angular decides that a row in the new list is the same row as one in the old list.",
     "orderId": 1,
     "topicSlugs": [
@@ -242057,22 +242057,22 @@
     ],
     "options": [
       {
-        "option": "It caches the previous DOM tree and replays it when data looks the same",
+        "option": "Wrap the @for in @defer so the list renders lazily",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It gives each item a stable identity, so Angular matches rows by id",
+        "option": "Track by a stable id instead, with track item.id",
         "correct": true,
         "comment": "trackBy gives each item a stable identity, so unchanged items are matched instead of recreated."
       },
       {
-        "option": "It turns off change detection for the list until its length changes",
+        "option": "Turn on OnPush so the refreshed list skips checks",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It sorts the items so Angular can compare them position by position",
+        "option": "Sort the items so Angular compares them by position",
         "correct": false,
         "comment": null
       }
