@@ -21860,7 +21860,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "Without the parentheses, click=\"save()\" is just a static HTML attribute containing the text save(). Angular registers no event listener for it, so clicking does nothing. (click)=\"save()\" is what adds the listener.",
     "hint": "Parentheses are what tell Angular to listen for an event.",
@@ -68174,13 +68174,13 @@
     "question": "What does toSignal() do in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "toSignal() converts an Observable into a read-only Signal, allowing Observable-based async data to be used in templates without the async pipe.",
+    "answer": "toSignal() converts an Observable into a read-only signal, so async data can be read in templates without the async pipe. It subscribes immediately and unsubscribes automatically when its injection context is destroyed; until the first value arrives the signal is undefined, unless you pass initialValue or requireSync.",
     "hint": "It bridges Observables to the Signal world.",
     "orderId": 1,
     "topicSlugs": [
@@ -69277,39 +69277,39 @@
   {
     "slug": "which-browser-tool-measures-core-web-vitals-in-the-field",
     "title": null,
-    "question": "Which browser tool measures Core Web Vitals in the field?",
+    "question": "Which pair of tools gives you lab data and real-user (field) data for Core Web Vitals?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "Lighthouse (in Chrome DevTools) measures lab-based Web Vitals. The web-vitals JavaScript library measures real-user field data from actual visits.",
-    "hint": "Lab data vs. field data — both tools matter.",
+    "answer": "Lighthouse measures Web Vitals in a controlled lab run. The web-vitals JavaScript library reports real-user field data from actual visits, which is also what the Chrome UX Report and PageSpeed Insights show.",
+    "hint": "Lab data comes from a controlled test run; field data comes from real visits.",
     "orderId": 1,
     "topicSlugs": [
       "core-web-vitals"
     ],
     "options": [
       {
-        "option": "Angular DevTools, using its component profiler",
+        "option": "Angular DevTools for lab data, and its profiler for field data",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Lighthouse for lab data; the web-vitals JS library for real field data",
+        "option": "Lighthouse for lab data, and the web-vitals library for field data",
         "correct": true,
         "comment": null
       },
       {
-        "option": "The Chrome Performance panel exclusively",
+        "option": "The Performance panel for lab data, and nothing for field data",
         "correct": false,
         "comment": null
       },
       {
-        "option": "The Network tab in Chrome DevTools",
+        "option": "The Network tab for lab data, and server logs for field data",
         "correct": false,
         "comment": null
       }
@@ -70532,7 +70532,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "Yes. Standalone components can be imported directly into an NgModule's imports array and used in that module's component templates.",
     "hint": "Standalone components are importable just like modules.",
@@ -70542,7 +70542,7 @@
     ],
     "options": [
       {
-        "option": "No, they are incompatible with NgModule-based apps",
+        "option": "No, standalone components can't be used inside NgModule apps",
         "correct": false,
         "comment": null
       },
@@ -70552,12 +70552,12 @@
         "comment": "@NgModule({ imports: [MyStandaloneComponent] }) — mixing is fully supported."
       },
       {
-        "option": "Yes, but only if wrapped in a feature module",
+        "option": "Yes, but only after wrapping it in its own feature module",
         "correct": false,
         "comment": null
       },
       {
-        "option": "No, they require the full app to be standalone",
+        "option": "No, the whole app has to be standalone before you can use it",
         "correct": false,
         "comment": null
       }
@@ -71556,7 +71556,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "Since v18, anything inside <ng-content> is fallback content: Angular renders it only when the parent projects nothing into that slot, like a default label inside a reusable button component.",
     "hint": "Think of a default value for a slot.",
@@ -72600,7 +72600,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "The (activate) and (deactivate) outputs on router-outlet fire when a routed component is instantiated into, or removed from, that outlet, letting you run code at those exact moments.",
     "hint": "Think about hooking into the moment a routed component appears or disappears from that outlet.",
@@ -72610,22 +72610,22 @@
     ],
     "options": [
       {
-        "option": "Run code when a routed component is instantiated or removed from the outlet",
+        "option": "Run code when a routed component enters or leaves the outlet",
         "correct": true,
         "comment": null
       },
       {
-        "option": "Manually enable or disable the outlet from a guard",
+        "option": "Enable or disable the outlet from inside a route guard",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Control whether a route is preloaded",
+        "option": "Control whether the outlet's lazy route gets preloaded",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Trigger a page transition animation automatically",
+        "option": "Play a page transition animation without any extra code",
         "correct": false,
         "comment": null
       }
@@ -73644,17 +73644,17 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "When the service worker script file (ngsw-worker.js) changes — which happens on every Angular production build because the build hashes app files and embeds them in the worker. The browser detects the byte change and activates a new worker.",
-    "hint": "The service worker script changes every production build.",
+    "answer": "The browser installs a new service worker when the worker script's bytes change. Angular's ngsw-worker.js only changes when Angular itself is upgraded; new versions of your app are detected through ngsw.json, the manifest of hashed files, which the worker checks and then downloads.",
+    "hint": "The browser compares the worker script byte for byte.",
     "orderId": 1,
     "topicSlugs": [
       "pwa-service-workers"
     ],
     "options": [
       {
-        "option": "The user manually refreshes the page twice",
+        "option": "The user manually refreshes the page two times in a row",
         "correct": false,
         "comment": null
       },
@@ -73664,12 +73664,12 @@
         "comment": "Angular embeds content hashes in ngsw-worker.js at build time — any code change produces a different worker."
       },
       {
-        "option": "When the HTTP cache expires after max-age",
+        "option": "When the worker's HTTP cache entry expires after max-age",
         "correct": false,
         "comment": null
       },
       {
-        "option": "When the user clears their browser cache",
+        "option": "When the user clears the browser cache for the site",
         "correct": false,
         "comment": null
       }
@@ -127218,7 +127218,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "ng build uses the production configuration by default (since v12), writing optimized, minified, AOT-compiled files to dist/. The old --prod flag was removed; ng build --configuration development produces a development build instead.",
     "hint": "Since Angular 12, the production configuration is what you get unless you ask for something else.",
@@ -131441,7 +131441,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "Call signal(initialValue) from @angular/core. It returns a WritableSignal<T> with set() and update(), plus asReadonly() for exposing a read-only view. An early mutate() method was removed in v17.",
     "hint": "It's a plain function from @angular/core, not a class or an RxJS type.",
@@ -131765,14 +131765,14 @@
     "question": "How do you prevent browser-only code from running on the server in Angular SSR?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "Inject PLATFORM_ID and use isPlatformBrowser() to guard browser-only APIs (like localStorage, window, document) from executing in the Node.js server environment.",
-    "hint": "PLATFORM_ID and isPlatformBrowser() are the standard guards.",
+    "answer": "Inject PLATFORM_ID and check isPlatformBrowser() before using browser-only APIs such as localStorage, window or document, which don't exist during server rendering. For DOM work after rendering, afterNextRender() is often simpler, because it only ever runs in the browser.",
+    "hint": "Angular can tell you which platform the code is running on.",
     "orderId": 1,
     "topicSlugs": [
       "server-side-rendering"
@@ -131784,7 +131784,7 @@
         "comment": null
       },
       {
-        "option": "Check the platform with isPlatformBrowser() before calling browser APIs",
+        "option": "Check isPlatformBrowser(PLATFORM_ID) before using browser APIs",
         "correct": true,
         "comment": null
       },
@@ -132216,13 +132216,13 @@
     "question": "What replaced ComponentFactoryResolver in modern Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "Angular 13 introduced viewContainerRef.createComponent(ComponentClass) directly, eliminating the need for ComponentFactoryResolver which is now deprecated.",
+    "answer": "Since v13, viewContainerRef.createComponent(ComponentClass) takes the component class directly, so the older ComponentFactoryResolver step is no longer needed and is deprecated. The standalone createComponent() function does the same outside a view container.",
     "hint": "It was deprecated in Angular 13.",
     "orderId": 1,
     "topicSlugs": [
@@ -178946,9 +178946,9 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "createFeatureSelector gives you a starting selector for one named slice of the store (a feature), which you then build more specific selectors from using createSelector.",
+    "answer": "createFeatureSelector gives you a typed starting selector for one named slice of the store, which you build more specific selectors from with createSelector. createFeature() can generate these selectors for you automatically.",
     "hint": "It's the entry point into one particular branch of the whole state tree.",
     "orderId": 1,
     "topicSlugs": [
@@ -178956,7 +178956,7 @@
     ],
     "options": [
       {
-        "option": "It generates a brand-new reducer for that feature",
+        "option": "It generates a brand-new reducer for that feature's state",
         "correct": false,
         "comment": null
       },
@@ -178966,12 +178966,12 @@
         "comment": null
       },
       {
-        "option": "It dispatches an action scoped to just that feature",
+        "option": "It dispatches an action scoped to just that feature's slice",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It lazy-loads the feature module's code",
+        "option": "It lazy-loads the feature's code the first time it's selected",
         "correct": false,
         "comment": null
       }
@@ -179725,32 +179725,32 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "Structural directives can pass a context object into the view they create; properties on that context, especially $implicit, are what the let-syntax in the template picks up, similar to how *ngFor exposes each item.",
-    "hint": "Look at how *ngFor gives you let item of items — the mechanism is the same idea.",
+    "answer": "A structural directive passes a context object when it creates the embedded view, and the template's let and as syntax reads properties from it, with $implicit as the default value. A static ngTemplateContextGuard function can type that context for template type checking.",
+    "hint": "Think of how *ngFor exposed let item in older templates; the mechanism is the same.",
     "orderId": 1,
     "topicSlugs": [
       "custom-directives"
     ],
     "options": [
       {
-        "option": "A regular @Input() property named result on the directive",
+        "option": "A regular input named result declared on the directive",
         "correct": false,
         "comment": null
       },
       {
-        "option": "A context object passed when creating the view, exposing properties like $implicit",
+        "option": "A context object the directive passes when it creates the view",
         "correct": true,
         "comment": null
       },
       {
-        "option": "A @HostBinding declared on the directive class",
+        "option": "A host binding on the directive that exposes the value",
         "correct": false,
         "comment": null
       },
       {
-        "option": "An @Output() EventEmitter the directive fires",
+        "option": "An output the directive emits whenever the condition changes",
         "correct": false,
         "comment": null
       }
@@ -179841,14 +179841,14 @@
   {
     "slug": "if-a-service-is-added-to-a-directives-own-providers-array-instead-of-a-modules-whats-the",
     "title": null,
-    "question": "If a service is added to a directive's own providers array instead of a module's, what's the effect?",
+    "question": "If a service is added to a directive's own providers array instead of being provided app-wide, what's the effect?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "Providing a service at the directive level, rather than app-wide, means Angular creates a separate instance scoped to each element the directive is on, rather than one shared instance across the whole app.",
     "hint": "Where you put a provider changes how many copies of the service end up existing — root, or somewhere narrower.",
@@ -179863,7 +179863,7 @@
         "comment": null
       },
       {
-        "option": "A new instance of that service is created for each element the directive is applied to",
+        "option": "A separate instance is created for each element using the directive",
         "correct": true,
         "comment": null
       },
@@ -180012,7 +180012,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "XLIFF is one of the standard file formats ng extract-i18n can produce, giving translators a structured file with the extracted strings ready to be translated.",
     "hint": "Think of it as the handoff file that goes to a translation team.",
@@ -180027,7 +180027,7 @@
         "comment": null
       },
       {
-        "option": "A standard XML-based format that holds extracted, translatable text for translators",
+        "option": "An XML format that carries extracted text to translators",
         "correct": true,
         "comment": null
       },
@@ -180500,13 +180500,13 @@
     "question": "In a typical Angular SSR project, what is the role of the server.ts (Express) file?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "server.ts sets up a Node.js server, commonly using Express, that receives incoming HTTP requests, runs Angular's rendering on the server for each one, and sends back the resulting HTML.",
+    "answer": "server.ts is the Node.js entry point, usually an Express app, that receives requests, renders the matching route with Angular's server engine (AngularNodeAppEngine in current versions) and sends back the HTML.",
     "hint": "This is the piece that actually runs on a Node server, not in the browser.",
     "orderId": 1,
     "topicSlugs": [
@@ -180514,12 +180514,12 @@
     ],
     "options": [
       {
-        "option": "It defines the Angular router's route configuration",
+        "option": "It defines the Angular router's route configuration for the server",
         "correct": false,
         "comment": null
       },
       {
-        "option": "It's the Node.js entry point that renders the app to HTML for each request",
+        "option": "The Node.js entry point that renders each request's page to HTML",
         "correct": true,
         "comment": null
       },
@@ -181279,13 +181279,13 @@
     "question": "What is a common reason to inject Injector directly into a service or component?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "Injecting Injector lets you call injector.get() to resolve a dependency dynamically at runtime, which is useful when the dependency isn't known until the code is actually running.",
+    "answer": "Injecting the Injector (inject(Injector)) lets code call injector.get() to look up a dependency at runtime, which helps when the right dependency isn't known until the code runs. It is also what you pass to runInInjectionContext() or toSignal() when calling them outside an injection context.",
     "hint": "Sometimes you don't know what you need until runtime.",
     "orderId": 1,
     "topicSlugs": [
@@ -181293,7 +181293,7 @@
     ],
     "options": [
       {
-        "option": "To manually resolve a dependency at runtime instead of through the constructor",
+        "option": "To look up a dependency at runtime with injector.get()",
         "correct": true,
         "comment": null
       },
@@ -182267,7 +182267,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "ngModelGroup groups a set of related ngModel-bound fields together under one name, similar to a nested FormGroup in reactive forms, so you can check validity or read the value of that group as a unit.",
     "hint": "Think about the template-driven equivalent of nesting a FormGroup inside another FormGroup.",
@@ -182277,7 +182277,7 @@
     ],
     "options": [
       {
-        "option": "Groups related ngModel-bound fields together, like a nested FormGroup, for validation",
+        "option": "Groups ngModel fields under one name, like a nested FormGroup",
         "correct": true,
         "comment": null
       },
@@ -186080,7 +186080,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "In this case they emit the same three values, but the intent differs: from() flattens an existing iterable-like source, while of() just emits whatever arguments you give it.",
     "hint": "Same result here, but built for slightly different jobs.",
@@ -186090,12 +186090,12 @@
     ],
     "options": [
       {
-        "option": "from() converts iterables or promises into emissions; of() emits its arguments as-is",
+        "option": "from() unpacks an array, iterable or promise; of() emits each argument",
         "correct": true,
         "comment": null
       },
       {
-        "option": "of() only works when every argument is a number",
+        "option": "of() only works when every argument is a number or a string",
         "correct": false,
         "comment": null
       },
@@ -186105,7 +186105,7 @@
         "comment": null
       },
       {
-        "option": "They can never be used interchangeably for the same values",
+        "option": "They can't be used interchangeably, even for the same values",
         "correct": false,
         "comment": null
       }
@@ -189934,7 +189934,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "It helps improve LCP by enforcing best practices like priority loading for above-the-fold images and requiring explicit sizing.",
     "hint": "It's specifically aimed at the metric most often dragged down by a slow hero image.",
@@ -189975,7 +189975,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "If a fallback font renders first and then swaps to the custom web font, and the two fonts have different letter widths and line heights, the surrounding text reflows and visibly shifts.",
     "hint": "Different fonts take up different amounts of space for the same text.",
@@ -189985,22 +189985,22 @@
     ],
     "options": [
       {
-        "option": "A fallback font swaps to a custom font with different sizing, reflowing text",
+        "option": "A fallback font swaps for one with different sizing, so text reflows",
         "correct": true,
         "comment": null
       },
       {
-        "option": "Fonts are static assets and never affect page layout",
+        "option": "Fonts are static assets loaded once, so they never move layout",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Layout shift can only ever be caused by images",
+        "option": "Only images and ads can shift layout, never text rendering",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Web fonts only ever influence LCP, never CLS",
+        "option": "Web fonts affect only LCP timing, never layout stability",
         "correct": false,
         "comment": null
       }
@@ -190012,11 +190012,11 @@
     "question": "What's the practical relationship between preconnect/preload hints and LCP?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "They tell the browser to start connecting to a domain or fetching a critical resource, like the hero image or a font, earlier than it otherwise would, shrinking the time before that content can paint.",
     "hint": "They're a way of giving the browser a head start on something you already know it will need.",
@@ -190026,7 +190026,7 @@
     ],
     "options": [
       {
-        "option": "They let the browser start fetching a critical resource earlier, cutting time to paint",
+        "option": "They let the browser start fetching a critical resource sooner",
         "correct": true,
         "comment": null
       },
@@ -190094,11 +190094,11 @@
     "question": "Do skeleton screens (loading placeholders) directly improve a page's measured Core Web Vitals scores?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "Not automatically — they improve how fast the page feels to users, but they don't change when the actual largest content paints or when layout truly stabilizes unless the skeleton itself is sized to match the real content.",
     "hint": "Feeling faster and measuring faster aren't automatically the same thing.",
@@ -190108,7 +190108,7 @@
     ],
     "options": [
       {
-        "option": "Not necessarily — they improve perceived speed, not the measured metrics automatically",
+        "option": "Not necessarily; they change perceived speed, not the metrics",
         "correct": true,
         "comment": null
       },
@@ -192927,9 +192927,9 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "If a feature module or component is imported normally at the top of a file (a static import) even though the route is configured with loadChildren, bundlers will often still include it in the main bundle, since the static import creates a direct reference that isn't split off.",
+    "answer": "If the lazily loaded component or routes file is also imported normally somewhere in the eagerly loaded app, the bundler has to put that code in the main bundle, even though the route uses loadComponent or loadChildren. The dynamic import() only splits code that nothing else imports statically.",
     "hint": "A stray import statement at the top of the file can quietly pull the 'lazy' code back into the main bundle.",
     "orderId": 1,
     "topicSlugs": [
@@ -192942,17 +192942,17 @@
         "comment": null
       },
       {
-        "option": "Statically importing the feature module instead of using a dynamic import()",
+        "option": "A static import of the same code elsewhere in the eager app",
         "correct": true,
         "comment": null
       },
       {
-        "option": "Adding RouterModule.forChild() inside the feature module",
+        "option": "Giving the lazy route a path that includes a route parameter",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Naming the route's file with a hyphen in it",
+        "option": "Adding a canMatch guard to the lazy route",
         "correct": false,
         "comment": null
       }
@@ -193046,13 +193046,13 @@
     "question": "What are Angular's @defer blocks (Angular 17+) used for, and how do they differ from route-level lazy loading?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "@defer blocks let you lazy-load part of a component's template, such as a chart or comment section, based on triggers like viewport visibility or user interaction, this works at the template level, separate from lazy-loading whole routes or components via the router.",
+    "answer": "@defer blocks lazy-load part of a component's template, such as a chart or a comment section, and load it on a trigger like the block entering the viewport or a user interaction. This works inside a template, separately from the router lazy-loading whole routes or components.",
     "hint": "Routing lazy-loads whole pages. Is there a smaller unit than a page you might want to delay?",
     "orderId": 1,
     "topicSlugs": [
@@ -193065,7 +193065,7 @@
         "comment": null
       },
       {
-        "option": "They lazy-load part of a template's content, like a heavy widget, apart from routing",
+        "option": "They lazy-load part of a template, such as a heavy widget, not a route",
         "correct": true,
         "comment": null
       },
@@ -193870,7 +193870,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "Trusted Types is a browser API that restricts assigning raw strings to risky DOM sinks like innerHTML unless they've gone through an approved sanitizing policy first, closing off a whole class of DOM-based XSS bugs even if application code has a mistake.",
     "hint": "It's a browser-level safety net specifically for the risky DOM properties that XSS bugs usually target.",
@@ -193885,7 +193885,7 @@
         "comment": null
       },
       {
-        "option": "Raw strings landing in dangerous sinks like innerHTML and triggering XSS",
+        "option": "Raw strings reaching sinks like innerHTML and causing XSS",
         "correct": true,
         "comment": null
       },
@@ -195998,11 +195998,11 @@
     "question": "What does a custom RouteReuseStrategy let you control in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 3,
+    "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
     "answer": "A RouteReuseStrategy controls whether Angular reuses an existing component instance (keeping its state) or destroys and recreates it when the router navigates to a matching route again.",
     "hint": "Think about whether navigating away and back should feel like a fresh page or picking up where you left off.",
@@ -196012,7 +196012,7 @@
     ],
     "options": [
       {
-        "option": "Whether a route's component instance is reused or destroyed and recreated on navigation",
+        "option": "Whether a route's component is kept and reused, or recreated",
         "correct": true,
         "comment": null
       },
@@ -196986,9 +196986,9 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Pending",
+    "status": "Active",
     "isWhitelisted": false,
-    "answer": "ng add @angular/pwa wires up everything for a basic PWA in one step: it adds icons and a manifest file, registers the ServiceWorkerModule, and creates a starter ngsw-config.json.",
+    "answer": "ng add @angular/pwa sets up a basic PWA in one step: it adds a web app manifest and icons, registers the service worker with provideServiceWorker() in app.config.ts, and creates a starter ngsw-config.json.",
     "hint": "It's a scaffolding command that sets up several PWA pieces at once.",
     "orderId": 1,
     "topicSlugs": [
@@ -197001,7 +197001,7 @@
         "comment": null
       },
       {
-        "option": "Adds icons and a manifest, registers the service worker, and creates ngsw-config.json",
+        "option": "Sets up the manifest, icons, service worker and ngsw-config.json",
         "correct": true,
         "comment": null
       },
