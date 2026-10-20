@@ -21696,7 +21696,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "ngModel provides two-way binding in template-driven forms, keeping an input and a component property in sync. It comes from FormsModule, which goes in the standalone component's imports (or an NgModule's imports in older apps).",
     "hint": "It belongs to the FormsModule.",
@@ -23424,7 +23424,7 @@
     "hint": " Think of the central container for state.",
     "orderId": 1,
     "topicSlugs": [
-      "services-dependency-injection-and-stat"
+      "ngrx"
     ],
     "options": [
       {
@@ -24613,7 +24613,7 @@
     "hint": " It’s attached to the <form> element.",
     "orderId": 1,
     "topicSlugs": [
-      "routing-and-navigation"
+      "forms-and-user-input"
     ],
     "options": [
       {
@@ -25597,7 +25597,7 @@
     "hint": "Angular ships a dedicated testing module built specifically for faking HTTP responses.",
     "orderId": 1,
     "topicSlugs": [
-      "http-and-api-integration"
+      "testing-5"
     ],
     "options": [
       {
@@ -26329,7 +26329,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Custom pipes can accept multiple arguments by defining them in the transform() method signature and passing them with colons in templates.",
     "hint": " Just like built-in pipes, custom ones can receive parameters.",
@@ -26575,7 +26575,7 @@
     "marks": 2,
     "timeAllowed": 30,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "With Zone.js, Angular patches async APIs such as events, timers, promises and HTTP calls, and runs change detection after they complete. New apps have been zoneless by default since v21; there, change detection is scheduled when a signal read by a template changes, an input changes, a template event fires, or markForCheck() is called.",
     "hint": "Includes clicks, promises, and HTTP responses.",
@@ -65311,7 +65311,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "A SharedModule collects commonly used components, directives, and pipes so multiple feature modules can import it instead of duplicating declarations.",
     "hint": "Think DRY — Don't Repeat Yourself.",
@@ -65352,7 +65352,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Providers in @NgModule register services with the module's injector, making them available to all components declared in that module.",
     "hint": "This is where services are registered at the module level.",
@@ -65434,7 +65434,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "CoreModule is a convention for housing singleton services and app-wide components (like header, footer) that should only be instantiated once at root level.",
     "hint": "It is imported only once in AppModule.",
@@ -65475,7 +65475,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "A standalone component (the default since v19) lists the components, directives, pipes or NgModules its template uses in its own imports array, so no NgModule is needed to declare it.",
     "hint": "Each standalone component carries its own list of dependencies.",
@@ -65516,7 +65516,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "BrowserModule registers platform-level providers that should only exist once. Importing it in a feature module creates duplicate providers and causes a runtime error.",
     "hint": "Angular will throw if it detects this mistake.",
@@ -65823,7 +65823,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Separate each argument with a colon: {{ value | myPipe:arg1:arg2 }}. They map to the extra parameters in transform().",
     "hint": "Use colons, not commas.",
@@ -65987,7 +65987,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Pipe the output of one into the next using the | operator: {{ value | customPipe | uppercase }}. Pipes execute left to right.",
     "hint": "Left-to-right, just like shell pipes.",
@@ -66519,7 +66519,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "detectChanges() immediately runs change detection for the current component and its children, regardless of the change detection strategy.",
     "hint": "It forces an immediate synchronous check right now.",
@@ -66894,7 +66894,7 @@
     "hint": "It's the manual escape hatch for custom detection logic.",
     "orderId": 1,
     "topicSlugs": [
-      "advanced-change-detection"
+      "angular-lifecycle-and-change-detection"
     ],
     "options": [
       {
@@ -66990,7 +66990,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "BehaviorSubject holds the last emitted value and replays it to every new subscriber immediately, which suits state that must always have a current value. In signal-based code, a signal() plays the same role.",
     "hint": "New subscribers need to know the current state right away.",
@@ -67318,7 +67318,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Manual subscribe() requires explicit unsubscription in ngOnDestroy to prevent memory leaks. The async pipe handles subscription and teardown automatically.",
     "hint": "Memory leaks vs. automatic cleanup.",
@@ -70778,7 +70778,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "ApplicationConfig is the object passed as the second argument to bootstrapApplication(). It holds the providers array for app-level services and features like router and HTTP.",
     "hint": "It's the standalone equivalent of AppModule's providers.",
@@ -70962,7 +70962,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "tap() is for side effects (logging) without modifying the stream. catchError() actually handles the error, returns a new observable, and can prevent the stream from terminating.",
     "hint": "tap peeks; catchError replaces the error path.",
@@ -71044,7 +71044,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "throwError(() => new Error('msg')) creates an observable that immediately emits an error notification, used to propagate errors intentionally in a pipeline.",
     "hint": "It creates an observable that only errors — never emits a value.",
@@ -71228,7 +71228,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Content projection lets a parent component pass HTML template content into a child component's designated slots, making the child's layout flexible and reusable.",
     "hint": "Think of it as named slots in a reusable component.",
@@ -73910,7 +73910,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "DatePipe, CurrencyPipe, DecimalPipe, and PercentPipe all read LOCALE_ID to format values correctly for the active locale — date formats, currency symbols, decimal separators, and grouping differ by locale automatically.",
     "hint": "The same date pipe renders differently in 'en-US' vs 'de-DE'.",
@@ -127669,7 +127669,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Declaring providers in a component limits the service’s instance to that component and its children only.",
     "hint": "Providers can be declared at the component level for local scope.",
@@ -132677,7 +132677,7 @@
     "hint": "It catches everything — must go last in the routes array.",
     "orderId": 1,
     "topicSlugs": [
-      "advanced-routing"
+      "routing-and-navigation"
     ],
     "options": [
       {
@@ -178167,7 +178167,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "A freshly cloned repo doesn't include node_modules, so the dependencies listed in package.json need to be installed first before Angular can find the packages it needs to run.",
     "hint": "Git doesn't usually track node_modules — so what's missing right after a clone?",
@@ -178460,7 +178460,7 @@
     "hint": "It's named after the exact thing it lets you build.",
     "orderId": 1,
     "topicSlugs": [
-      "components-and-templates"
+      "custom-pipes"
     ],
     "options": [
       {
@@ -180381,7 +180381,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "provideClientHydration() turns on Angular's hydration support, so when the client-side app boots up on an SSR-rendered page, it attaches to the existing DOM instead of wiping it out and rebuilding it.",
     "hint": "Think about what the browser does with HTML the server already rendered.",
@@ -181207,7 +181207,7 @@
     "hint": "Same trick as normal provider overriding, just inside a test module.",
     "orderId": 1,
     "topicSlugs": [
-      "services-dependency-injection-and-stat"
+      "testing-5"
     ],
     "options": [
       {
@@ -181248,7 +181248,7 @@
     "hint": "Don't redo math when the inputs are the same as last time.",
     "orderId": 1,
     "topicSlugs": [
-      "services-dependency-injection-and-stat"
+      "ngrx"
     ],
     "options": [
       {
@@ -182806,7 +182806,7 @@
     "hint": "You want to test the component, not accidentally re-test the service too.",
     "orderId": 1,
     "topicSlugs": [
-      "component-state-patterns"
+      "testing-5"
     ],
     "options": [
       {
@@ -183866,7 +183866,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "ng serve compiles the app and runs a local development server that automatically reloads the browser when files change.",
     "hint": "The command you run to actually see your app while coding.",
@@ -191205,7 +191205,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "provideRouter() is the standalone-API equivalent of RouterModule.forRoot(), you pass it to bootstrapApplication() to set up routing without needing an NgModule.",
     "hint": "Standalone apps swap 'forRoot module imports' for 'provide function calls' in bootstrap.",
@@ -191574,7 +191574,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Before Ivy, Angular needed components created dynamically (like in a modal) to be listed in entryComponents so the compiler knew about them ahead of time. Ivy's compiler can resolve this at the point of use, so the array became unnecessary.",
     "hint": "Something changed under the hood when Angular switched rendering engines around version 9.",
@@ -191615,7 +191615,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Each module's providers array creates its own injector registration, so listing the same service in two eager modules produces two separate instances, usually not what you want for shared state, which is why providedIn: 'root' or a single shared registration is preferred.",
     "hint": "Each module's providers array creates its own injector scope — think about what that means for sharing state.",
@@ -191738,7 +191738,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "importProvidersFrom() extracts the providers configured by a traditional NgModule (like one from a third-party library) so they can be registered in a standalone app's bootstrap config, easing the migration away from NgModules.",
     "hint": "It's a bridge that lets old module-based libraries keep working in a module-free app.",
@@ -191820,7 +191820,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Two modules importing each other creates a circular dependency, which can break the module resolution the compiler relies on, the fix is usually to extract the shared pieces into a third module both can import.",
     "hint": "Two modules needing each other is a sign something shared should be pulled out into a third module.",
@@ -191861,7 +191861,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "A feature module groups everything related to one part of the application's functionality, like an orders module or a settings module, keeping the codebase organized as it grows.",
     "hint": "Think of it as a folder-level grouping by business feature, not by file type.",
@@ -191908,7 +191908,7 @@
     "hint": "One is a property on the service itself; the other is a manual registration inside a specific module.",
     "orderId": 1,
     "topicSlugs": [
-      "angular-modules"
+      "services-dependency-injection-and-stat"
     ],
     "options": [
       {
@@ -191984,7 +191984,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "forRoot() is typically called once at the root to set up shared configuration and singleton services, while forFeature() is called in individual feature modules to register that feature's own pieces, like NgRx reducers for a specific slice of state.",
     "hint": "Compare this to the Router's forRoot vs forChild pattern you may already know.",
@@ -192025,7 +192025,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "If a module already loaded eagerly gets lazy-loaded again through a route, Angular creates a second copy with its own injector, which can duplicate services and cause subtle bugs, the fix is to only load a module one way, not both.",
     "hint": "Think about what happens when Angular sees a module requested for loading a second time.",
@@ -192066,7 +192066,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "A module can list an imported module in its own exports array to pass it along, so a SharedModule that imports and re-exports CommonModule lets any module importing SharedModule use CommonModule's directives without importing it separately.",
     "hint": "Exporting isn't limited to your own declarations — you can also 'forward' modules you've imported.",
@@ -192722,7 +192722,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "canMatch runs before the router decides a route matches the URL, so returning false there can stop a lazy module's chunk from ever being downloaded, useful for showing a different route to unauthorized users without even fetching the code.",
     "hint": "This one intercepts before the router commits to that route at all, code and all.",
@@ -193296,7 +193296,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "FormControl exposes a valueChanges Observable, so piping it through RxJS's debounceTime(300) (often with distinctUntilChanged) is the standard reactive-forms way to wait for the user to pause typing before reacting.",
     "hint": "It's the same RxJS pattern you'd use to debounce any input event, applied to a form control's value stream.",
@@ -194690,7 +194690,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "ngOnDestroy() is your last chance to run cleanup code, like unsubscribing or clearing timers, right before Angular actually removes the component.",
     "hint": "It's the 'last call' hook, not an after-the-fact notice.",
@@ -195967,7 +195967,7 @@
     "hint": "It's about matching the whole URL, not just its beginning.",
     "orderId": 1,
     "topicSlugs": [
-      "advanced-routing"
+      "routing-and-navigation"
     ],
     "options": [
       {
@@ -196090,7 +196090,7 @@
     "hint": "One brings in a single piece; the other brings in a whole route sub-tree.",
     "orderId": 1,
     "topicSlugs": [
-      "advanced-routing"
+      "lazy-loading"
     ],
     "options": [
       {
@@ -239615,7 +239615,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Inject CoreModule itself in its own constructor using @Optional() and @SkipSelf(), and throw if that resolves to a truthy value — a truthy result means an ancestor injector already loaded CoreModule once, so this is a second import.",
     "hint": "The guard checks whether an ANCESTOR injector already has this exact module.",
@@ -239656,7 +239656,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "A component, directive, or pipe can only be declared in exactly one NgModule's declarations array — Angular's compiler rejects declaring the same one in two modules. The fix is a SharedModule that both feature modules import, which exports the component once.",
     "hint": "A declarable only has ONE home module — reuse happens through exporting, not re-declaring.",
@@ -239738,7 +239738,7 @@
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Lazy-load it. Code almost nobody runs shouldn't ship in the bundle everybody downloads on first load — lazy loading via loadChildren/loadComponent defers that cost to the rare users who actually navigate to /admin, keeping the initial bundle smaller for everyone else.",
     "hint": "Think about who pays the bundle-size cost under each choice.",
@@ -239785,7 +239785,7 @@
     "hint": "Importing ONE thing from a barrel file doesn't always mean only that one thing ships.",
     "orderId": 1,
     "topicSlugs": [
-      "angular-modules"
+      "performance-optimization-5"
     ],
     "options": [
       {
@@ -239902,7 +239902,7 @@
     "marks": 3,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "Yes. When multiple providers are registered for the same token at the same injector level, Angular's DI uses the last one registered — so import order matters whenever two imported modules both configure the same token.",
     "hint": "DI resolves conflicts by registration order, not alphabetically.",
@@ -241331,7 +241331,7 @@
     "marks": 2,
     "timeAllowed": 50,
     "tag": null,
-    "status": "Active",
+    "status": "Pending",
     "isWhitelisted": false,
     "answer": "It doesn't re-render. OnPush only checks for a new reference on @Input() bindings, and mutating the array in place keeps the same reference — Angular has no signal that anything changed, so it skips checking that component.",
     "hint": "OnPush compares references, not contents.",

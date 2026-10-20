@@ -3932,18 +3932,18 @@
     },
     {
       "slug": "angular-modules",
-      "title": "Angular Modules",
+      "title": "NgModules: Legacy & Interop",
       "subjectSlug": "angular",
       "image": null,
       "label": "Intermediate",
-      "shortDesc": "NgModule system",
+      "shortDesc": "Reading NgModule apps and mixing them with standalone code",
       "order": 12,
       "weight": 2,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Understand how NgModule organises an Angular app into cohesive blocks — covering declarations, imports, exports, providers, and the difference between feature and shared modules.",
-      "goal": "Describe the role of NgModule, set up feature modules, create shared modules, and understand how Angular resolves components and services at the module level."
+      "description": "Read and maintain NgModule-based Angular apps, covering declarations, imports, exports, providers, BrowserModule and CommonModule, forRoot and forChild, and how NgModules work alongside standalone components.",
+      "goal": "Read an NgModule-based app with confidence, explain how its modules and providers fit together, and bring standalone components and NgModule libraries into the same app."
     },
     {
       "slug": "custom-pipes",
