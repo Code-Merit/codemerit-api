@@ -20257,7 +20257,7 @@
     "question": "Why are Angular applications considered scalable?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
+    "level": 1,
     "marks": 1,
     "timeAllowed": 50,
     "tag": null,
@@ -20850,7 +20850,7 @@
         "comment": null
       },
       {
-        "option": "ng serve compiles and hosts the app locally; ng build outputs files to disk",
+        "option": "ng serve runs a local dev server; ng build writes output to disk",
         "correct": true,
         "comment": null
       },
@@ -21282,8 +21282,8 @@
     "question": "Which is an example of two-way data binding in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -21979,8 +21979,8 @@
     "question": "What does (input)=onInputChange($event) represent in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -22044,7 +22044,7 @@
         "comment": null
       },
       {
-        "option": "The view updates automatically to reflect the new value",
+        "option": "The view updates to show the new value",
         "correct": true,
         "comment": null
       },
@@ -22061,8 +22061,8 @@
     "question": " What is the purpose of $event in Angular event binding?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -22560,14 +22560,14 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "ngStyle sets individual CSS style properties directly; ngClass toggles whole CSS classes.",
-    "hint": "Match each directive to what its name literally says it manipulates.",
+    "hint": "Compare what each binding receives: a list of names, or property–value pairs.",
     "orderId": 1,
     "topicSlugs": [
       "directives-and-conditional-rendering"
     ],
     "options": [
       {
-        "option": "ngStyle sets inline style properties; ngClass toggles class names",
+        "option": "ngStyle sets inline styles; ngClass toggles class names",
         "correct": true,
         "comment": null
       },
@@ -22635,8 +22635,8 @@
     "question": "Which Angular class gives direct access to the host DOM element in a directive?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -23332,8 +23332,8 @@
     "question": "What does Angular's hierarchical injector system mean?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -23373,8 +23373,8 @@
     "question": "How can a component get a new instance of a service, even if it's provided in root?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -23455,21 +23455,21 @@
     "question": "What does the multi: true option do when registering a provider?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Setting multi: true lets several different providers register values under the same injection token, so Angular collects them all into an array instead of the last one overwriting the rest.",
-    "hint": "Think about several providers stacking up under one shared token, instead of replacing each other.",
+    "hint": "Think about two providers using the same token: does the second one replace the first?",
     "orderId": 1,
     "topicSlugs": [
       "services-dependency-injection-and-stat"
     ],
     "options": [
       {
-        "option": "Lets multiple providers register values under the same injection token as an array",
+        "option": "Lets several providers add values under one token, as an array",
         "correct": true,
         "comment": null
       },
@@ -23537,8 +23537,8 @@
     "question": "What is a potential downside of overusing services for shared state without proper structure?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -23578,8 +23578,8 @@
     "question": "What best describes Angular's DI tokens?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -23679,7 +23679,7 @@
         "comment": null
       },
       {
-        "option": "A placeholder that renders the component matching the active route",
+        "option": "A placeholder where the matched route's component renders",
         "correct": true,
         "comment": null
       },
@@ -23783,8 +23783,8 @@
     "question": "Which guard determines if a route can be activated?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -23824,8 +23824,8 @@
     "question": "How can you navigate programmatically in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -24089,7 +24089,7 @@
         "comment": null
       },
       {
-        "option": "Details about the currently active route, like params and query strings",
+        "option": "Details of the current route, like its params and query string",
         "correct": true,
         "comment": null
       },
@@ -24125,7 +24125,7 @@
     ],
     "options": [
       {
-        "option": "To embed dynamic values, like an id, directly into the URL path",
+        "option": "To put dynamic values, like an id, into the URL path",
         "correct": true,
         "comment": null
       },
@@ -24398,8 +24398,8 @@
     "question": "Which syntax correctly creates a reactive form group in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -24439,8 +24439,8 @@
     "question": " Which Angular service simplifies creating reactive forms?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -24480,8 +24480,8 @@
     "question": "What directive is used to bind a form element to a FormGroup in reactive forms?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -24521,8 +24521,8 @@
     "question": "Inside a template using [formGroup], which directive do you add to an <input> to bind it to one specific FormControl by name?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -24658,7 +24658,7 @@
     ],
     "options": [
       {
-        "option": "Reactive forms build the model in code; template-driven forms use template directives",
+        "option": "Reactive forms build the model in code; template-driven ones in the template",
         "correct": true,
         "comment": null
       },
@@ -24685,8 +24685,8 @@
     "question": "Which built-in validator checks if an input matches a regex pattern?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -24726,8 +24726,8 @@
     "question": "How do you access a specific form control from a FormGroup?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -24849,8 +24849,8 @@
     "question": "Which built-in validator ensures a checkbox must be checked, like agreeing to terms?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -24890,8 +24890,8 @@
     "question": "How do you mark all controls in a form as touched manually?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -25389,7 +25389,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "HttpParams helps append query parameters in a type-safe, immutable way.",
-    "hint": "Angular has a dedicated, immutable helper class for this, separate from headers.",
+    "hint": "Angular has a helper class for this, built the same way as HttpHeaders.",
     "orderId": 1,
     "topicSlugs": [
       "http-and-api-integration"
@@ -25547,7 +25547,7 @@
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
-    "marks": 1,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -25751,8 +25751,8 @@
     "question": "Which built-in pipe is used to convert a string to a specific date format?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -25956,8 +25956,8 @@
     "question": "Which built-in pipe converts an object into a JSON string?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -26284,8 +26284,8 @@
     "question": "Which pipe would you use to format a date like January 5, 2025?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -26489,8 +26489,8 @@
     "question": "What is the primary purpose of Angular's change detection mechanism?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -26981,8 +26981,8 @@
     "question": "Which lifecycle hook is suitable for detecting view DOM changes after every update?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 30,
     "tag": null,
     "status": "Active",
@@ -65232,7 +65232,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "BrowserModule provides browser-specific services and re-exports CommonModule. Feature modules should import CommonModule, not BrowserModule.",
-    "hint": "One is for the root; the other is for feature modules.",
+    "hint": "Think about which module only the app's entry point should import.",
     "orderId": 1,
     "topicSlugs": [
       "angular-modules"
@@ -65614,8 +65614,8 @@
     "question": "Which interface must a custom pipe implement?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -65751,7 +65751,7 @@
     ],
     "options": [
       {
-        "option": "A pipe that returns null for invalid inputs",
+        "option": "A pipe that returns null whenever its input is invalid",
         "correct": false,
         "comment": null
       },
@@ -65761,7 +65761,7 @@
         "comment": "Angular memoizes pure pipes — same input always returns the cached result."
       },
       {
-        "option": "A pipe that runs on every change detection cycle",
+        "option": "A pipe that runs again on every change detection cycle",
         "correct": false,
         "comment": null
       },
@@ -66065,8 +66065,8 @@
     "question": "What is the name property in @Pipe({ name: '...' }) used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -66145,7 +66145,7 @@
         "comment": null
       },
       {
-        "option": "It shrinks the initial bundle by loading feature code on demand",
+        "option": "It shrinks the initial bundle by loading features on demand",
         "correct": true,
         "comment": null
       },
@@ -66604,14 +66604,14 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "detach() removes the component from Angular's change detection tree. It will no longer be checked automatically until reattach() is called.",
-    "hint": "Think of it as pulling the component out of the automatic cycle.",
+    "hint": "Think about what 'detach' means for the component's link to Angular's checking cycle.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-change-detection"
     ],
     "options": [
       {
-        "option": "Destroys the component and clears its DOM",
+        "option": "Destroys the component and clears its rendered DOM",
         "correct": false,
         "comment": null
       },
@@ -66621,7 +66621,7 @@
         "comment": "Useful for read-only views or components updated manually on a controlled interval."
       },
       {
-        "option": "Disconnects the component from its parent",
+        "option": "Disconnects the component from its parent component",
         "correct": false,
         "comment": null
       },
@@ -67034,7 +67034,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Keep the BehaviorSubject private and expose it through asObservable(), so outside code can subscribe but not call next(). The signal equivalent is a private writable signal exposed with asReadonly().",
-    "hint": "asObservable() strips the ability to emit.",
+    "hint": "Think about hiding the method that lets callers push new values.",
     "orderId": 1,
     "topicSlugs": [
       "component-state-patterns"
@@ -67116,7 +67116,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Prop drilling is passing data through many intermediate components that don't use it. Services break this chain by holding shared state accessible directly by any component.",
-    "hint": "Services eliminate the need to pass data through layers.",
+    "hint": "Think about the middle components that only pass inputs along without using them.",
     "orderId": 1,
     "topicSlugs": [
       "component-state-patterns"
@@ -67205,7 +67205,7 @@
     ],
     "options": [
       {
-        "option": "A component that displays state as a list",
+        "option": "A component that displays the store's state as a list",
         "correct": false,
         "comment": null
       },
@@ -67215,7 +67215,7 @@
         "comment": "Facades improve testability and decouple components from NgRx specifics."
       },
       {
-        "option": "A directive that applies CSS based on state",
+        "option": "A directive that applies CSS classes based on state",
         "correct": false,
         "comment": null
       },
@@ -67375,8 +67375,8 @@
     "question": "What is the NgRx Store?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -67394,7 +67394,7 @@
         "comment": null
       },
       {
-        "option": "An injectable, single immutable container holding the app's state tree",
+        "option": "One injectable, immutable container for the whole app's state",
         "correct": true,
         "comment": null
       },
@@ -67416,8 +67416,8 @@
     "question": "What is an NgRx Action?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -67457,14 +67457,14 @@
     "question": "What is a Reducer in NgRx?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A Reducer is a pure function that takes the current state and an action, then returns a new state object without mutating the original.",
-    "hint": "(state, action) => newState — always returns a new object.",
+    "hint": "Think about the function shape that takes the current state and an action.",
     "orderId": 1,
     "topicSlugs": [
       "ngrx"
@@ -67498,8 +67498,8 @@
     "question": "What is a Selector in NgRx?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -67539,14 +67539,14 @@
     "question": "What is an NgRx Effect?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "An effect listens for actions, performs side effects such as HTTP calls, and dispatches new actions with the results, which keeps reducers pure. Effects are created with createEffect(), either as properties of an injectable class or, since NgRx 15.2, as standalone functional effects.",
-    "hint": "Effects handle side effects so reducers stay pure.",
+    "hint": "Reducers must stay pure, so something else has to talk to the outside world.",
     "orderId": 1,
     "topicSlugs": [
       "ngrx"
@@ -67580,8 +67580,8 @@
     "question": "How do you dispatch an action in NgRx from a component?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -67621,14 +67621,14 @@
     "question": "What does createAction() do in NgRx?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "createAction() produces a typed action creator function. Calling it returns an action object with the type string and any props defined.",
-    "hint": "It is the factory for action creator functions.",
+    "hint": "Think about what you call later to build an action object.",
     "orderId": 1,
     "topicSlugs": [
       "ngrx"
@@ -67662,14 +67662,14 @@
     "question": "How do you select a slice of state in a component using NgRx?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "store.select(mySelector) returns an Observable, usually read with the async pipe. Since NgRx 16, store.selectSignal(mySelector) returns a signal instead, which a template reads by calling it.",
-    "hint": "store.select() returns an Observable of the slice.",
+    "hint": "Think about whether the result keeps updating as the store changes.",
     "orderId": 1,
     "topicSlugs": [
       "ngrx"
@@ -67744,8 +67744,8 @@
     "question": "What is NgRx EntityAdapter used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -67763,7 +67763,7 @@
         "comment": null
       },
       {
-        "option": "It provides CRUD helpers for normalised entity collections",
+        "option": "CRUD helpers for normalised entity collections",
         "correct": true,
         "comment": "Use createEntityAdapter<User>() to get addOne, removeOne, selectAll, and more out of the box."
       },
@@ -67785,8 +67785,8 @@
     "question": "How does NgRx DevTools help in debugging?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -67846,8 +67846,8 @@
     "question": "What is the on() function inside createReducer() used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -67865,7 +67865,7 @@
         "comment": null
       },
       {
-        "option": "It maps an action to its state handler inside createReducer()",
+        "option": "Maps an action to the state change it makes",
         "correct": true,
         "comment": "createReducer(initialState, on(loadSuccess, (state, { users }) => ({ ...state, users })))"
       },
@@ -67887,14 +67887,14 @@
     "question": "Why does NgRx use the props() function when creating actions?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "props<T>() attaches a typed payload shape to the action creator, giving you type safety when dispatching and reading action data in reducers or effects.",
-    "hint": "It adds TypeScript type safety to action payloads.",
+    "hint": "Think about what the action's payload needs at compile time.",
     "orderId": 1,
     "topicSlugs": [
       "ngrx"
@@ -67928,14 +67928,14 @@
     "question": "What is the difference between ofType() and filter() in an NgRx Effect?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "ofType() is NgRx-specific and narrows the actions$ stream to the specified action types with TypeScript type narrowing. filter() is a generic RxJS operator with no type narrowing.",
-    "hint": "ofType is NgRx-aware; filter is generic RxJS.",
+    "hint": "Think about which one also tells TypeScript the action's type.",
     "orderId": 1,
     "topicSlugs": [
       "ngrx"
@@ -67947,7 +67947,7 @@
         "comment": null
       },
       {
-        "option": "ofType filters and narrows types; filter is a generic RxJS operator",
+        "option": "ofType narrows by action type; filter is plain RxJS",
         "correct": true,
         "comment": "ofType(loadUsers) narrows the emission to LoadUsers action type inside the Effect pipe."
       },
@@ -67969,8 +67969,8 @@
     "question": "What is a Signal in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -67988,7 +67988,7 @@
         "comment": null
       },
       {
-        "option": "A reactive wrapper around a value that notifies readers when it changes",
+        "option": "A reactive value that notifies its readers when it changes",
         "correct": true,
         "comment": null
       },
@@ -68010,8 +68010,8 @@
     "question": "How do you read the current value of a signal?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68051,8 +68051,8 @@
     "question": "What function creates a derived/computed signal in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68092,8 +68092,8 @@
     "question": "What is the effect() function used for in Angular Signals?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68133,8 +68133,8 @@
     "question": "Are Angular Signals synchronous or asynchronous?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68215,14 +68215,14 @@
     "question": "Can a computed() signal depend on multiple signals?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Yes. computed() automatically tracks all signals read inside its factory function. It recomputes whenever any of them changes.",
-    "hint": "All signals read inside the function become dependencies.",
+    "hint": "Think about how computed() finds out what it depends on.",
     "orderId": 1,
     "topicSlugs": [
       "angular-signals"
@@ -68234,7 +68234,7 @@
         "comment": null
       },
       {
-        "option": "Yes, all signals read inside the factory become dependencies",
+        "option": "Yes, every signal read inside it becomes a dependency",
         "correct": true,
         "comment": "const total = computed(() => price() * quantity()); — recomputes when either price or quantity changes."
       },
@@ -68276,14 +68276,14 @@
     "question": "When would you use exhaustMap?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Use exhaustMap when you want to ignore new emissions while an inner observable is still active. Ideal for preventing duplicate form submissions.",
-    "hint": "While busy, ignore new triggers.",
+    "hint": "Think about a login button clicked five times during one request.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-rxjs"
@@ -68317,8 +68317,8 @@
     "question": "What is shareReplay() used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68358,8 +68358,8 @@
     "question": "What is the difference between Subject, BehaviorSubject, and ReplaySubject?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68377,7 +68377,7 @@
         "comment": null
       },
       {
-        "option": "Subject has no memory; BehaviorSubject replays 1 value; ReplaySubject replays N values",
+        "option": "Subject keeps no value; BehaviorSubject keeps 1; ReplaySubject keeps N",
         "correct": true,
         "comment": null
       },
@@ -68399,8 +68399,8 @@
     "question": "What is a cold observable vs a hot observable?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68440,8 +68440,8 @@
     "question": "What does combineLatest do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68454,7 +68454,7 @@
     ],
     "options": [
       {
-        "option": "Emits only when all observables complete",
+        "option": "Emits only once all of the observables have completed",
         "correct": false,
         "comment": null
       },
@@ -68464,12 +68464,12 @@
         "comment": "combineLatest([price$, qty$]).pipe(map(([p,q]) => p*q)) — recomputes whenever either changes."
       },
       {
-        "option": "Subscribes to each observable in sequence",
+        "option": "Subscribes to each observable in sequence, one by one",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Emits only the first value from each input",
+        "option": "Emits only the first value from each of the inputs",
         "correct": false,
         "comment": null
       }
@@ -68481,8 +68481,8 @@
     "question": "What is forkJoin used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68500,7 +68500,7 @@
         "comment": null
       },
       {
-        "option": "Emits once when all complete, with an array of their last values",
+        "option": "Emits once all complete, with each one's last value",
         "correct": true,
         "comment": "forkJoin([getUser(), getOrders()]) — fires once when both HTTP calls complete."
       },
@@ -68522,8 +68522,8 @@
     "question": "What does the scan() operator do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68563,8 +68563,8 @@
     "question": "What does distinctUntilChanged() do in RxJS?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68624,8 +68624,8 @@
     "question": "What is tree-shaking in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68706,8 +68706,8 @@
     "question": "What is the @defer block used for in Angular 17+?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68829,14 +68829,14 @@
     "question": "What is code splitting in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Code splitting divides the app into multiple bundles so the browser only downloads the code needed for the current route. Angular achieves this primarily through lazy loading.",
-    "hint": "Multiple smaller bundles loaded on demand.",
+    "hint": "Think about not shipping every feature in the first download.",
     "orderId": 1,
     "topicSlugs": [
       "performance-optimization-5"
@@ -68911,8 +68911,8 @@
     "question": "How does NgOptimizedImage improve Angular app performance?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -68993,8 +68993,8 @@
     "question": "What are the three Core Web Vitals?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69034,14 +69034,14 @@
     "question": "What does LCP (Largest Contentful Paint) measure?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "LCP measures the time from page load start until the largest visible image or text block in the viewport is fully rendered.",
-    "hint": "How long until the main content is visible.",
+    "hint": "Focus on the word 'Largest' and when the user sees the main content.",
     "orderId": 1,
     "topicSlugs": [
       "core-web-vitals"
@@ -69053,7 +69053,7 @@
         "comment": null
       },
       {
-        "option": "Time until the largest visible content element finishes rendering",
+        "option": "Time until the largest visible element finishes rendering",
         "correct": true,
         "comment": null
       },
@@ -69075,8 +69075,8 @@
     "question": "What does CLS (Cumulative Layout Shift) measure?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69116,8 +69116,8 @@
     "question": "What does INP (Interaction to Next Paint) measure?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69157,8 +69157,8 @@
     "question": "What replaced FID (First Input Delay) as a Core Web Vital in 2024?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69198,14 +69198,14 @@
     "question": "How does SSR improve LCP in Angular apps?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "SSR delivers fully rendered HTML from the server, so the browser can paint meaningful content immediately without waiting for JavaScript to download, parse, and render the component tree.",
-    "hint": "HTML arrives pre-rendered from the server.",
+    "hint": "Think about what the browser can paint before any JavaScript runs.",
     "orderId": 1,
     "topicSlugs": [
       "core-web-vitals"
@@ -69217,7 +69217,7 @@
         "comment": null
       },
       {
-        "option": "SSR sends pre-rendered HTML so content paints without waiting on JS",
+        "option": "It sends ready HTML, so content paints before JS runs",
         "correct": true,
         "comment": null
       },
@@ -69239,8 +69239,8 @@
     "question": "What causes layout shift in Angular SPAs?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69258,7 +69258,7 @@
         "comment": null
       },
       {
-        "option": "Images without set dimensions and content injected asynchronously",
+        "option": "Unsized images and content injected after load",
         "correct": true,
         "comment": null
       },
@@ -69321,8 +69321,8 @@
     "question": "What is a good LCP score according to Google?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69362,8 +69362,8 @@
     "question": "What is Time to First Byte (TTFB) and why does it matter for Angular apps?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69376,7 +69376,7 @@
     ],
     "options": [
       {
-        "option": "Time from first byte to full page load",
+        "option": "Time from the first byte to a full page load",
         "correct": false,
         "comment": null
       },
@@ -69386,12 +69386,12 @@
         "comment": "Slow TTFB delays LCP. Fix: CDN edge caching, SSR with caching, or static pre-rendering."
       },
       {
-        "option": "Time until the first JS byte is executed",
+        "option": "Time until the first byte of JS is executed",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Total bytes transferred for the page",
+        "option": "Total number of bytes transferred for the page",
         "correct": false,
         "comment": null
       }
@@ -69464,8 +69464,8 @@
     "question": "A marketing team says Google isn't indexing their Angular SPA's content properly. How does switching to SSR fix this?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69505,8 +69505,8 @@
     "question": "What is hydration in Angular SSR?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69546,8 +69546,8 @@
     "question": "What is the difference between SSR and static pre-rendering in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69565,7 +69565,7 @@
         "comment": null
       },
       {
-        "option": "SSR renders at request time; pre-rendering renders at build time",
+        "option": "SSR renders per request; pre-rendering at build time",
         "correct": true,
         "comment": "Pre-rendered pages are faster (served as static files) but can't handle dynamic per-user content."
       },
@@ -69607,14 +69607,14 @@
     "question": "How does Angular prevent XSS by default?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Angular automatically escapes HTML, URL, style, and script content interpolated in templates. It treats all interpolated values as untrusted and sanitizes them before rendering.",
-    "hint": "Angular escapes all interpolated values automatically.",
+    "hint": "Think about what happens to a <script> tag placed inside {{ }}.",
     "orderId": 1,
     "topicSlugs": [
       "angular-security"
@@ -69626,7 +69626,7 @@
         "comment": null
       },
       {
-        "option": "By automatically escaping and sanitising all interpolated values",
+        "option": "By escaping and sanitising bound values automatically",
         "correct": true,
         "comment": "Angular's sanitisation engine follows OWASP guidelines and runs at compile time via AOT."
       },
@@ -69648,8 +69648,8 @@
     "question": "What is the danger of using innerHTML binding in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69696,7 +69696,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "HttpOnly cookies are the most secure option — JavaScript cannot read them, preventing XSS attacks from stealing the token. Storing JWTs in localStorage or sessionStorage exposes them to XSS.",
-    "hint": "HttpOnly cookies can't be read by JavaScript.",
+    "hint": "Think about storage that page scripts can't reach, so an XSS bug can't steal it.",
     "orderId": 1,
     "topicSlugs": [
       "angular-security"
@@ -69730,8 +69730,8 @@
     "question": "What is Content Security Policy (CSP) and how does it help Angular apps?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69771,8 +69771,8 @@
     "question": "What does CORS control and who is responsible for it?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69812,8 +69812,8 @@
     "question": "What is a route guard used for in a security context?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69873,8 +69873,8 @@
     "question": "What is TestBed in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69914,8 +69914,8 @@
     "question": "What does TestBed.configureTestingModule() do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -69955,14 +69955,14 @@
     "question": "How do you mock an Angular service in TestBed?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Provide a fake object in the providers array using { provide: RealService, useValue: mockService } where mockService has the same methods as spies or stubs.",
-    "hint": "Use useValue in providers to inject a fake.",
+    "hint": "Think about which provider option supplies a ready-made object.",
     "orderId": 1,
     "topicSlugs": [
       "testing-5"
@@ -70037,8 +70037,8 @@
     "question": "How do you query a DOM element in an Angular test?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -70078,8 +70078,8 @@
     "question": "What is the difference between unit and integration testing in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -70139,8 +70139,8 @@
     "question": "What is ViewContainerRef used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -70180,8 +70180,8 @@
     "question": "How do you dynamically create a component in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -70221,14 +70221,14 @@
     "question": "What does ComponentRef represent?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "ComponentRef is the handle returned by createComponent(), giving you access to the component instance, its change detector, and a destroy() method to clean it up.",
-    "hint": "It's the reference to the created component instance.",
+    "hint": "Think about what createComponent() hands back to you.",
     "orderId": 1,
     "topicSlugs": [
       "dynamic-components"
@@ -70240,7 +70240,7 @@
         "comment": null
       },
       {
-        "option": "A handle to the created component with instance and destroy methods",
+        "option": "A handle to a created component, its instance and destroy()",
         "correct": true,
         "comment": "componentRef.instance.title = 'Hello'; componentRef.changeDetectorRef.detectChanges();"
       },
@@ -70303,14 +70303,14 @@
     "question": "How do you destroy a dynamically created component?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Call componentRef.destroy() to clean up the component, trigger ngOnDestroy, and remove it from the DOM. Or call viewContainerRef.clear() to remove all dynamic components.",
-    "hint": "componentRef.destroy() or viewContainerRef.clear().",
+    "hint": "Think about the object createComponent() returned, or the container it went into.",
     "orderId": 1,
     "topicSlugs": [
       "dynamic-components"
@@ -70351,7 +70351,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Dynamic creation fits when the component type isn't known at compile time, for example when it comes from configuration or a plugin system. For choosing among known components in a template, NgComponentOutlet (with ngComponentOutletInputs) is a declarative middle ground.",
-    "hint": "Use dynamic loading when the component type is not known at compile time.",
+    "hint": "Think about cases where you don't know which component to show until runtime.",
     "orderId": 1,
     "topicSlugs": [
       "dynamic-components"
@@ -70385,8 +70385,8 @@
     "question": "What is the @defer block and how does it differ from dynamic component loading?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -70446,14 +70446,14 @@
     "question": "Where do you import dependencies for a standalone component?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "In the imports array of its own @Component decorator. This replaces the need to declare imports in an NgModule.",
-    "hint": "The @Component decorator gains an imports field.",
+    "hint": "A standalone component has no NgModule, so its dependencies go in its own metadata.",
     "orderId": 1,
     "topicSlugs": [
       "standalone-components"
@@ -70465,7 +70465,7 @@
         "comment": null
       },
       {
-        "option": "In the imports array of its own @Component decorator",
+        "option": "In its own @Component imports array",
         "correct": true,
         "comment": "@Component({ standalone: true, imports: [CommonModule, RouterModule] }) — no module needed."
       },
@@ -70740,7 +70740,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Each standalone component explicitly declares only its own imports, so unused directives or pipes from a shared NgModule aren't bundled — the build includes exactly what's used.",
-    "hint": "Explicit imports = only what you use gets bundled.",
+    "hint": "Think about what the bundler can see when each component lists exactly what it uses.",
     "orderId": 1,
     "topicSlugs": [
       "standalone-components"
@@ -71088,7 +71088,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "EMPTY is an observable that completes immediately without emitting any values. Returning it from catchError silently swallows the error and completes the stream.",
-    "hint": "It completes immediately — useful when you want to ignore an error quietly.",
+    "hint": "Think about how to end a stream quietly inside catchError.",
     "orderId": 1,
     "topicSlugs": [
       "error-handling"
@@ -71325,7 +71325,7 @@
         "comment": null
       },
       {
-        "option": "A CSS selector that filters which content lands in this slot",
+        "option": "A CSS selector choosing which content goes in this slot",
         "correct": true,
         "comment": "<ng-content select='[card-header]'> only receives elements with the card-header attribute."
       },
@@ -71354,7 +71354,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "ng-content projects DOM content passed by the parent between the component tags. ng-template defines a reusable template fragment that is not rendered until explicitly instantiated.",
-    "hint": "One receives parent content; the other defines a dormant fragment.",
+    "hint": "One is a slot for content from outside; the other doesn't render until asked.",
     "orderId": 1,
     "topicSlugs": [
       "content-projection"
@@ -71366,7 +71366,7 @@
         "comment": null
       },
       {
-        "option": "ng-content receives parent content; ng-template is a dormant fragment",
+        "option": "ng-content shows parent content; ng-template is a stored fragment",
         "correct": true,
         "comment": "ng-template is rendered only when used with *ngTemplateOutlet or structural directives."
       },
@@ -71395,7 +71395,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "They query the first matching element, component or directive in the projected content, meaning what the parent puts between the component's tags. @ContentChild is ready from ngAfterContentInit; contentChild() is the signal version and needs no lifecycle hook.",
-    "hint": "It queries projected content, not the component's own template.",
+    "hint": "Think about the content a parent places between the component's tags.",
     "orderId": 1,
     "topicSlugs": [
       "content-projection"
@@ -71613,8 +71613,8 @@
     "question": "What is the difference between attribute and structural directives?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -71632,7 +71632,7 @@
         "comment": null
       },
       {
-        "option": "Attribute directives modify an element; structural directives change the DOM structure",
+        "option": "Attribute ones change an element; structural ones add or remove DOM",
         "correct": true,
         "comment": null
       },
@@ -71654,8 +71654,8 @@
     "question": "Which decorator marks a class as a directive?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -71743,7 +71743,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "@HostListener('click') marks a method that Angular calls when that event fires on the directive's host element. The style guide now prefers the host metadata property for this, for example host: { '(click)': 'onClick()' }.",
-    "hint": "Listen to DOM events on the host element from inside the directive.",
+    "hint": "Think about reacting to clicks or keystrokes on the element the directive sits on.",
     "orderId": 1,
     "topicSlugs": [
       "custom-directives"
@@ -71784,7 +71784,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "@HostBinding('class.active') binds a directive property to a property, attribute or class on the host element, so changing the property updates the DOM. The style guide now prefers the host metadata property, for example host: { '[class.active]': 'isActive()' }.",
-    "hint": "Bind a directive property to the host element's attribute or style.",
+    "hint": "Think about setting a class or style on the element the directive is attached to.",
     "orderId": 1,
     "topicSlugs": [
       "custom-directives"
@@ -71866,7 +71866,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "exportAs gives the directive a reference name so the template can get a reference to the directive instance via a template variable (e.g., #d='myDirective'), allowing calls to its methods.",
-    "hint": "It exposes the directive instance to the template via a # reference.",
+    "hint": "Think about using #ref=\"...\" in a template to reach the directive.",
     "orderId": 1,
     "topicSlugs": [
       "custom-directives"
@@ -71878,7 +71878,7 @@
         "comment": null
       },
       {
-        "option": "Exposes the directive instance in templates via a reference variable",
+        "option": "Lets a template variable reference the directive instance",
         "correct": true,
         "comment": "@Directive({ exportAs: 'tooltip' }) — <div appTooltip #t='tooltip'> (click)='t.show()'>"
       },
@@ -72098,7 +72098,7 @@
     ],
     "options": [
       {
-        "option": "An Observable or Promise that resolves to a ValidationErrors object or null",
+        "option": "An Observable or Promise of ValidationErrors or null",
         "correct": true,
         "comment": null
       },
@@ -72173,7 +72173,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "writeValue(value) is called by Angular to push a new value into the custom control when the form model updates. The component should update its internal state to reflect this value.",
-    "hint": "Angular calls this to push a new value INTO your component.",
+    "hint": "Think about which way the data flows when the form sets a value.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-forms"
@@ -72185,7 +72185,7 @@
         "comment": null
       },
       {
-        "option": "Called by Angular to push a form model value into the component",
+        "option": "Angular calls it to push a model value into the component",
         "correct": true,
         "comment": "writeValue(v) { this.internalValue = v; } — update internal state when the form sets a value."
       },
@@ -72255,7 +72255,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "FormArray is a form control that manages an ordered list of FormControls, FormGroups, or nested FormArrays. It's used for dynamic fields like a list of phone numbers or address rows.",
-    "hint": "An array of form controls managed as one unit.",
+    "hint": "Think about forms where the user can add or remove rows.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-forms"
@@ -72337,7 +72337,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Put formArrayName=\"phones\" on a wrapper element, loop with @for (ctrl of phones.controls; track ctrl; let i = $index), and bind each input with [formControlName]=\"i\" (or [formGroupName]=\"i\" for groups of fields). A getter typed as FormArray keeps the template simple.",
-    "hint": "formArrayName + index in the template.",
+    "hint": "Think about the directive that names the array, plus each item's position.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-forms"
@@ -72460,7 +72460,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "FormBuilder.nonNullable creates controls that never have null in their value type (they reset to the initial value instead), removing the need to handle null in typed forms.",
-    "hint": "It removes null from the control's value type.",
+    "hint": "Think about what reset() sets the control back to.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-forms"
@@ -72472,7 +72472,7 @@
         "comment": null
       },
       {
-        "option": "Creates controls whose value is never null — resets to initial value",
+        "option": "Makes controls that reset to their initial value, never null",
         "correct": true,
         "comment": "const fb = inject(NonNullableFormBuilder); fb.control('') has type FormControl<string> not FormControl<string|null>."
       },
@@ -72562,7 +72562,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A plain function (not a class) used as a resolver. It receives ActivatedRouteSnapshot and RouterStateSnapshot and returns data directly, removing the need for a class and Resolve<T> interface.",
-    "hint": "Angular 14+ lets you use a plain function instead of a class.",
+    "hint": "Think about how guards and resolvers changed in Angular 14.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -72726,7 +72726,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "withComponentInputBinding() makes the router set matching route params, query params and resolved data as the routed component's inputs, so it can declare id = input<string>() instead of injecting ActivatedRoute. It works with input() signals and with @Input().",
-    "hint": "Route values become component inputs automatically.",
+    "hint": "Think about reading route params without injecting ActivatedRoute.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -72767,7 +72767,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Plain functions (not classes) that return boolean, UrlTree, Observable, or Promise. They use inject() internally and are passed directly in canActivate, canDeactivate, and similar route config fields.",
-    "hint": "Functions that use inject() instead of class-based CanActivate.",
+    "hint": "Think about how a guard gets services without a constructor.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -72849,7 +72849,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "canDeactivate runs when the user tries to leave a route. It can return false or a confirmation Observable to block navigation — useful for unsaved-form warnings.",
-    "hint": "It prevents navigation AWAY from a route.",
+    "hint": "Think about a form page with unsaved changes.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -72951,7 +72951,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "trigger(name, [states, transitions]) creates a named animation that you attach to an element with [@triggerName]='expression'. It groups all states and transitions for one animated behaviour.",
-    "hint": "It's the named container for an animation bound to a host element.",
+    "hint": "Think about what the @name in a template refers to.",
     "orderId": 1,
     "topicSlugs": [
       "angular-animations"
@@ -73004,7 +73004,7 @@
         "comment": null
       },
       {
-        "option": "The state representing an element not yet in or removed from the DOM",
+        "option": "The state of an element that isn't attached to the DOM",
         "correct": true,
         "comment": "transition('void => *', ...) is equivalent to :enter — runs when *ngIf adds the element."
       },
@@ -73033,7 +73033,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "transition(expr, [steps]) defines what animation to run when the trigger's bound expression changes from one state to another, e.g., 'open => closed'.",
-    "hint": "It defines the animation to play between two states.",
+    "hint": "Think about animating from 'open' to 'closed'.",
     "orderId": 1,
     "topicSlugs": [
       "angular-animations"
@@ -73115,7 +73115,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "query(selector, animation) selects child elements matching a CSS selector and applies an animation to all of them, enabling parent-controlled child animations.",
-    "hint": "Apply animation to matching child elements from a parent trigger.",
+    "hint": "Think about animating several list items from one trigger.",
     "orderId": 1,
     "topicSlugs": [
       "angular-animations"
@@ -73197,7 +73197,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Bind [@.disabled]='true' on the element or a parent container. All animation triggers on the element and its descendants are skipped when disabled is true.",
-    "hint": "There's a special @.disabled binding for this.",
+    "hint": "Think about a special animation binding you can set to true.",
     "orderId": 1,
     "topicSlugs": [
       "angular-animations"
@@ -73251,8 +73251,8 @@
     "question": "What is the Angular CDK?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -73270,7 +73270,7 @@
         "comment": null
       },
       {
-        "option": "A library of unstyled behaviour primitives for building UI components",
+        "option": "A library of unstyled building blocks for UI components",
         "correct": true,
         "comment": "Angular Material is built on top of CDK — CDK provides the mechanics, Material adds the visual design."
       },
@@ -73292,14 +73292,14 @@
     "question": "What is the Overlay service in Angular CDK?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "The Overlay service creates floating panels (tooltips, dropdowns, modals) that are rendered outside the normal component tree in a dedicated overlay container, with configurable positioning strategies.",
-    "hint": "It manages floating UI elements positioned relative to an anchor.",
+    "hint": "Think about dropdowns and tooltips that must escape their parent's overflow.",
     "orderId": 1,
     "topicSlugs": [
       "angular-cdk"
@@ -73311,7 +73311,7 @@
         "comment": null
       },
       {
-        "option": "A service for creating positioned floating panels outside the component tree",
+        "option": "A service that opens positioned floating panels, like dropdowns",
         "correct": true,
         "comment": "overlay.create({ positionStrategy, scrollStrategy }) returns an OverlayRef you attach content to."
       },
@@ -73333,14 +73333,14 @@
     "question": "What is CdkDragDrop and what does the cdkDropList directive do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "CdkDragDrop is the event emitted when an item is dropped. cdkDropList marks a container whose children (cdkDrag elements) can be reordered or moved between lists. Use moveItemInArray() or transferArrayItem() in the drop handler.",
-    "hint": "cdkDropList = container, cdkDrag = item; drop event gives old/new index.",
+    "hint": "cdkDrag marks an item; think about what holds the items and what fires on drop.",
     "orderId": 1,
     "topicSlugs": [
       "angular-cdk"
@@ -73374,8 +73374,8 @@
     "question": "What is CdkVirtualScrollViewport and when should you use it?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -73434,7 +73434,7 @@
         "comment": null
       },
       {
-        "option": "Positions the overlay against a trigger element, with fallback positions",
+        "option": "Anchors the overlay to a trigger element, with fallbacks",
         "correct": true,
         "comment": null
       },
@@ -73476,8 +73476,8 @@
     "question": "What is the a11y module in Angular CDK?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -73517,14 +73517,14 @@
     "question": "What is ngsw-config.json used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "ngsw-config.json configures the Angular service worker: which asset groups to precache, which API data URLs to cache, caching strategies (performance vs freshness), and cache sizes/durations.",
-    "hint": "The config file that tells the service worker what and how to cache.",
+    "hint": "Think about the JSON file that ng add @angular/pwa creates.",
     "orderId": 1,
     "topicSlugs": [
       "pwa-service-workers"
@@ -73558,8 +73558,8 @@
     "question": "What is the SwUpdate service used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -73599,14 +73599,14 @@
     "question": "What is the SwPush service used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "SwPush provides methods and observables for Web Push notifications: requestSubscription() to subscribe a user, messages observable for incoming notifications, and notificationClicks for click events.",
-    "hint": "SwPush = Service Worker Push — handles push notifications.",
+    "hint": "Think about what 'push' means for web notifications.",
     "orderId": 1,
     "topicSlugs": [
       "pwa-service-workers"
@@ -73681,14 +73681,14 @@
     "question": "How do you prompt users to reload when a new app version is available?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Subscribe to swUpdate.versionUpdates, filter for VERSION_READY events, then show a UI prompt. When the user confirms, call swUpdate.activateUpdate() and reload the page with document.location.reload().",
-    "hint": "versionUpdates → VERSION_READY → confirm → activateUpdate() → reload.",
+    "hint": "Think about the SwUpdate event that says a new version has downloaded.",
     "orderId": 1,
     "topicSlugs": [
       "pwa-service-workers"
@@ -73742,8 +73742,8 @@
     "question": "What CLI command extracts translation messages in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -73783,8 +73783,8 @@
     "question": "What is the $localize tag function used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -73802,7 +73802,7 @@
         "comment": null
       },
       {
-        "option": "A tag function to mark TypeScript strings for extraction/translation",
+        "option": "Marks strings in TypeScript code for translation",
         "correct": true,
         "comment": "import '@angular/localize/init'; then: title = $localize`Hello ${name}` — works in .ts files."
       },
@@ -73824,14 +73824,14 @@
     "question": "What is the LOCALE_ID token in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "LOCALE_ID is an injection token holding the current locale string (e.g., 'en-US', 'fr-FR'). Pipes like DatePipe and CurrencyPipe read it to format values according to the active locale.",
-    "hint": "Inject it to read the current locale code anywhere in the app.",
+    "hint": "Think about what DatePipe needs to know to format a date for a user.",
     "orderId": 1,
     "topicSlugs": [
       "i18n"
@@ -73843,7 +73843,7 @@
         "comment": null
       },
       {
-        "option": "An injection token holding the current locale string like 'en-US'",
+        "option": "A token holding the current locale, like 'en-US'",
         "correct": true,
         "comment": "providers: [{ provide: LOCALE_ID, useValue: 'fr-FR' }] — or set via the --localize build flag."
       },
@@ -73872,14 +73872,14 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Compile-time i18n (Angular built-in) inlines translations at build time, producing separate bundles per locale — faster at runtime but requires a separate deploy per language. Runtime i18n (ngx-translate) loads translation files lazily and switches languages without a page reload — more flexible but slightly slower.",
-    "hint": "One bakes translations in at build; the other loads them at runtime.",
+    "hint": "Think about when translations get applied: while building, or while running.",
     "orderId": 1,
     "topicSlugs": [
       "i18n"
     ],
     "options": [
       {
-        "option": "Compile-time i18n uses JSON; runtime uses XLIFF files",
+        "option": "Compile-time i18n uses JSON files; runtime i18n uses XLIFF files",
         "correct": false,
         "comment": null
       },
@@ -73889,12 +73889,12 @@
         "comment": "ng build --localize produces dist/fr/, dist/en/ etc. ngx-translate loads a JSON at startup per language."
       },
       {
-        "option": "Runtime i18n only supports right-to-left languages",
+        "option": "Runtime i18n only supports right-to-left languages like Arabic",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Compile-time i18n only works in production builds",
+        "option": "Compile-time i18n only works in production builds, never in dev",
         "correct": false,
         "comment": null
       }
@@ -73947,14 +73947,14 @@
     "question": "How do you build locale-specific bundles in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Add locales to angular.json under i18n.locales, providing the translation files. Then run ng build --localize which produces a separate output folder for each locale (e.g. dist/fr/, dist/en/).",
-    "hint": "Configure locales in angular.json, then build with --localize.",
+    "hint": "Think about the build flag that produces one bundle per language.",
     "orderId": 1,
     "topicSlugs": [
       "i18n"
@@ -73966,7 +73966,7 @@
         "comment": null
       },
       {
-        "option": "Configure locales in angular.json, then run ng build --localize",
+        "option": "Set locales in angular.json, then run ng build --localize",
         "correct": true,
         "comment": "angular.json: { i18n: { locales: { fr: 'src/locale/messages.fr.xlf' } } } then ng build --localize."
       },
@@ -73988,14 +73988,14 @@
     "question": "What is an ICU expression in Angular i18n?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "ICU (International Components for Unicode) expressions handle pluralisation and select patterns inside translated strings: {count, plural, =0 {No items} =1 {One item} other {# items}}.",
-    "hint": "It handles plural forms and gender/select patterns in translations.",
+    "hint": "Think about 'one item' versus 'five items' in translated text.",
     "orderId": 1,
     "topicSlugs": [
       "i18n"
@@ -74048,7 +74048,7 @@
         "comment": null
       },
       {
-        "option": "A stable string ID for a translatable unit; prevents translation loss on edits",
+        "option": "A stable ID for a message, so edits don't lose its translations",
         "correct": true,
         "comment": "<h1 i18n='@@hero.title'>Heroes</h1> — the @@hero.title ID is stable even if 'Heroes' changes to 'Champions'."
       },
@@ -127110,7 +127110,7 @@
         "comment": null
       },
       {
-        "option": "Stores third-party libraries and packages the project depends on",
+        "option": "Stores the third-party packages the project depends on",
         "correct": true,
         "comment": null
       },
@@ -127795,7 +127795,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "The Angular Router enables navigation between views in a single-page application (SPA) by dynamically loading and unloading components based on the route configuration. This avoids full-page reloads and maintains a seamless user experience.",
-    "hint": "It allows you to move between different views without reloading the page.",
+    "hint": "Think about single-page apps switching screens.",
     "orderId": 1,
     "topicSlugs": [
       "routing-and-navigation"
@@ -131292,7 +131292,7 @@
         "comment": null
       },
       {
-        "option": "To re-enter the zone and trigger change detection with results",
+        "option": "To re-enter the zone so change detection runs",
         "correct": true,
         "comment": "Pattern: run heavy work outside zone, then ngZone.run(() => this.result = data) to update UI."
       },
@@ -131444,7 +131444,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Call signal(initialValue) from @angular/core. It returns a WritableSignal<T> with set() and update(), plus asReadonly() for exposing a read-only view. An early mutate() method was removed in v17.",
-    "hint": "It's a plain function from @angular/core, not a class or an RxJS type.",
+    "hint": "It's a plain function, not a class or an RxJS type.",
     "orderId": 1,
     "topicSlugs": [
       "angular-signals"
@@ -131478,8 +131478,8 @@
     "question": "What is the difference between signal.set() and signal.update()?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -131497,7 +131497,7 @@
         "comment": null
       },
       {
-        "option": "set() replaces the value outright; update() derives the new value from the old",
+        "option": "set() replaces the value; update() computes it from the old one",
         "correct": true,
         "comment": null
       },
@@ -131601,8 +131601,8 @@
     "question": "What is the difference between switchMap and concatMap?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -131642,8 +131642,8 @@
     "question": "What does mergeMap do differently from switchMap?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -131683,8 +131683,8 @@
     "question": "What does debounceTime() do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -131724,8 +131724,8 @@
     "question": "What is Ahead-of-Time (AOT) compilation in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -131743,7 +131743,7 @@
         "comment": null
       },
       {
-        "option": "Compiles templates at build time for smaller bundles and fast startup",
+        "option": "Compiling templates at build time, for faster startup",
         "correct": true,
         "comment": "AOT also catches template errors at build time rather than runtime."
       },
@@ -131806,8 +131806,8 @@
     "question": "Which Angular CLI command adds SSR to an existing Angular project?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -131847,14 +131847,14 @@
     "question": "What is the TransferState service used for in Angular SSR?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "TransferState serializes data fetched on the server into the HTML, so the client reads it during hydration instead of fetching it again. HttpClient GET requests get this automatically through the HTTP transfer cache that provideClientHydration() enables; TransferState itself is for other data computed on the server.",
-    "hint": "Avoids making the same HTTP call twice — once on server, once on client.",
+    "hint": "Think about the same HTTP call running on the server and then again in the browser.",
     "orderId": 1,
     "topicSlugs": [
       "server-side-rendering"
@@ -131888,14 +131888,14 @@
     "question": "What causes a hydration mismatch error in Angular SSR?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A hydration mismatch occurs when the client-rendered DOM differs from the server-rendered HTML, often caused by browser-only APIs (like Date.now() or localStorage) producing different content on server vs. client.",
-    "hint": "Server and client produce different HTML for the same route.",
+    "hint": "Think about what hydration compares when it reuses the server DOM.",
     "orderId": 1,
     "topicSlugs": [
       "server-side-rendering"
@@ -131907,7 +131907,7 @@
         "comment": null
       },
       {
-        "option": "The server-rendered HTML and the client's re-render of it don't match",
+        "option": "The server HTML differs from what the client renders",
         "correct": true,
         "comment": null
       },
@@ -131929,8 +131929,8 @@
     "question": "What is DomSanitizer used for in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -132011,8 +132011,8 @@
     "question": "What is an HTTP interceptor used for in authentication?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -132030,7 +132030,7 @@
         "comment": null
       },
       {
-        "option": "It automatically attaches the JWT token to outgoing HTTP requests",
+        "option": "It adds the JWT to outgoing requests automatically",
         "correct": true,
         "comment": "req.clone({ setHeaders: { Authorization: 'Bearer ' + token } }) — standard interceptor pattern."
       },
@@ -132052,8 +132052,8 @@
     "question": "What is ComponentFixture used for in Angular tests?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -132071,7 +132071,7 @@
         "comment": null
       },
       {
-        "option": "A wrapper giving access to the component, its DOM, and change detection",
+        "option": "A wrapper around the component, its DOM and change detection",
         "correct": true,
         "comment": null
       },
@@ -132093,8 +132093,8 @@
     "question": "What does fixture.detectChanges() do in an Angular test?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -132112,7 +132112,7 @@
         "comment": null
       },
       {
-        "option": "It triggers change detection so the template reflects current state",
+        "option": "It runs change detection so the template shows current state",
         "correct": true,
         "comment": null
       },
@@ -132134,8 +132134,8 @@
     "question": "What is a spy in Jasmine?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -132153,7 +132153,7 @@
         "comment": null
       },
       {
-        "option": "A function wrapper that tracks calls and controls return values",
+        "option": "A wrapper that records calls and can fake return values",
         "correct": true,
         "comment": "spyOn(service, 'getData').and.returnValue(of(data)) — spy that returns a fake Observable."
       },
@@ -132194,7 +132194,7 @@
         "comment": null
       },
       {
-        "option": "fakeAsync() enables synchronous async testing; tick() advances time",
+        "option": "fakeAsync() fakes async timing; tick() moves time forward",
         "correct": true,
         "comment": "it('should debounce', fakeAsync(() => { triggerInput(); tick(300); detectChanges(); expect(spy).toHaveBeenCalled(); }));"
       },
@@ -132339,8 +132339,8 @@
     "question": "What function bootstraps an Angular app without AppModule?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -132481,7 +132481,7 @@
         "comment": null
       },
       {
-        "option": "An interceptor that catches error responses globally for all HTTP calls",
+        "option": "An interceptor that handles error responses for all HTTP calls",
         "correct": true,
         "comment": "One interceptor handles auth errors (401 → redirect to login) for the entire app."
       },
@@ -132510,7 +132510,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "ViewChild queries elements in the component's own template. ContentChild queries elements projected into the component from the parent. Both require different lifecycle hooks to access their results.",
-    "hint": "View = own template; Content = what parent passes in.",
+    "hint": "Think about where each query looks: inside the template, or between the tags.",
     "orderId": 1,
     "topicSlugs": [
       "content-projection"
@@ -132522,7 +132522,7 @@
         "comment": null
       },
       {
-        "option": "ViewChild queries own template; ContentChild queries projected content",
+        "option": "ViewChild: own template; ContentChild: projected content",
         "correct": true,
         "comment": "ViewChild is ready in ngAfterViewInit; ContentChild is ready in ngAfterContentInit."
       },
@@ -132592,7 +132592,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A route resolver pre-fetches data before a route activates. Angular waits for the resolver's Observable or Promise to complete before rendering the routed component.",
-    "hint": "Data is fetched before the component renders — not inside ngOnInit.",
+    "hint": "Think about a route that waits on something before it activates.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -132674,14 +132674,14 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A wildcard route with path: '**' matches any URL not matched by earlier routes. It must be last in the route array and is used to show a 404 page or redirect.",
-    "hint": "It catches everything — must go last in the routes array.",
+    "hint": "Think about the router's 404 route.",
     "orderId": 1,
     "topicSlugs": [
       "routing-and-navigation"
     ],
     "options": [
       {
-        "option": "path: '*' — matches any single segment",
+        "option": "path: '*' — matches any single URL segment",
         "correct": false,
         "comment": null
       },
@@ -132691,12 +132691,12 @@
         "comment": "{ path: '**', component: NotFoundComponent } — order matters; earlier specific routes match first."
       },
       {
-        "option": "path: 'any' — conventional wildcard name",
+        "option": "path: 'any' — the conventional wildcard name",
         "correct": false,
         "comment": null
       },
       {
-        "option": "path: ':any' — catches any named parameter",
+        "option": "path: ':any' — catches any named route parameter",
         "correct": false,
         "comment": null
       }
@@ -132797,7 +132797,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "keyframes([]) defines multiple intermediate style snapshots within a single animate() call, similar to CSS @keyframes. Use offset to position each keyframe (0 = start, 1 = end).",
-    "hint": "Define multiple style snapshots within one animation step.",
+    "hint": "Think about CSS @keyframes, but defined in TypeScript.",
     "orderId": 1,
     "topicSlugs": [
       "angular-animations"
@@ -132809,7 +132809,7 @@
         "comment": null
       },
       {
-        "option": "Defines intermediate style snapshots within one animate() call",
+        "option": "Defines in-between style steps within one animate() call",
         "correct": true,
         "comment": "animate('1s', keyframes([style({offset:0, opacity:0}), style({offset:0.5, opacity:1}), ...]))"
       },
@@ -132838,7 +132838,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "animateChild() explicitly runs child component animations during a parent animation. By default, child animations are blocked while the parent animates — animateChild() unblocks them.",
-    "hint": "Parent animations block children by default; this unblocks them.",
+    "hint": "Think about a child animation that doesn't play while its parent animates.",
     "orderId": 1,
     "topicSlugs": [
       "angular-animations"
@@ -132872,8 +132872,8 @@
     "question": "What is a Portal in Angular CDK?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -132891,7 +132891,7 @@
         "comment": null
       },
       {
-        "option": "A UI piece that renders in a PortalOutlet elsewhere in the DOM",
+        "option": "A piece of UI rendered into a PortalOutlet elsewhere",
         "correct": true,
         "comment": "ComponentPortal, TemplatePortal, DomPortal — attach them to an OverlayRef or CdkPortalOutlet."
       },
@@ -132913,8 +132913,8 @@
     "question": "What is FocusTrap used for in Angular CDK?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -132954,8 +132954,8 @@
     "question": "What is an OverlayRef and what can you do with it?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -133036,8 +133036,8 @@
     "question": "What is the difference between 'performance' and 'freshness' caching strategies?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -133077,14 +133077,14 @@
     "question": "What is precaching in a service worker?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Precaching downloads and stores a defined set of assets (app shell, JS bundles, CSS) during service worker installation so they are instantly available offline — before the user even requests them.",
-    "hint": "Assets are cached at install time, before the user navigates to them.",
+    "hint": "Think about which files are available offline before the user visits them.",
     "orderId": 1,
     "topicSlugs": [
       "pwa-service-workers"
@@ -133096,7 +133096,7 @@
         "comment": null
       },
       {
-        "option": "Downloading and storing app assets at service worker install time",
+        "option": "Storing app assets when the service worker installs",
         "correct": true,
         "comment": "Angular's assetGroups in ngsw-config.json define what gets precached — the install strategy is 'prefetch'."
       },
@@ -133118,8 +133118,8 @@
     "question": "What is the Web App Manifest and what does it contain?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -133159,8 +133159,8 @@
     "question": "What does i18n stand for in the context of web development?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -133200,14 +133200,14 @@
     "question": "How do you mark a template string for translation in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Add the i18n attribute to the element: <h1 i18n>Welcome</h1>. Angular CLI's extract-i18n command collects these marked strings into a translation source file.",
-    "hint": "Add i18n attribute to the element wrapping the text.",
+    "hint": "Think about an attribute named after the abbreviation.",
     "orderId": 1,
     "topicSlugs": [
       "i18n"
@@ -177321,7 +177321,7 @@
         "comment": null
       },
       {
-        "option": "Configures how the TypeScript compiler processes the project's code",
+        "option": "Configures how TypeScript compiles the project's code",
         "correct": true,
         "comment": null
       },
@@ -177485,7 +177485,7 @@
         "comment": null
       },
       {
-        "option": "It records the exact dependency versions installed for reproducible installs",
+        "option": "It pins the exact installed dependency versions",
         "correct": true,
         "comment": null
       },
@@ -177794,8 +177794,8 @@
     "question": "What does passing --strict to ng new do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -177854,7 +177854,7 @@
         "comment": null
       },
       {
-        "option": "It gives autocomplete and error checking inside templates in your editor",
+        "option": "Template autocomplete and error checking in your editor",
         "correct": true,
         "comment": null
       },
@@ -177895,7 +177895,7 @@
         "comment": null
       },
       {
-        "option": "It installs exactly what package-lock.json specifies, failing if it's out of sync",
+        "option": "It installs exactly what package-lock.json lists, or fails",
         "correct": true,
         "comment": null
       },
@@ -177917,8 +177917,8 @@
     "question": "A teammate's npm install fails with a message about an unsupported Node.js version. What is the most likely cause?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -177936,7 +177936,7 @@
         "comment": null
       },
       {
-        "option": "Their installed Node.js version doesn't meet Angular's required range",
+        "option": "Their Node.js version is outside Angular's supported range",
         "correct": true,
         "comment": null
       },
@@ -177958,8 +177958,8 @@
     "question": "What is the purpose of the \"schematics\" defaults section inside angular.json?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -178059,7 +178059,7 @@
         "comment": null
       },
       {
-        "option": "They help debug original source in dev tools, but add size and expose code in prod",
+        "option": "Easier debugging in dev, but larger and exposed source in prod",
         "correct": true,
         "comment": null
       },
@@ -178457,7 +178457,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A class decorated with @Pipe() and implementing the transform() method becomes a reusable pipe you can use in templates with the | syntax.",
-    "hint": "It's named after the exact thing it lets you build.",
+    "hint": "Think about how Angular knows a class can be used after the | symbol.",
     "orderId": 1,
     "topicSlugs": [
       "custom-pipes"
@@ -178860,8 +178860,8 @@
     "question": "What can the host property inside a @Component decorator's metadata be used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -178874,7 +178874,7 @@
     ],
     "options": [
       {
-        "option": "To declare host listeners and bindings without separate decorators",
+        "option": "To declare host bindings and listeners in the metadata",
         "correct": true,
         "comment": null
       },
@@ -179043,7 +179043,7 @@
         "comment": null
       },
       {
-        "option": "A function wrapping the root reducer to add app-wide logic like logging",
+        "option": "A wrapper around the root reducer for app-wide logic, like logging",
         "correct": true,
         "comment": null
       },
@@ -179065,8 +179065,8 @@
     "question": "When you call createReducer(initialState, ...), what is initialState for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -179084,7 +179084,7 @@
         "comment": null
       },
       {
-        "option": "It's the value that slice of state starts with, before any action runs",
+        "option": "The value that slice of state starts with, before any action",
         "correct": true,
         "comment": null
       },
@@ -179207,7 +179207,7 @@
         "comment": null
       },
       {
-        "option": "It marks the effect as doing a side effect without dispatching a new action",
+        "option": "The effect runs side effects but dispatches no new action",
         "correct": true,
         "comment": null
       },
@@ -179535,7 +179535,7 @@
         "comment": null
       },
       {
-        "option": "It lets consumers apply the directive and pass it a value in a single expression",
+        "option": "It applies the directive and passes it a value in one attribute",
         "correct": true,
         "comment": null
       },
@@ -179576,7 +179576,7 @@
         "comment": null
       },
       {
-        "option": "Yes, multiple attribute directives can be applied to the same element at once",
+        "option": "Yes, several attribute directives can share one element",
         "correct": true,
         "comment": null
       },
@@ -179658,7 +179658,7 @@
         "comment": null
       },
       {
-        "option": "Yes, directives can implement the same lifecycle interfaces as components",
+        "option": "Yes, directives support the same lifecycle hooks as components",
         "correct": true,
         "comment": null
       },
@@ -179680,8 +179680,8 @@
     "question": "What does the hostDirectives feature (Angular 15+) allow a component or directive to do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -179699,7 +179699,7 @@
         "comment": null
       },
       {
-        "option": "It lets a component apply another directive's behavior on itself automatically",
+        "option": "Lets a component apply another directive's behaviour to itself",
         "correct": true,
         "comment": null
       },
@@ -180008,8 +180008,8 @@
     "question": "What is XLIFF, in the context of Angular i18n?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -180068,7 +180068,7 @@
         "comment": null
       },
       {
-        "option": "Use an i18n-prefixed attribute, like i18n-alt, alongside the attribute itself",
+        "option": "Add a matching i18n- attribute, like i18n-alt",
         "correct": true,
         "comment": null
       },
@@ -180109,7 +180109,7 @@
         "comment": null
       },
       {
-        "option": "Serve or build with a locale-specific configuration, e.g. ng serve --configuration=fr",
+        "option": "Serve with a locale configuration, e.g. ng serve --configuration=fr",
         "correct": true,
         "comment": null
       },
@@ -180172,8 +180172,8 @@
     "question": "If an Angular app doesn't configure LOCALE_ID at all, what locale does it default to?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -180273,7 +180273,7 @@
         "comment": null
       },
       {
-        "option": "Layout direction (RTL) and mirrored UI elements often need explicit CSS or dir handling",
+        "option": "Layout direction (RTL) and mirrored UI, via CSS and the dir attribute",
         "correct": true,
         "comment": null
       },
@@ -180601,7 +180601,7 @@
         "comment": null
       },
       {
-        "option": "The resolver also runs on the server, so its data is already in the initial HTML",
+        "option": "The resolver runs on the server, so its data is in the first HTML",
         "correct": true,
         "comment": null
       },
@@ -180664,8 +180664,8 @@
     "question": "Compared to serving a plain client-rendered SPA bundle, why does SSR generally increase load on the server?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -180705,8 +180705,8 @@
     "question": "What does Angular's InjectionToken class let you do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -180719,7 +180719,7 @@
     ],
     "options": [
       {
-        "option": "Inject non-class values, like config objects or plain strings",
+        "option": "Inject non-class values, like config objects or strings",
         "correct": true,
         "comment": null
       },
@@ -180869,8 +180869,8 @@
     "question": "Which provider option lets you supply an already-created value instead of having Angular construct a class?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -180910,8 +180910,8 @@
     "question": "What does useFactory let you do in a provider configuration?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -181088,7 +181088,7 @@
     ],
     "options": [
       {
-        "option": "Get a dependency inside a field initializer, no constructor param needed",
+        "option": "Get a dependency in a field initializer, without a constructor",
         "correct": true,
         "comment": null
       },
@@ -181771,8 +181771,8 @@
     "question": "How do you make a form control non-interactive and exclude its value from the form's submitted value?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -181853,8 +181853,8 @@
     "question": "What must a custom synchronous validator function return?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -181872,7 +181872,7 @@
         "comment": null
       },
       {
-        "option": "null when valid, or a small object describing the error when invalid",
+        "option": "null when valid, or an object describing the error",
         "correct": true,
         "comment": null
       },
@@ -182118,7 +182118,7 @@
         "comment": null
       },
       {
-        "option": "Lets a custom component plug into forms and work like a native input",
+        "option": "Lets a custom component work in forms like a native input",
         "correct": true,
         "comment": null
       },
@@ -182323,7 +182323,7 @@
         "comment": null
       },
       {
-        "option": "debounceTime() paired with switchMap() to drop stale in-flight requests",
+        "option": "debounceTime() with switchMap() to drop stale requests",
         "correct": true,
         "comment": null
       },
@@ -182639,7 +182639,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "When the same derived value is calculated in two places, the logic can drift. Centralizing that computation into one shared selector or computed signal keeps both components in sync.",
-    "hint": "Compute it once in a shared spot instead of twice in two places.",
+    "hint": "Think about having one source of truth for derived values.",
     "orderId": 1,
     "topicSlugs": [
       "component-state-patterns"
@@ -182651,7 +182651,7 @@
         "comment": null
       },
       {
-        "option": "Compute the value once in a shared selector or signal both components read",
+        "option": "Compute it once in a shared selector or signal both read",
         "correct": true,
         "comment": null
       },
@@ -182796,8 +182796,8 @@
     "question": "Why is it usually better to provide a mock service via TestBed rather than letting the real state-holding service run during a component test?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -182815,7 +182815,7 @@
         "comment": null
       },
       {
-        "option": "It isolates the test to the component's logic, apart from the real service",
+        "option": "It tests only the component's logic, not the real service",
         "correct": true,
         "comment": null
       },
@@ -182878,8 +182878,8 @@
     "question": "How can a service expose a writable signal to component consumers so they can read it but not call .set() or .update() on it?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -182926,14 +182926,14 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "untracked() lets you read a signal's current value without telling Angular that this effect or computed should re-run whenever that signal changes, useful when you need a value but don't want it as a dependency.",
-    "hint": "Look at the value without signing up for updates whenever it changes.",
+    "hint": "Think about reading a signal without the effect reacting to it.",
     "orderId": 1,
     "topicSlugs": [
       "angular-signals"
     ],
     "options": [
       {
-        "option": "Reads the current value without registering it as a tracked dependency",
+        "option": "Reads the value without making it a tracked dependency",
         "correct": true,
         "comment": null
       },
@@ -182960,8 +182960,8 @@
     "question": "How can an effect() clean up resources, like clearing a timer, before it re-runs or when it's destroyed?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -183020,7 +183020,7 @@
         "comment": null
       },
       {
-        "option": "No, computed signals are read-only and derive from their dependencies",
+        "option": "No, computed signals are read-only, derived from their inputs",
         "correct": true,
         "comment": null
       },
@@ -183042,8 +183042,8 @@
     "question": "What does Angular's input() function, for signal-based inputs, let a component declare?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -183138,7 +183138,7 @@
     ],
     "options": [
       {
-        "option": "It ties the effect's lifecycle to the injector so it's auto-destroyed with it",
+        "option": "It ties the effect to the injector, so it's destroyed with it",
         "correct": true,
         "comment": null
       },
@@ -183261,7 +183261,7 @@
     ],
     "options": [
       {
-        "option": "computed() derives a new value; effect() runs side effects, returns nothing usable",
+        "option": "computed() derives a value; effect() runs side effects",
         "correct": true,
         "comment": null
       },
@@ -183329,8 +183329,8 @@
     "question": "What does the animate() function specify in an Angular animation transition?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -183348,7 +183348,7 @@
         "comment": null
       },
       {
-        "option": "The timing, delay, and easing, plus the optional target styles",
+        "option": "The timing, delay and easing, plus optional end styles",
         "correct": true,
         "comment": null
       },
@@ -183370,8 +183370,8 @@
     "question": "What does the style() function define in an Angular animation?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -183411,8 +183411,8 @@
     "question": "What is the purpose of the state() function in Angular animations?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -183430,17 +183430,17 @@
         "comment": null
       },
       {
-        "option": "Tracks a component's internal service state",
+        "option": "Tracks a component's internal service state over time",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Pauses an animation at a checkpoint",
+        "option": "Pauses a running animation at a named checkpoint",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Registers a trigger with the animations module",
+        "option": "Registers a new trigger with the animations module",
         "correct": false,
         "comment": null
       }
@@ -183493,8 +183493,8 @@
     "question": "What are params used for in Angular animation metadata?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -183507,7 +183507,7 @@
     ],
     "options": [
       {
-        "option": "Passing dynamic values, like a duration or color, into an animation",
+        "option": "Passing dynamic values, like a duration, into an animation",
         "correct": true,
         "comment": null
       },
@@ -183616,8 +183616,8 @@
     "question": "What's the difference between sequence() and group() when combining animation steps?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -183799,17 +183799,17 @@
         "comment": null
       },
       {
-        "option": "Defines all the routing paths for the app",
+        "option": "Defines all of the routing paths for the app",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Stores the templates for every component",
+        "option": "Stores the HTML templates for every component",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Configures the production build process",
+        "option": "Configures how the production build process runs",
         "correct": false,
         "comment": null
       }
@@ -183985,8 +183985,8 @@
     "question": "Why does Angular use a nested component tree structure for the UI?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -184068,7 +184068,7 @@
     "subjectSlug": "angular",
     "questionType": "Trivia",
     "level": 2,
-    "marks": 3,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -184149,8 +184149,8 @@
     "question": "What does Angular's semantic versioning scheme (e.g., v17, v18) primarily signal to developers?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -184245,22 +184245,22 @@
     ],
     "options": [
       {
-        "option": "Sensible defaults for build, test, and serve setup",
+        "option": "Ready-made build, test and serve setup",
         "correct": true,
         "comment": null
       },
       {
-        "option": "Removes any need to write TypeScript",
+        "option": "No need to write any TypeScript at all",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Guarantees the finished app has no bugs",
+        "option": "A guarantee the finished app has no bugs",
         "correct": false,
         "comment": null
       },
       {
-        "option": "Removes the need for a web server",
+        "option": "No need for a web server to host the app",
         "correct": false,
         "comment": null
       }
@@ -184286,7 +184286,7 @@
     ],
     "options": [
       {
-        "option": "Make HTTP requests and get Observable responses",
+        "option": "Make HTTP requests that return Observables",
         "correct": true,
         "comment": null
       },
@@ -184327,7 +184327,7 @@
     ],
     "options": [
       {
-        "option": "Ships built-in conventions for routing, forms, HTTP",
+        "option": "Built-in ways to do routing, forms and HTTP",
         "correct": true,
         "comment": null
       },
@@ -184409,7 +184409,7 @@
     ],
     "options": [
       {
-        "option": "Handling async data streams via Observables",
+        "option": "Handling async data with Observables",
         "correct": true,
         "comment": null
       },
@@ -184436,8 +184436,8 @@
     "question": "What is the practical difference between a component and a service in Angular?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -184559,8 +184559,8 @@
     "question": "A small marketing site has one page and almost no interactivity. What's the tradeoff of building it as a full Angular app instead of plain HTML/CSS/JS?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -184737,7 +184737,7 @@
     ],
     "options": [
       {
-        "option": "To toggle multiple classes at once from one expression",
+        "option": "To toggle several classes from one expression",
         "correct": true,
         "comment": null
       },
@@ -184887,8 +184887,8 @@
     "question": "Why doesn't <input [value]=\"name\"> update the name property when the user types, unlike [(ngModel)]?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -184928,8 +184928,8 @@
     "question": "What is the difference between an HTML attribute and the DOM property that Angular's property binding usually targets?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -184942,7 +184942,7 @@
     ],
     "options": [
       {
-        "option": "Attribute is the initial value; property is the live value",
+        "option": "Attribute is the initial value; property the live one",
         "correct": true,
         "comment": null
       },
@@ -185010,21 +185010,21 @@
     "question": "What does {{ price | currency }} combine in a template?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "The value inside {{ }} is interpolated as usual, and the pipe reformats it for display - here, turning a raw number into a currency-formatted string.",
-    "hint": "Interpolation shows the value; the pipe dresses it up first.",
+    "hint": "Think about the {{ }} syntax and the | symbol.",
     "orderId": 1,
     "topicSlugs": [
       "data-binding-and-event-handling"
     ],
     "options": [
       {
-        "option": "Interpolation with a pipe that formats it as currency",
+        "option": "Interpolation with a currency-formatting pipe",
         "correct": true,
         "comment": null
       },
@@ -185174,8 +185174,8 @@
     "question": "Two event bindings, (mouseenter) and (mouseleave), sit on the same element to toggle a tooltip. What does Angular do here compared to a single event binding?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -185215,8 +185215,8 @@
     "question": "What does [attr.disabled]=\"isDisabled\" do differently from a plain [disabled] property binding?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -185338,8 +185338,8 @@
     "question": "Which binding lets you set a native DOM property that isn't a plain HTML attribute, such as an element's scrollTop?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -185502,8 +185502,8 @@
     "question": "With an OnPush component, why does binding an Observable through the async pipe usually just work, without extra ChangeDetectorRef calls?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 3,
+    "marks": 3,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -185584,8 +185584,8 @@
     "question": "Why do immutable data patterns, creating new objects/arrays instead of mutating existing ones, pair naturally with OnPush?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -185789,8 +185789,8 @@
     "question": "How do Signals in modern Angular relate to change detection?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -185803,7 +185803,7 @@
     ],
     "options": [
       {
-        "option": "Let Angular track dependencies for fine-grained updates",
+        "option": "Let Angular update only what depends on them",
         "correct": true,
         "comment": null
       },
@@ -186165,7 +186165,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "take(1) grabs just the first value that comes through and then completes, which is handy when you only care about one emission, like an initial response.",
-    "hint": "Grab the first one, then walk away.",
+    "hint": "Think about what happens after the first value arrives.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-rxjs"
@@ -186206,7 +186206,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "throttleTime lets an emission through immediately and mutes further ones for a window, while debounceTime waits until things go quiet, then emits the latest value.",
-    "hint": "One fires right away then goes quiet; the other waits for quiet, then fires.",
+    "hint": "Think about a scroll handler versus a search box.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-rxjs"
@@ -186281,8 +186281,8 @@
     "question": "Why does a BehaviorSubject require an initial value when it's created?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -186329,7 +186329,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "withLatestFrom lets the source Observable stay in charge of timing - every time it emits, it grabs whatever the other Observable's most recent value was.",
-    "hint": "The source drives the timing, the other stream just tags along with its latest value.",
+    "hint": "Think about which stream decides when values are emitted.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-rxjs"
@@ -186363,8 +186363,8 @@
     "question": "A component manually subscribes to a Subject and calls next() from a button click to push new values into it. What role is this Subject playing compared to a plain Observable?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -186541,7 +186541,7 @@
     ],
     "options": [
       {
-        "option": "Caches and replays the response, avoiding duplicate calls",
+        "option": "Replays one cached response, avoiding duplicate calls",
         "correct": true,
         "comment": null
       },
@@ -186568,8 +186568,8 @@
     "question": "What is the point of gzip or brotli compression on a production Angular build's output files?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -186691,8 +186691,8 @@
     "question": "An app serves static assets like compiled JS bundles from a CDN close to users instead of from the origin server. Why does this typically help performance?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -186773,8 +186773,8 @@
     "question": "A page shows server-rendered HTML instantly, but users can't fully interact with it until Angular finishes loading and hydrating in the browser. Why does this two-step process still improve perceived performance overall?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -186978,8 +186978,8 @@
     "question": "Once a component is created with createComponent() and inserted into a ViewContainerRef, does it participate in Angular's normal change detection?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -187142,21 +187142,21 @@
     "question": "What is a key difference between content projection with <ng-content> and dynamically creating a component with createComponent()?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "ng-content is a declarative way to slot pre-existing template markup into a component, while createComponent() actually instantiates a new component instance programmatically.",
-    "hint": "One arranges content you already wrote; the other builds something brand new on the fly.",
+    "hint": "Think about where the content comes from in each case.",
     "orderId": 1,
     "topicSlugs": [
       "dynamic-components"
     ],
     "options": [
       {
-        "option": "ng-content slots in content that was already written; createComponent() builds it fresh",
+        "option": "ng-content shows existing content; createComponent() builds new",
         "correct": true,
         "comment": null
       },
@@ -187552,8 +187552,8 @@
     "question": "Which Angular CLI schematic command converts *ngIf/*ngFor templates to the new @if/@for block syntax?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -187798,8 +187798,8 @@
     "question": "In the new control flow syntax, can you chain multiple conditions using @else if?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 1,
+    "marks": 1,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -187880,8 +187880,8 @@
     "question": "What determines whether a directive can be imported into a standalone component's imports array?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -187962,8 +187962,8 @@
     "question": "What's the practical benefit of the @for block requiring a track expression, unlike ngFor where trackBy was optional?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -187976,7 +187976,7 @@
     ],
     "options": [
       {
-        "option": "It forces upfront thinking about item identity, avoiding full re-renders",
+        "option": "It makes you define item identity, avoiding needless re-renders",
         "correct": true,
         "comment": null
       },
@@ -188044,8 +188044,8 @@
     "question": "What does withInterceptors() do when passed into provideHttpClient()?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188058,7 +188058,7 @@
     ],
     "options": [
       {
-        "option": "Registers functional interceptors for the app's HttpClient",
+        "option": "Registers functional interceptors for HttpClient",
         "correct": true,
         "comment": null
       },
@@ -188085,8 +188085,8 @@
     "question": "What's the difference between a functional interceptor (HttpInterceptorFn) and a class-based interceptor implementing HttpInterceptor?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188208,8 +188208,8 @@
     "question": "Which HttpClient option lets you track upload or download progress for a large file transfer?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188263,7 +188263,7 @@
     ],
     "options": [
       {
-        "option": "A periodic event reporting bytes uploaded so far during the request",
+        "option": "A periodic event with the bytes uploaded so far",
         "correct": true,
         "comment": null
       },
@@ -188290,8 +188290,8 @@
     "question": "When uploading a file with HttpClient, why is FormData commonly used as the request body instead of JSON.stringify(file)?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188372,8 +188372,8 @@
     "question": "What does the timeout() RxJS operator do when piped onto an HTTP call?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188536,8 +188536,8 @@
     "question": "What does the HttpClient .head() method do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188550,7 +188550,7 @@
     ],
     "options": [
       {
-        "option": "Sends a HEAD request, returning headers without a response body",
+        "option": "Sends a HEAD request, which returns headers but no body",
         "correct": true,
         "comment": null
       },
@@ -188618,8 +188618,8 @@
     "question": "A GET request keeps returning stale, browser-cached data even after the server's data has changed. What's a way to force a fresh request?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188659,8 +188659,8 @@
     "question": "What's the benefit of typing an HttpClient call as http.get<Product[]>(url), even though Angular doesn't validate the response shape at runtime?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188673,7 +188673,7 @@
     ],
     "options": [
       {
-        "option": "Type checking and autocomplete at compile time, with no runtime validation",
+        "option": "Compile-time type checking and autocomplete, not runtime checks",
         "correct": true,
         "comment": null
       },
@@ -188700,8 +188700,8 @@
     "question": "What does the HttpClient .options() request typically check for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188741,8 +188741,8 @@
     "question": "Why does Angular commonly recommend piping catchError() inside a service method, close to the HttpClient call, rather than only in the component that subscribes?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188789,7 +188789,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "put() conventionally sends the full resource to replace it entirely, while patch() sends only the fields that changed for a partial update.",
-    "hint": "One replaces the whole thing, the other nudges just a piece of it.",
+    "hint": "Think about sending a whole object versus a single changed field.",
     "orderId": 1,
     "topicSlugs": [
       "http-and-api-integration"
@@ -188823,8 +188823,8 @@
     "question": "How can you convert an HttpClient Observable into a Promise so you can use it with async/await for a one-off call?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -188994,7 +188994,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "You add a providers array directly on that Route object, so the service is only created for navigations under that branch and its children.",
-    "hint": "Routes themselves can carry their own providers array, just like components can.",
+    "hint": "Think about where else Angular accepts a providers array, besides components.",
     "orderId": 1,
     "topicSlugs": [
       "standalone-components"
@@ -189006,7 +189006,7 @@
         "comment": null
       },
       {
-        "option": "Use @Injectable({ providedIn: 'route' })",
+        "option": "Use @Injectable({ providedIn: 'route' }) on it",
         "correct": false,
         "comment": null
       },
@@ -189016,7 +189016,7 @@
         "comment": null
       },
       {
-        "option": "Use an APP_INITIALIZER function",
+        "option": "Register it with an APP_INITIALIZER function",
         "correct": false,
         "comment": null
       }
@@ -189192,8 +189192,8 @@
     "question": "What function is the modern replacement for APP_INITIALIZER-style startup logic in standalone apps?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189233,8 +189233,8 @@
     "question": "A standalone app defines routes with loadComponent for lazy routes. What must each lazily-loaded component still declare in its own decorator?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189288,7 +189288,7 @@
     ],
     "options": [
       {
-        "option": "Import arrays get repetitive since every component lists its own dependencies",
+        "option": "Import arrays get repetitive, as each component lists its own",
         "correct": true,
         "comment": null
       },
@@ -189315,8 +189315,8 @@
     "question": "Why don't standalone components need CommonModule for basic control flow like @if or @for, unlike the older *ngIf and *ngFor directives?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189356,8 +189356,8 @@
     "question": "Does Angular's built-in ErrorHandler automatically catch errors thrown inside an RxJS Observable pipeline?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189397,8 +189397,8 @@
     "question": "What does an HTTP status of 0 in an HttpErrorResponse usually indicate?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189411,7 +189411,7 @@
     ],
     "options": [
       {
-        "option": "A network-level failure, like no connection, a CORS block, or an unreachable server",
+        "option": "A network failure, like no connection, a CORS block or a down server",
         "correct": true,
         "comment": null
       },
@@ -189493,7 +189493,7 @@
     ],
     "options": [
       {
-        "option": "Flush a mock error response with HttpTestingController and check the UI updates",
+        "option": "Flush a mock error with HttpTestingController, then check the UI",
         "correct": true,
         "comment": null
       },
@@ -189520,14 +189520,14 @@
     "question": "What's the difference between exponential backoff retry logic and a plain retry(3) on a failing HTTP call?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Exponential backoff waits progressively longer between retries, while retry(3) retries immediately up to three times. RxJS supports backoff directly: retry({ count: 3, delay: (error, attempt) => timer(2 ** attempt * 1000) }).",
-    "hint": "One retries instantly and repeatedly; the other deliberately spaces attempts further apart each time.",
+    "hint": "Think about the gap between each attempt.",
     "orderId": 1,
     "topicSlugs": [
       "error-handling"
@@ -189561,8 +189561,8 @@
     "question": "Where would you typically integrate an external error-logging service like Sentry in an Angular app?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189739,7 +189739,7 @@
     ],
     "options": [
       {
-        "option": "It can leak internal implementation details not meant for users to see",
+        "option": "It can leak internal details users shouldn't see",
         "correct": true,
         "comment": null
       },
@@ -189766,8 +189766,8 @@
     "question": "Besides Angular's ErrorHandler, what native browser mechanism can also catch uncaught JavaScript errors app-wide?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189807,8 +189807,8 @@
     "question": "What is considered a \"good\" CLS score according to Google's Core Web Vitals thresholds?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189848,8 +189848,8 @@
     "question": "What is considered a \"good\" INP score according to Google's Core Web Vitals thresholds?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -189903,7 +189903,7 @@
     ],
     "options": [
       {
-        "option": "It delays the browser from starting the fetch until the image nears the viewport",
+        "option": "The browser waits to fetch it until it nears the viewport",
         "correct": true,
         "comment": null
       },
@@ -190135,8 +190135,8 @@
     "question": "Which of these commonly hurts INP the most on an otherwise fast page?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -190149,7 +190149,7 @@
     ],
     "options": [
       {
-        "option": "Long third-party scripts blocking the main thread during a click",
+        "option": "Long third-party scripts blocking the main thread",
         "correct": true,
         "comment": null
       },
@@ -190217,8 +190217,8 @@
     "question": "What does the Angular CDK's BreakpointObserver help you do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -190231,7 +190231,7 @@
     ],
     "options": [
       {
-        "option": "Detect and react to viewport size or media query changes in TypeScript",
+        "option": "React to viewport size or media query changes in code",
         "correct": true,
         "comment": null
       },
@@ -190258,8 +190258,8 @@
     "question": "What is CdkTable used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -190272,7 +190272,7 @@
     ],
     "options": [
       {
-        "option": "A building block for a custom-styled data table, with rendering logic handled",
+        "option": "A base for custom-styled data tables, with rendering handled",
         "correct": true,
         "comment": null
       },
@@ -190381,8 +190381,8 @@
     "question": "How do you let users drag items between two separate drop lists, like a \"todo\" list and a \"done\" list?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -190422,8 +190422,8 @@
     "question": "What does the CDK's Platform service let you check?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -190436,7 +190436,7 @@
     ],
     "options": [
       {
-        "option": "Which browser and operating system the app is currently running on",
+        "option": "Which browser and operating system the app runs on",
         "correct": true,
         "comment": null
       },
@@ -190791,21 +190791,21 @@
     "question": "What is a named (auxiliary) router outlet used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A named outlet, declared as router-outlet name='sidebar', lets you display a separate view (like a chat panel or modal) that navigates independently of the primary router-outlet.",
-    "hint": "Picture a page with a main content area and a separate sidebar that can change without reloading the main view.",
+    "hint": "Picture a layout with two areas that change independently.",
     "orderId": 1,
     "topicSlugs": [
       "routing-and-navigation"
     ],
     "options": [
       {
-        "option": "A second view, like a sidebar, that navigates independently of the main outlet",
+        "option": "A second view, like a sidebar, that navigates on its own",
         "correct": true,
         "comment": null
       },
@@ -191242,8 +191242,8 @@
     "question": "What does the scrollPositionRestoration router option control?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -191365,8 +191365,8 @@
     "question": "How do you link to a specific fragment (anchor) on the target page using routerLink?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -191389,12 +191389,12 @@
         "comment": null
       },
       {
-        "option": "[routerLinkFragment]=\"'section2'\"",
+        "option": "[routerLink]=\"['/page']\" [routerLinkFragment]=\"'section2'\"",
         "correct": false,
         "comment": null
       },
       {
-        "option": "[routerLink]=\"['/page', '#section2']\"",
+        "option": "[routerLink]=\"['/page']\" [anchor]=\"'section2'\"",
         "correct": false,
         "comment": null
       }
@@ -191425,7 +191425,7 @@
         "comment": null
       },
       {
-        "option": "The first matching route in the routes array, evaluated top to bottom",
+        "option": "The first match in the routes array, checked top to bottom",
         "correct": true,
         "comment": null
       },
@@ -191529,8 +191529,8 @@
     "question": "What does the imports array in @NgModule do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -191917,7 +191917,7 @@
         "comment": null
       },
       {
-        "option": "providedIn: 'root' is tree-shakable app-wide; module providers scope it there",
+        "option": "'root' is tree-shakable and app-wide; module providers scope it",
         "correct": true,
         "comment": null
       },
@@ -192308,8 +192308,8 @@
     "question": "How would you unit test a custom pipe's logic without rendering any component or template?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -192327,7 +192327,7 @@
         "comment": null
       },
       {
-        "option": "Create a new instance of the pipe and call transform() directly",
+        "option": "Create a pipe instance and call transform() directly",
         "correct": true,
         "comment": null
       },
@@ -192368,7 +192368,7 @@
         "comment": null
       },
       {
-        "option": "Your custom pipe can shadow the built-in one wherever it's in scope",
+        "option": "It can shadow the built-in pipe wherever it's in scope",
         "correct": true,
         "comment": null
       },
@@ -192397,7 +192397,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Pure pipes only compare references (or primitive values) between runs, not deep contents. Pushing into the same array keeps the same reference, so Angular thinks nothing changed and the pipe doesn't re-run, you'd need to create a new array to trigger it.",
-    "hint": "Pure pipes check 'is this the same object?', not 'did the object's insides change?'",
+    "hint": "Think about what a pure pipe compares to decide whether to run.",
     "orderId": 1,
     "topicSlugs": [
       "custom-pipes"
@@ -192595,8 +192595,8 @@
     "question": "If the pure property is omitted from a @Pipe decorator, what does Angular use by default?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -192983,7 +192983,7 @@
         "comment": null
       },
       {
-        "option": "On the server, the requested route's lazy code generally must resolve to render content",
+        "option": "The server must load the route's lazy code to render it",
         "correct": true,
         "comment": null
       },
@@ -193024,7 +193024,7 @@
         "comment": null
       },
       {
-        "option": "After the module has loaded, when the router evaluates that specific child route",
+        "option": "After the chunk loads, when the router reaches that child route",
         "correct": true,
         "comment": null
       },
@@ -193188,7 +193188,7 @@
         "comment": null
       },
       {
-        "option": "Provide it via the NG_VALIDATORS injection token with multi: true",
+        "option": "Provide it with the NG_VALIDATORS token, multi: true",
         "correct": true,
         "comment": null
       },
@@ -193210,8 +193210,8 @@
     "question": "How do you remove a control from a FormArray at a specific index?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -193251,8 +193251,8 @@
     "question": "When would you need to manually call updateValueAndValidity() on a form control?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -193374,8 +193374,8 @@
     "question": "What is a FormRecord (introduced alongside typed reactive forms) used for?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -193538,8 +193538,8 @@
     "question": "What's the difference between using FormBuilder.group({...}) and manually writing new FormGroup({ name: new FormControl('') })?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -193620,8 +193620,8 @@
     "question": "Why should a real API secret key never be placed in an Angular environment.ts file?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -193639,7 +193639,7 @@
         "comment": null
       },
       {
-        "option": "Everything in environment.ts is bundled into client-side JS, readable by anyone",
+        "option": "environment.ts is bundled into client JS that anyone can read",
         "correct": true,
         "comment": null
       },
@@ -193661,8 +193661,8 @@
     "question": "In the context of route guards, what is the difference between authentication and authorization?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -193803,7 +193803,7 @@
         "comment": null
       },
       {
-        "option": "It makes the browser refuse to run the script if its hash doesn't match",
+        "option": "The browser won't run the script if its hash doesn't match",
         "correct": true,
         "comment": null
       },
@@ -193844,7 +193844,7 @@
         "comment": null
       },
       {
-        "option": "A malicious site frames your app to trick clicks; an X-Frame-Options header blocks it",
+        "option": "A site frames your app to trick clicks; X-Frame-Options blocks it",
         "correct": true,
         "comment": null
       },
@@ -193926,7 +193926,7 @@
         "comment": null
       },
       {
-        "option": "Anyone can bypass the UI and call the API directly, so the server must validate too",
+        "option": "Anyone can bypass the UI and call the API, so the server must check",
         "correct": true,
         "comment": null
       },
@@ -193948,8 +193948,8 @@
     "question": "What object does the ngOnChanges() lifecycle hook receive as its argument?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -194003,7 +194003,7 @@
     ],
     "options": [
       {
-        "option": "Check the firstChange property on that input's SimpleChange object",
+        "option": "Check firstChange on that input's SimpleChange",
         "correct": true,
         "comment": null
       },
@@ -194090,7 +194090,7 @@
         "comment": null
       },
       {
-        "option": "It resumes including the component in normal change detection",
+        "option": "It puts the component back into normal change detection",
         "correct": true,
         "comment": null
       },
@@ -194100,7 +194100,7 @@
         "comment": null
       },
       {
-        "option": "It resets the component's strategy back to Default",
+        "option": "It resets the component's strategy back to Eager",
         "correct": false,
         "comment": null
       }
@@ -194235,8 +194235,8 @@
     "question": "Is ngOnDestroy() guaranteed to run when a user abruptly closes the browser tab or the browser crashes?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -194440,8 +194440,8 @@
     "question": "If an @Input() property has a custom setter function, does that setter run before or after ngOnChanges() fires for the same change?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 3,
+    "marks": 3,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -194973,8 +194973,8 @@
     "question": "What does {{ 'Angular' | slice:-3 }} display?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -195137,8 +195137,8 @@
     "question": "Can a pipe be used in an @if condition, such as @if (items$ | async; as list)?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -195219,8 +195219,8 @@
     "question": "What's a key tradeoff of using the async pipe compared to manually subscribing to an Observable in ngOnInit and storing the result on a component property?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -195424,8 +195424,8 @@
     "question": "Why is it generally a bad idea to put heavy logic, like an API call for currency conversion, directly inside a pipe's transform() method?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -195629,8 +195629,8 @@
     "question": "What does router.navigate() do differently from router.navigateByUrl()?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -195875,8 +195875,8 @@
     "question": "How do query parameters differ from route parameters in Angular routing?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -195957,8 +195957,8 @@
     "question": "What does pathMatch: 'full' do when set on a route with an empty path?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -196203,8 +196203,8 @@
     "question": "A component has one ng-content with a select attribute and one plain ng-content with no select attribute. Where does projected content that doesn't match the select attribute end up?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -196222,7 +196222,7 @@
         "comment": null
       },
       {
-        "option": "It ends up in the plain ng-content slot, which catches everything else",
+        "option": "The plain ng-content slot, which catches everything else",
         "correct": true,
         "comment": null
       },
@@ -196244,8 +196244,8 @@
     "question": "Content projected into a component via ng-content, does Angular recreate that content fresh each time the child re-renders, or does it reuse what the parent created?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -196408,8 +196408,8 @@
     "question": "A reusable Tabs component needs the parent to supply multiple, repeated tab-panel pieces of content, not just one blob. What combination typically supports this?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 3,
+    "marks": 3,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -196449,8 +196449,8 @@
     "question": "Does a component using ng-content still let projected child components use their own @Input and @Output bindings that the parent set on them?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -196468,7 +196468,7 @@
         "comment": null
       },
       {
-        "option": "Yes, those bindings work exactly as if it weren't being projected at all",
+        "option": "Yes, they work just as if it weren't projected",
         "correct": true,
         "comment": null
       },
@@ -196497,14 +196497,14 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Plain ng-content just displays whatever the parent already put there. With ngTemplateOutlet and a context object, the child component can hand data down into the template as it renders it.",
-    "hint": "One is a one-way display; the other lets the child feed data into what gets rendered.",
+    "hint": "Think about what plain ng-content can't do: hand the content values.",
     "orderId": 1,
     "topicSlugs": [
       "content-projection"
     ],
     "options": [
       {
-        "option": "It lets the component pass data into the projected template as it renders",
+        "option": "It lets the component pass data into the template it renders",
         "correct": true,
         "comment": null
       },
@@ -196531,8 +196531,8 @@
     "question": "If two different child elements in the parent's markup both match the same select selector on a single ng-content, what happens?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -196613,14 +196613,14 @@
     "question": "What's the difference between spyOn(service, 'method').and.returnValue(x) and .and.callThrough()?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "returnValue() swaps out the method so it always gives back a fixed value. callThrough() keeps the original implementation running, but still records how it was called.",
-    "hint": "One fakes the result, the other watches the real thing happen.",
+    "hint": "Think about whether the real method still executes.",
     "orderId": 1,
     "topicSlugs": [
       "testing-5"
@@ -196695,8 +196695,8 @@
     "question": "Which combination of tools has the Angular CLI traditionally used by default for running unit tests?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -196714,7 +196714,7 @@
         "comment": null
       },
       {
-        "option": "Karma as the test runner and Jasmine for assertions and spies",
+        "option": "Karma to run tests, Jasmine for assertions and spies",
         "correct": true,
         "comment": null
       },
@@ -196791,7 +196791,7 @@
     ],
     "options": [
       {
-        "option": "It waits for async setup, like compiling components, before assertions run",
+        "option": "It waits for async setup, like component compiling, to finish",
         "correct": true,
         "comment": null
       },
@@ -196859,8 +196859,8 @@
     "question": "What does By.directive(SomeComponent) let you query for in a test, compared to By.css()?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -196982,8 +196982,8 @@
     "question": "What does running ng add @angular/pwa on an existing Angular project do?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -197030,7 +197030,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "assetGroups deals with the app's own build output that rarely changes between deploys. dataGroups is for dynamic data, like calls to a backend API, using a strategy such as freshness or performance.",
-    "hint": "One is about your app's own files; the other is about data from outside, like an API.",
+    "hint": "Think about what changes only between deploys and what changes all the time.",
     "orderId": 1,
     "topicSlugs": [
       "pwa-service-workers"
@@ -197105,8 +197105,8 @@
     "question": "Do service workers work over a plain, non-HTTPS connection?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -197124,7 +197124,7 @@
         "comment": null
       },
       {
-        "option": "No, they require HTTPS, though localhost is allowed for development",
+        "option": "No, they need HTTPS, though localhost is allowed for dev",
         "correct": true,
         "comment": null
       },
@@ -197146,8 +197146,8 @@
     "question": "What does calling swUpdate.checkForUpdate() do, and why might an app call it manually?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -197228,8 +197228,8 @@
     "question": "What browser event lets an app show its own custom 'Install App' button instead of relying only on the browser's built-in install prompt?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -239570,8 +239570,8 @@
     "question": "A service is declared with providedIn: 'root'. A lazy-loaded feature module also lists that same service in its own providers array. What happens when a component inside that lazy module injects it?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 3,
+    "marks": 3,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -239693,14 +239693,14 @@
     "question": "Angular throws \"Type ... is part of the declarations of 2 modules\" at build time. What causes this specific error?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A component, directive, or pipe was listed in the declarations array of two different NgModules. Each declarable can belong to exactly one owning module; to use it elsewhere, that module must export it and the consumer must import the owning module (or share it via a SharedModule).",
-    "hint": "The error name describes the mistake almost literally — check how many declarations arrays list it.",
+    "hint": "Count how many places one component is allowed to be declared.",
     "orderId": 1,
     "topicSlugs": [
       "angular-modules"
@@ -240081,8 +240081,8 @@
     "question": "A standalone component needs to be lazy-loaded at a single route with no nested child routes. Which router API loads it directly, without a feature-module wrapper?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -240428,8 +240428,8 @@
     "question": "Your app lazy-loads a rarely-visited /admin route and a frequently-visited /reports route. PreloadAllModules preloads both in the background after initial load, including the admin bundle almost nobody needs. What's a better approach?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 3,
+    "marks": 3,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -240469,8 +240469,8 @@
     "question": "A lazy-loaded feature module provides a service in its own providers array. A component OUTSIDE that lazy module (in the eagerly-loaded part of the app) tries to inject that same service class. What happens?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 2,
-    "marks": 2,
+    "level": 3,
+    "marks": 3,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -240715,8 +240715,8 @@
     "question": "Can a lazy-loaded module itself contain further nested lazy-loaded child routes — lazy-loading inside lazy-loading?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -240756,8 +240756,8 @@
     "question": "What is Angular Router's default PreloadingStrategy if you don't specify one in provideRouter/RouterModule.forRoot?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -240857,8 +240857,8 @@
     "question": "A route needs to check both that a user is authenticated AND that they have a specific role, using two separate, reusable guard functions. How do you compose multiple guards on one route?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -240939,14 +240939,14 @@
     "question": "A settings page has three tabs (Profile, Billing, Security), each needing its own deep-linkable URL while sharing the same page shell/layout. What's the standard Angular routing pattern for this?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "A parent route renders the settings shell component, and child routes (one per tab) render into a router-outlet inside that shell — giving each tab its own URL segment while reusing the same parent layout.",
-    "hint": "One component owns the shared layout; each tab becomes a child route inside it.",
+    "hint": "Think about how tabs can share one layout but still have separate URLs.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -241110,7 +241110,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "data is a static, build-time-known value available immediately with no async work involved (e.g. a page title or a required role); resolve runs an async function — often an HTTP call — and the router waits for it to complete before activating the route, injecting the resolved result into the activated route's data.",
-    "hint": "One is known upfront with zero async work; the other explicitly waits on something.",
+    "hint": "Think about whether the value needs any work to get.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -241144,14 +241144,14 @@
     "question": "Angular supports matrix URL parameters like /products;category=shoes;size=10, distinct from query parameters like /products?category=shoes. What's the key difference in scope between the two?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Matrix parameters are scoped to a specific route segment and can carry different values per segment within a complex URL, while query parameters are global to the entire URL regardless of which route segment they conceptually belong to.",
-    "hint": "One is attached to a specific URL segment; the other applies to the whole URL.",
+    "hint": "Think about where in the URL each kind appears.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-routing"
@@ -241185,8 +241185,8 @@
     "question": "You want each route to set the browser tab's document title declaratively, without manually calling Title.setTitle() in every component's ngOnInit. What's the modern Angular Router feature for this?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -241286,8 +241286,8 @@
     "question": "A component holds a simple counter that only needs synchronous reads in the template, with no async composition required. Between signal() and BehaviorSubject, which is architecturally the simpler fit?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -241368,8 +241368,8 @@
     "question": "A piece of UI state (e.g. 'is this dropdown open') is only ever read and written by one component and never needs to survive navigation away from it. Where should that state live?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 1,
-    "marks": 1,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
@@ -241804,7 +241804,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "markForCheck() flags this component and its ancestors as dirty so they're included in the NEXT change-detection run — it doesn't run detection itself. detectChanges() synchronously runs change detection on this component (and its children) immediately, right now, regardless of the zone's own scheduling.",
-    "hint": "One schedules a future check; the other runs a check immediately, synchronously.",
+    "hint": "Think about whether each one runs a check itself.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-change-detection"
@@ -241886,7 +241886,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Yes. An Eager component is checked on every change detection run, whether or not its own inputs changed, as long as no OnPush ancestor skips its branch. That whole-tree cost is why OnPush became the default in v22.",
-    "hint": "'Eager' doesn't mean 'only checks what's relevant'; it means 'checks every time'.",
+    "hint": "Think about what 'Eager' implies about which components get checked.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-change-detection"
@@ -242009,7 +242009,7 @@
     "status": "Active",
     "isWhitelisted": false,
     "answer": "Yes — reading a signal directly in a template automatically makes Angular track it as a dependency of that view, and when the signal changes, Angular marks the component for check under OnPush too, without needing a new input value or a manual markForCheck() call.",
-    "hint": "Signals read in a template are tracked automatically, independent of input bindings.",
+    "hint": "Think about how signals notify the views that read them.",
     "orderId": 1,
     "topicSlugs": [
       "advanced-change-detection"
@@ -242043,8 +242043,8 @@
     "question": "A large list rendered with @for (item of items; track item) is refreshed from the server every 30 seconds. Even when only one item changed, every row's DOM is destroyed and recreated. What fixes it?",
     "subjectSlug": "angular",
     "questionType": "Trivia",
-    "level": 3,
-    "marks": 3,
+    "level": 2,
+    "marks": 2,
     "timeAllowed": 50,
     "tag": null,
     "status": "Active",
