@@ -259768,5 +259768,3285 @@
       "backup-replication-scaling"
     ],
     "options": []
+  },
+  {
+    "slug": "linkedsignal-writable-signal-reset-by-source",
+    "title": null,
+    "question": "What does linkedSignal() create?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "linkedSignal() creates a writable signal whose value is computed from a source. You can set() it yourself, but whenever the source changes, the computation runs again and resets the value.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "A writable signal that resets when its source changes",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "A read-only signal that combines two other signals",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A signal that mirrors its value into localStorage",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A signal shared between two separate Angular apps",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "linkedsignal-default-selection-user-can-override",
+    "title": null,
+    "question": "A shipping-option dropdown should default to the first option, but keep the user's pick until the list of options changes. Which API fits best?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "linkedSignal() gives a value derived from the options that the user can still overwrite with set(). computed() is read-only, and copying state with effect() is discouraged because it adds extra change detection and timing bugs.",
+    "hint": "You need a value that is derived, but can also be written.",
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "computed() derived from the options list",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "linkedSignal() computed from the options list",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "An effect() that writes to a plain signal",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "toSignal() over the options Observable",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "linkedsignal-previous-keeps-valid-selection",
+    "title": null,
+    "question": "In linkedSignal({ source, computation }), what extra argument lets computation keep the user's current choice if it's still valid?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "The computation receives the new source value and a previous object with previous.source and previous.value. Checking previous.value against the new source lets you keep a selection that still exists instead of always resetting.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "untracked, holding values read without tracking",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "context, holding the injector and DestroyRef",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "previous, holding the prior source and value",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "state, holding the full history of all writes",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "resource-api-async-data-into-signals",
+    "title": null,
+    "question": "What is the resource() API mainly for?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "resource() runs an async loader whenever its params change and exposes the result as signals such as value(), status(), error() and isLoading(). It brings async loading into the signal graph.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "Caching static assets like images inside the bundle",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Declaring lazy routes that load a component file",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Sharing one service instance across browser tabs",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Loading async data into signals, driven by reactive params",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "resource-params-undefined-status-idle",
+    "title": null,
+    "question": "A resource's params function returns undefined. What happens?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Returning undefined from params tells the resource there's nothing to load yet, so the loader is skipped and the status is 'idle'. This is a common way to wait for a required value such as a selected id.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "The loader doesn't run, and the status becomes 'idle'",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "The loader runs once with undefined as its params",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The resource throws, and its status becomes 'error'",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The resource keeps its last value and retries later",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "resource-loader-abortsignal-cancels-stale-load",
+    "title": null,
+    "question": "The params of a resource change while its loader is still fetching. How should the loader avoid wasted work?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "The loader receives an abortSignal that fires when params change mid-load. Passing it to fetch() cancels the outdated request, so the resource only resolves with data for the latest params.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "Call reload() on the resource before it returns",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Pass the abortSignal it receives on to fetch()",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Wrap the loader body in untracked() every time",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Check isLoading() and return early when true",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "resource-set-local-value-status-local",
+    "title": null,
+    "question": "What does calling set() on a resource's value do?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "A resource is writable: set() or update() replaces its value locally without running the loader, and status() reports 'local'. A later change to params, or reload(), loads fresh data again.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "Starts the loader again with that value as params",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Nothing, since resource values are read-only",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Sets a local value, and status() becomes 'local'",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Saves the value to the server through the loader",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "resource-reloading-keeps-previous-value",
+    "title": null,
+    "question": "While a resource reloads after it already has data, what does value() return?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "During 'reloading' the resource keeps its previous value, so the UI doesn't flash empty. value() is undefined only while 'idle' or on the first 'loading', and reading it in the 'error' state throws.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "undefined, until the new data has arrived",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "An error, because reading during a load throws",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The defaultValue given in the resource options",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The previous value, while status is 'reloading'",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "rxresource-loader-returns-observable",
+    "title": null,
+    "question": "How does rxResource() differ from resource()?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "rxResource() from @angular/core/rxjs-interop takes a stream function that returns an Observable, which suits code built on HttpClient or other RxJS sources. It returns the same kind of resource, with value(), status() and error().",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "It loads through an Observable instead of a Promise",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "It can only be used inside NgRx effects and stores",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It caches every response in the browser's storage",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It runs only on the server during server rendering",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "component-effect-runs-during-change-detection",
+    "title": null,
+    "question": "When does an effect() created in a component run, relative to change detection?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Effects are scheduled, not run synchronously. A component's effects run during change detection just before that component is checked; effects created in root services run before any component is checked.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "Synchronously, at the moment a signal it reads is set",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "During change detection, before that component is checked",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Only once the browser has painted the following frame",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "On a separate macrotask, after change detection ends",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "derived-state-use-computed-not-effect",
+    "title": null,
+    "question": "Which is the better way to keep a fullName signal in sync with firstName and lastName signals?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Derived state belongs in computed(): it is read-only, lazy and memoized. Using effect() to copy values into another signal adds extra change detection and can cause ExpressionChangedAfterItHasBeenChecked errors.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "An effect() that calls fullName.set()",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "linkedSignal() with both as its source",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "computed(), deriving fullName from both",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "toSignal() of a combineLatest stream",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "afterrendereffect-phases-avoid-layout-thrashing",
+    "title": null,
+    "question": "In afterRenderEffect(), why split DOM work into write and read phases instead of using one callback?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "afterRenderEffect() runs after Angular updates the DOM, in the phases earlyRead, write, mixedReadWrite and read. Keeping writes and reads apart lets Angular order them and avoid forced reflows. It only runs in the browser.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "So the read phase can run on the server during SSR",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Because a single callback would run on every keystroke",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "So each phase can run in its own Web Worker thread",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "To batch DOM writes before reads and avoid layout thrashing",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-custom-equal-skips-same-id-update",
+    "title": null,
+    "question": "A signal holds an object, and you call set() with a new object that has the same id. How can you stop dependents from updating?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Signals compare values with Object.is by default, so any new object counts as a change. An equal option, such as equal: (a, b) => a.id === b.id, lets you decide when a new value really is a change.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-signals"
+    ],
+    "options": [
+      {
+        "option": "Pass an equal function that compares the ids",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Wrap the set() call inside untracked()",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Call asReadonly() before calling set()",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Use update() instead of set() for objects",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "httpresource-refetches-when-url-signal-changes",
+    "title": null,
+    "question": "What does httpResource(() => `/api/user/${id()}`) give you?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "httpResource() wraps HttpClient in the resource pattern. It requests eagerly, tracks the signals read in the URL function, and re-sends the request, cancelling the pending one, when they change. Requests still go through your interceptors.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "http-and-api-integration"
+    ],
+    "options": [
+      {
+        "option": "An Observable you must subscribe to before it fires",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A resource that re-fetches whenever id() changes",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "A Promise that resolves once with the first response",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A plain object that updates only when you call get()",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "httpresource-for-reads-not-mutations",
+    "title": null,
+    "question": "Why is httpResource() a poor fit for a POST request that creates an order?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "httpResource() fires whenever its signals change, which suits reads. A mutation like creating an order should happen once, on a user action, so call HttpClient.post() directly.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "http-and-api-integration"
+    ],
+    "options": [
+      {
+        "option": "It only supports GET, so other methods won't compile",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It sends every request twice, once per detection cycle",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It's built for reading data; mutations should use HttpClient",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "It can't send a request body or any custom headers",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-form-takes-model-signal",
+    "title": null,
+    "question": "In Signal Forms, what do you pass as the first argument to form()?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Signal Forms start from your data. form(model) takes a writable signal, such as signal({ email: '', password: '' }), and returns a field tree whose fields mirror that model's shape.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "forms-and-user-input"
+    ],
+    "options": [
+      {
+        "option": "A FormGroup describing each control",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "An array of validator functions to apply",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The template element that holds the inputs",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A signal holding the form's data model",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-formfield-binds-input",
+    "title": null,
+    "question": "Which binding connects an <input> to the email field of a Signal Forms form?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "The FormField directive binds an input with [formField]. It keeps the input and the model signal in sync and also applies the field's disabled and readonly state. The component must import FormField.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "forms-and-user-input"
+    ],
+    "options": [
+      {
+        "option": "[formField]=\"form.email\"",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "[formControl]=\"form.email\"",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "[(ngModel)]=\"form.email\"",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "formControlName=\"email\"",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-schema-required-email",
+    "title": null,
+    "question": "How do you add required and email validation to a field in Signal Forms?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "form() takes a schema function as its second argument, for example form(model, (p) => { required(p.email); email(p.email); }). Rules are attached to paths in the model, not to template elements.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "forms-and-user-input"
+    ],
+    "options": [
+      {
+        "option": "Add Validators.required to each field's validators",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Call required() and email() in form()'s schema function",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Put required and type=email attributes on the inputs",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Pass a validators option to the FormField directive",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-show-error-after-touched",
+    "title": null,
+    "question": "How do you show an error for form.email only after the user has left the field?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Calling a field returns its state, and each part of that state is a signal: touched(), invalid(), errors() and so on. touched() turns true after focus and blur, so errors don't show while the user is still typing.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "forms-and-user-input"
+    ],
+    "options": [
+      {
+        "option": "Check form.email.hasError() inside an ngOnChanges hook",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Subscribe to form.email.statusChanges in the class",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Check form.email().touched() and form.email().invalid()",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Read form.email.errors as a plain array property",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-dirty-stays-true",
+    "title": null,
+    "question": "When does a Signal Forms field's dirty() become true?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "dirty() turns true once the user modifies the field and stays true even if they type the original value back. touched() tracks focus and blur instead.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "forms-and-user-input"
+    ],
+    "options": [
+      {
+        "option": "As soon as the field gains focus for the first time",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only while its value differs from the initial value",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only after the form has been submitted once",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "After the user changes it, even if changed back",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-conditional-required-when",
+    "title": null,
+    "question": "In Signal Forms, how do you make couponCode required only while applyDiscount is checked?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Validation rules accept a when function, for example required(p.couponCode, { when: ({ valueOf }) => valueOf(p.applyDiscount) }). The rule then applies only while the condition is true.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-forms"
+    ],
+    "options": [
+      {
+        "option": "Pass a when option that reads applyDiscount",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Toggle the validator inside an effect() call",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Wrap the input in @if inside the template",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Call required() again each time the box changes",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-hidden-field-ignored-for-validity",
+    "title": null,
+    "question": "A rule marks a Signal Forms field as hidden(). How does that affect the form?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Hidden, disabled and readonly fields don't affect their parent's validity, touched or dirty state, and submit() skips them. The value stays in the model; you decide in the template whether to render the input.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-forms"
+    ],
+    "options": [
+      {
+        "option": "Its errors still block the form from submitting",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It doesn't count toward the form's validity",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "It is removed from the model signal's value",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Angular throws if its input is still rendered",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-submit-touches-and-validates",
+    "title": null,
+    "question": "What does submit(form, action) do before it runs action?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "submit() marks interactive fields as touched so their errors show. If any validation rule failed, it resolves to false without running the action; otherwise it runs the action with the current value, and submitting() is true meanwhile.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-forms"
+    ],
+    "options": [
+      {
+        "option": "Resets every field back to its initial model value",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Disables every field until the server has responded",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Marks fields touched, and stops if the form is invalid",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Converts the model into a FormData request body",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-server-error-routed-to-field",
+    "title": null,
+    "question": "A Signal Forms submit action calls the API, which says the email is already taken. How do you show that under the email input?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "The action can return errors such as { kind: 'emailTaken', fieldTree: form.email }. They appear in that field's errors() with the validation errors and clear when the user edits the field.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-forms"
+    ],
+    "options": [
+      {
+        "option": "Call form.email.setErrors() inside a catchError()",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Add a validateHttp() rule for the email afterwards",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Throw it so ErrorHandler shows it on the input",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Return an error from the action, routed to that field",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "signal-forms-validatehttp-async-check",
+    "title": null,
+    "question": "In Signal Forms, how do you check a username's availability against the server as the user types?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "validateHttp() builds the request from the field's value and maps the response to an error or null in onSuccess. While it runs, the field's pending() is true and valid() is false.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-forms"
+    ],
+    "options": [
+      {
+        "option": "Use validateHttp() with a request and onSuccess",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Use validate() and subscribe to HttpClient in it",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Add an async validator to the FormField directive",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Call the API from an effect() and set an error signal",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "for-empty-block-shown-when-no-items",
+    "title": null,
+    "question": "In @for (item of items; track item.id) { ... } @empty { ... }, when is the @empty block shown?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "@empty is an optional block after @for that renders when the collection is empty. It replaces the separate @if check that *ngFor needed.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "directives-and-conditional-rendering"
+    ],
+    "options": [
+      {
+        "option": "When items is still loading",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "When items has no elements",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "When every item fails a filter",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "After the last item has rendered",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "track-index-breaks-reorderable-lists",
+    "title": null,
+    "question": "Why is track $index a poor choice for a list that users can reorder?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "track tells Angular which DOM row belongs to which item. With $index, a moved item gets the old position's DOM and state, such as focus or typed text. Track a stable id instead; $index is fine for static lists.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "directives-and-conditional-rendering"
+    ],
+    "options": [
+      {
+        "option": "track $index is only allowed inside nested @for loops",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It makes @for re-sort the array on every change",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Each DOM row stays tied to a position, not to its item",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "It turns off the @empty block for that loop entirely",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "switch-default-never-exhaustive-check",
+    "title": null,
+    "question": "What does adding @default never; to an @switch block do?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "It turns on exhaustive type checking: if the switched value is a union and some member has no @case, the build fails. It works on variables, so read a signal into @let first.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "directives-and-conditional-rendering"
+    ],
+    "options": [
+      {
+        "option": "Hides the whole block when no @case matches",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Stops later @case blocks from falling through",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Throws a runtime error if no case ever matches",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Makes the compiler flag any unhandled union case",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "let-declares-readonly-template-variable",
+    "title": null,
+    "question": "What does @let user = user$ | async; do in a template?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "@let declares a template variable from an expression. It stays in sync with the expression but can't be reassigned, and it's scoped to the current view and its children. It's handy for reusing an async result.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "Declares a read-only template variable for reuse",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Creates a writable property on the component class",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Subscribes once and never updates the value again",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Declares a variable visible in every other template",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "let-not-hoisted-use-before-declaration",
+    "title": null,
+    "question": "A template uses {{ total }} on a line before @let total = price * qty;. What happens?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "@let variables aren't hoisted, so they can only be read after the line that declares them. The compiler reports reading one earlier as an error.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "It works, since @let declarations are hoisted",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A compile error, since @let isn't hoisted",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "It shows undefined until change detection runs",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It reads the component's total property instead",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "defer-default-trigger-idle",
+    "title": null,
+    "question": "Which trigger does a @defer block use when you give it no trigger at all?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "@defer without a trigger loads its content when the browser is idle, like on idle. You can add a timeout, such as on idle(500), or pick another trigger.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "on viewport",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "on immediate",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "on idle",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "on interaction",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "defer-prefetch-on-idle-show-on-interaction",
+    "title": null,
+    "question": "With @defer (on interaction; prefetch on idle), when is the code downloaded and when is it shown?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "prefetch separates loading the JavaScript from rendering it. The chunk downloads once the browser is idle, so the content appears right away when the user interacts.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "Downloaded and shown together on interaction",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Downloaded on interaction, shown when idle",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Shown when idle, downloaded again on each click",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Downloaded when idle, shown on interaction",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "defer-loading-after-minimum-prevents-flicker",
+    "title": null,
+    "question": "What do the after and minimum parameters on @loading (after 100ms; minimum 500ms) prevent?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "after 100ms waits before showing the loading block, so fast loads skip it. minimum 500ms then keeps it visible long enough not to flicker once it does appear.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "A quick flicker of the loading state",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "The deferred chunk loading more than once",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The placeholder showing on the server",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Errors when the deferred chunk fails",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "defer-dependency-referenced-elsewhere-loads-eagerly",
+    "title": null,
+    "question": "A component used inside a @defer block is also referenced outside it in the same file. What happens?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "To be split out, a deferred dependency must be standalone and used only inside @defer blocks in that file. Any other reference, including a ViewChild query, keeps it in the eager bundle.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "The build fails until you remove the other reference",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It loads eagerly, so it isn't split into its own chunk",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Angular loads it twice, once for each reference",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The @defer block renders its @error block instead",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "read-signal-input-in-template",
+    "title": null,
+    "question": "A component declares title = input(''). How do you show its value in the template?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Signal inputs are signals, so you read them by calling them, both in the template and in the class.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "{{ title }}",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "{{ title.value }}",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "{{ title() }}",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "{{ $title }}",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "input-required-signal-input",
+    "title": null,
+    "question": "How do you declare a signal input that the parent must always provide?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "input.required<T>() makes the input mandatory: the build fails if a template leaves it out, and its type doesn't include undefined.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "data-binding-and-event-handling"
+    ],
+    "options": [
+      {
+        "option": "input<T>({ required: true })",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "requiredInput<T>()",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "input<T>()!",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "input.required<T>()",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "input-transform-booleanattribute",
+    "title": null,
+    "question": "A component should accept <app-btn disabled> with no value as true. Which input declaration handles that?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "booleanAttribute turns the bare attribute, which arrives as an empty string, into true and maps the string 'false' to false. Transforms run as Angular sets the input; model() doesn't support them.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "data-binding-and-event-handling"
+    ],
+    "options": [
+      {
+        "option": "input(false, { transform: booleanAttribute })",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "input(false, { alias: 'booleanAttribute' })",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "input.required({ transform: Boolean })",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "model(false, { transform: booleanAttribute })",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "input-alias-renames-template-name-only",
+    "title": null,
+    "question": "What does the alias option change in input(0, { alias: 'size' })?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "alias only renames the input for templates, so parents bind [size]. Inside the class you still use the property name. Aliases are best avoided unless there is a clear reason.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "data-binding-and-event-handling"
+    ],
+    "options": [
+      {
+        "option": "Both names, so the class property is renamed too",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only the name used in templates, not in TypeScript",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "The type, so the input accepts strings as well",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The name of the change event it emits to parents",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "model-creates-change-output",
+    "title": null,
+    "question": "A child declares checked = model(false). Which output does Angular create for it automatically?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "A model() input gets a matching output named after it plus \"Change\", which emits whenever the child writes to it. That pair is what makes [(checked)] two-way binding work.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "data-binding-and-event-handling"
+    ],
+    "options": [
+      {
+        "option": "checkedUpdate",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "onChecked",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "checkedChange",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "modelChange",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "model-two-way-binding-signal-or-property",
+    "title": null,
+    "question": "A parent writes [(volume)]=\"vol\" for a child that declares volume = model(0). What can vol be?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Two-way binding to a model() works with a writable signal or a plain property on the parent. When the child calls set() or update(), the new value flows back and volumeChange fires.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "data-binding-and-event-handling"
+    ],
+    "options": [
+      {
+        "option": "Only an Observable the child subscribes to",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only a read-only signal from computed()",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A string attribute parsed as a number",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A writable signal or a plain property",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "output-emit-event",
+    "title": null,
+    "question": "How does a child raise an event declared as saved = output<Item>()?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "output() returns an emitter, and calling emit() raises the event for the parent's (saved) binding. It isn't a signal, so it has no set() and can't be read.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "data-binding-and-event-handling"
+    ],
+    "options": [
+      {
+        "option": "this.saved.emit(item)",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "this.saved.set(item)",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "this.saved.next(item)",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "this.saved(item)",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "outputfromobservable-observable-to-output",
+    "title": null,
+    "question": "Which function turns an existing Observable into a component output?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "outputFromObservable() from @angular/core/rxjs-interop exposes an Observable as an output, so each emission becomes an event. outputToObservable() goes the other way, from an output to an Observable.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "data-binding-and-event-handling"
+    ],
+    "options": [
+      {
+        "option": "outputToObservable()",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "outputFromObservable()",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "toSignal()",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "toObservable()",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "viewchild-required-signal-without-undefined",
+    "title": null,
+    "question": "What does viewChild.required('chart') return?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Signal queries return signals. viewChild.required() types the result without undefined and throws if you read it when nothing matches. Read it once the view exists, for example in afterNextRender() or a computed().",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "A QueryList that updates on each change",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "An ElementRef that's ready in the constructor",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A signal whose type excludes undefined",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "A Promise that resolves after the view loads",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "viewchildren-signal-pairs-with-computed",
+    "title": null,
+    "question": "Why do signal queries like viewChildren() pair well with computed()?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "viewChildren() returns a signal of a read-only array. A computed() over it updates when matching elements are added or removed by @if or @for, with no need to subscribe to QueryList.changes.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "components-and-templates"
+    ],
+    "options": [
+      {
+        "option": "They run before inputs are set, so values are ready early",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "They skip change detection, so derived values are free",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "They return arrays that never change after first render",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Their results are signals, so derived values stay in sync",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "new-apps-zoneless-by-default",
+    "title": null,
+    "question": "Does a new Angular v21+ app use zone.js for change detection by default?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Zoneless change detection is the default from v21. Angular learns about changes from signals, template events, the async pipe and similar notifications instead of zone.js patching browser APIs.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-lifecycle-and-change-detection"
+    ],
+    "options": [
+      {
+        "option": "No, new apps are zoneless by default",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Yes, zone.js is still required for every app",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only in production builds, not during ng serve",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only when the app uses HttpClient or forms",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "v22-migration-adds-eager-strategy",
+    "title": null,
+    "question": "When upgrading to v22, why does the migration add ChangeDetectionStrategy.Eager to existing components?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "v22 made OnPush the default for components that don't set changeDetection. Eager is the new name for the old default, so the migration adds it to keep behaviour unchanged until each component is ready for OnPush.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-lifecycle-and-change-detection"
+    ],
+    "options": [
+      {
+        "option": "Because Eager is now required on every component",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "To keep their old check-every-time behaviour",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "To make them faster by skipping unchanged inputs",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Because OnPush was removed from Angular in v22",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "zoneless-settimeout-plain-field-no-update",
+    "title": null,
+    "question": "In a zoneless app, a setTimeout callback sets this.message = 'Done' on a plain field. Why might the view not update?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Without zone.js, Angular no longer checks after every async task. Changes are noticed through signals, markForCheck() (which the async pipe calls), template event handlers or setInput(). Making message a signal fixes it.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-change-detection"
+    ],
+    "options": [
+      {
+        "option": "setTimeout is blocked in zoneless apps by default",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Plain fields can't be bound in zoneless templates",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Nothing notifies Angular that the plain field changed",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "The callback runs before the component is created",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "zoneless-signal-write-notifies-change-detection",
+    "title": null,
+    "question": "Which of these makes a zoneless app run change detection?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "In zoneless apps, change detection is scheduled by notifications: writing a signal a template reads, markForCheck(), setInput(), or a bound template event. Async work by itself no longer triggers a check.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-change-detection"
+    ],
+    "options": [
+      {
+        "option": "Resolving a Promise inside a service",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A fetch() call finishing in the background",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A setInterval tick updating a plain field",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Setting a signal that a template reads",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "zoneless-replace-onstable-with-afternextrender",
+    "title": null,
+    "question": "Code used to wait for NgZone.onStable before measuring the DOM. What should it use in a zoneless app?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "In zoneless apps NgZone.onStable and onMicrotaskEmpty never emit, and NgZone.isStable is always true. afterNextRender() runs once after the next render, and afterEveryRender() after each one.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-change-detection"
+    ],
+    "options": [
+      {
+        "option": "afterNextRender() or afterEveryRender()",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "NgZone.onMicrotaskEmpty, which still fires",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "ApplicationRef.tick() inside a setTimeout",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A computed() that reads the element size",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "zoneless-performance-benefit",
+    "title": null,
+    "question": "How does going zoneless typically help performance?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Dropping zone.js removes its code from the bundle and stops change detection from running after every async task. Angular checks only when something notifies it, such as a signal change.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-change-detection"
+    ],
+    "options": [
+      {
+        "option": "Templates compile at runtime, so builds are smaller",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Less JS to load, and checks run only when notified",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Every component is skipped by change detection",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Signals move to a worker thread automatically",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "vitest-default-test-runner",
+    "title": null,
+    "question": "Which unit test runner do new Angular CLI projects use by default since v21?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Since v21, new projects use Vitest for unit tests. Older projects that use Karma and Jasmine keep working and can be migrated.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "testing-5"
+    ],
+    "options": [
+      {
+        "option": "Karma",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Jest",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Vitest",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Mocha",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "zoneless-test-prefer-whenstable",
+    "title": null,
+    "question": "In a zoneless component test, why prefer await fixture.whenStable() over fixture.detectChanges()?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "TestBed is zoneless by default. Awaiting whenStable() lets change detection run when Angular would schedule it, which catches missing change notifications. Forcing detectChanges() can hide those bugs.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "testing-5"
+    ],
+    "options": [
+      {
+        "option": "detectChanges() is removed when zone.js isn't loaded",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "whenStable() also flushes all pending HTTP requests",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "detectChanges() can't render signal-based templates",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It lets Angular schedule checks, as the real app would",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "cdk-component-harness-purpose",
+    "title": null,
+    "question": "What is a CDK component harness used for in tests?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Harnesses from @angular/cdk/testing wrap a component's DOM in methods such as click() or getValue(), so tests don't depend on its internal markup and keep working when the template changes.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "testing-5"
+    ],
+    "options": [
+      {
+        "option": "Driving a component through a stable, high-level API",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Rendering components without TestBed or a DOM",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Recording screenshots for visual regression tests",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Mocking every service that a component injects",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "defer-renders-placeholder-on-server",
+    "title": null,
+    "question": "Without incremental hydration, what does a @defer block render during server-side rendering?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Triggers don't run on the server, so SSR outputs the placeholder, or nothing if there isn't one. To server-render the real content, use incremental hydration with hydrate triggers.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "The deferred content, fully rendered",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Its @placeholder content, or nothing",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "The @loading block, until JS arrives",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The @error block, as triggers can't run",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "zoneless-ssr-pendingtasks-holds-serialization",
+    "title": null,
+    "question": "Why do zoneless SSR apps use the PendingTasks service?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Without zone.js, the server can't tell when async work is done. Wrapping work in pendingTasks.run() keeps the app unstable until it finishes, so the HTML includes the loaded data.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "To run slow tasks in a Web Worker on the server",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "To queue user clicks until hydration is complete",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "To hold serialization until async work has finished",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "To cache HTTP responses for the browser to reuse",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "hydrate-never-keeps-block-static",
+    "title": null,
+    "question": "Which hydrate trigger keeps a @defer block as static server HTML on the initial load?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "hydrate never leaves the block's server-rendered HTML static: its code isn't loaded or hydrated on the initial load. It suits content that never needs to be interactive.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "hydrate on idle",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "hydrate on immediate",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "hydrate on viewport",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "hydrate never",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "incremental-hydration-replays-early-click",
+    "title": null,
+    "question": "A user clicks a button inside a @defer block that is still dehydrated. With incremental hydration, what happens to the click?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Incremental hydration turns on event replay automatically. Events on dehydrated content are recorded and replayed after hydration, so with hydrate on interaction the first click both hydrates the block and still counts.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "It's queued, then replayed once that block hydrates",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "It's lost, so the user has to click a second time",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It's sent to the server, which re-renders the block",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It runs at once against the server-rendered HTML",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "incremental-hydration-nested-top-down",
+    "title": null,
+    "question": "A @defer block nested inside another dehydrated block hits its hydrate trigger. What hydrates?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Hydration runs top-down: hydrating a child block first hydrates its dehydrated parents, from the top-most one down to the block whose trigger fired.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "Only the child, while its parents stay static",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Its dehydrated parents first, then the child",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "The whole page at once, from the root down",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only the parent; the child waits for a reload",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "rendermode-prerender-build-time",
+    "title": null,
+    "question": "In a server routes file, which RenderMode builds a route's HTML once, at build time?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "RenderMode.Prerender generates static HTML at build time. RenderMode.Server renders on each request, and RenderMode.Client renders in the browser.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "RenderMode.Server",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "RenderMode.Client",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "RenderMode.Prerender",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "RenderMode.Static",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "getprerenderparams-lists-ids-to-prerender",
+    "title": null,
+    "question": "A route post/:id uses RenderMode.Prerender. What does its getPrerenderParams function provide?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "getPrerenderParams is an async function that returns objects like { id: '1' } and { id: '2' }. Each produces its own static page at build time; other ids fall back to server rendering by default.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "The id of the post the current user is viewing",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Default params used when a request has no id",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Params that the server reads again on each request",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The list of ids to generate pages for at build time",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "prerender-fallback-default-server",
+    "title": null,
+    "question": "With RenderMode.Prerender, what happens by default to a post/:id path that wasn't prerendered?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "PrerenderFallback.Server is the default, so unknown paths are rendered on demand. PrerenderFallback.Client renders them in the browser instead, and None leaves them unhandled.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "It falls back to server-side rendering",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "It returns a 404 page from the server",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It's prerendered on its first request",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It renders an empty app shell only",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "server-route-custom-status",
+    "title": null,
+    "question": "How can an SSR app send a 404 status for its not-found route?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Server routes accept headers and status, for example { path: '**', renderMode: RenderMode.Server, status: 404 }. For values that depend on the request, inject the RESPONSE_INIT token at runtime.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "server-side-rendering"
+    ],
+    "options": [
+      {
+        "option": "Throw an HttpErrorResponse from the component",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Set status: 404 in that route's server config",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Return 404 from the route's canActivate guard",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Call res.status(404) in the component's ngOnInit",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "service-decorator-root-singleton",
+    "title": null,
+    "question": "In Angular v22, what does the @Service() decorator give a class by default?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 1,
+    "marks": 1,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "@Service() is shorthand for the common @Injectable({ providedIn: 'root' }) case: one app-wide, tree-shakable singleton. It is meant to be used with inject(), and @Injectable() is still available for other setups.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "services-dependency-injection-and-stat"
+    ],
+    "options": [
+      {
+        "option": "A new instance for every component that injects it",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "An instance scoped to the nearest lazy route",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A single root-provided, tree-shakable instance",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "A class that must be listed in a providers array",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "inject-requires-injection-context",
+    "title": null,
+    "question": "Where can you call inject() without getting an error?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "inject() works in an injection context: field initializers, constructors, provider factories, guards and resolvers, or code run with runInInjectionContext(). Calling it later, such as in ngOnInit or a click handler, throws.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "services-dependency-injection-and-stat"
+    ],
+    "options": [
+      {
+        "option": "Anywhere, as long as the service is provided in root",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only in ngOnInit, once the inputs have been set",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only inside a constructor's parameter list",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "In an injection context, like a field initializer",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "runininjectioncontext-for-late-inject",
+    "title": null,
+    "question": "A helper function calls inject(), and you need to call it later from a click handler. What makes that work?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Event handlers run outside an injection context, so inject() would throw. Inject the Injector early, then use runInInjectionContext(injector, fn) to run code that calls inject() later.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "services-dependency-injection-and-stat"
+    ],
+    "options": [
+      {
+        "option": "runInInjectionContext(injector, () => helper())",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Wrapping the call in untracked(() => helper())",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Calling it inside ngZone.run(() => helper())",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Marking the helper function with @Injectable()",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "destroyref-ondestroy-registers-cleanup",
+    "title": null,
+    "question": "What does inject(DestroyRef).onDestroy(fn) let a component or service do?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "DestroyRef represents the lifetime of the current component, directive or injector. onDestroy() registers cleanup without implementing ngOnDestroy, and it is what takeUntilDestroyed() uses under the hood.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "services-dependency-injection-and-stat"
+    ],
+    "options": [
+      {
+        "option": "Destroy the component from code when fn returns true",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Run cleanup when its component or injector is destroyed",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Keep the component alive until fn has finished running",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Run fn after every change detection cycle completes",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "guard-returns-redirectcommand-with-options",
+    "title": null,
+    "question": "What can a functional guard return to redirect and also pass navigation options such as skipLocationChange?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Guards and resolvers can return new RedirectCommand(urlTree, { skipLocationChange: true }). A plain UrlTree also redirects, but RedirectCommand adds options for how that navigation behaves.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-routing"
+    ],
+    "options": [
+      {
+        "option": "A string URL with the options appended",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A NavigationCancel event with the target",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A RedirectCommand wrapping a UrlTree",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "A call to router.navigate() from the guard",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "v22-params-inherited-by-default",
+    "title": null,
+    "question": "In Angular v22, a child route reads a :teamId param defined on its parent route. What does it get by default?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "v22 changed the paramsInheritanceStrategy default from 'emptyOnly' to 'always', so child routes inherit params and data from all parents. withRouterConfig({ paramsInheritanceStrategy: 'emptyOnly' }) restores the old behaviour.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "advanced-routing"
+    ],
+    "options": [
+      {
+        "option": "Nothing, unless the child path repeats :teamId",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "An error, as params can't cross route levels",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Only the value from the first navigation",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "The parent's teamId, since params are inherited",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "withviewtransitions-animated-route-changes",
+    "title": null,
+    "question": "What does withViewTransitions() add when passed to provideRouter()?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "withViewTransitions() wraps each navigation in the browser's View Transitions API, so you can animate between pages with CSS. Browsers without support simply navigate without the animation.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "routing-and-navigation"
+    ],
+    "options": [
+      {
+        "option": "Animated route changes via the View Transitions API",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Preloading of lazy routes while the browser is idle",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Scroll-position restoration after each navigation",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Breadcrumbs built from each route's title data",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "component-input-binding-route-param-as-input",
+    "title": null,
+    "question": "With withComponentInputBinding() enabled, how does a routed component receive the :id route param?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "withComponentInputBinding() sets route params, query params and resolved data as inputs with matching names. Declaring id = input<string>() is enough, with no ActivatedRoute subscription.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "routing-and-navigation"
+    ],
+    "options": [
+      {
+        "option": "Only through inject(ActivatedRoute).snapshot",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Through an input named id, e.g. id = input<string>()",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Through a constructor parameter named id",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Through a model() signal named routeId",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "animate-enter-modern-enter-animation",
+    "title": null,
+    "question": "What is the modern way to animate an element as Angular adds it to the page?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "animate.enter and animate.leave are built into the compiler and apply CSS classes, so native CSS animations do the work. The @angular/animations package, with trigger(), state() and transition(), is deprecated since v20.2.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-animations"
+    ],
+    "options": [
+      {
+        "option": "trigger() from @angular/animations",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "A [@.enter] binding on the element",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "animate.enter with a CSS animation class",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "An ngAfterViewInit that sets style.opacity",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "animate-leave-waits-before-removal",
+    "title": null,
+    "question": "What does Angular do with an element that has animate.leave=\"fade-out\" when it is removed?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Angular applies the leave class and waits for the animation to finish, the longest one if there are several, before removing the element from the DOM.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-animations"
+    ],
+    "options": [
+      {
+        "option": "Removes it at once and plays the class on a clone",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Keeps it in the DOM until the next navigation",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Skips the class unless BrowserAnimationsModule loads",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Adds the class and removes the element once it ends",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "animate-leave-function-call-animationcomplete",
+    "title": null,
+    "question": "With (animate.leave)=\"slideOut($event)\", what must the handler do for the element to be removed?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "With the function form, Angular waits until the handler calls animationComplete(), which lets libraries like GSAP run the animation. If it is never called, Angular removes the element after a timeout of four seconds by default.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-animations"
+    ],
+    "options": [
+      {
+        "option": "Call $event.animationComplete() when it is done",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Return true once the animation has finished",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Remove the element itself with Renderer2",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Emit a done event from the component's output",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "angular-aria-headless-accessible-directives",
+    "title": null,
+    "question": "What does the @angular/aria package provide?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Angular Aria is a set of headless directives for WAI-ARIA patterns such as tabs, menus, listbox, combobox, tree and grid. They handle keyboard interaction, ARIA attributes and focus, and you supply the markup and styles.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-cdk"
+    ],
+    "options": [
+      {
+        "option": "Prebuilt Material Design components with full theming",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Unstyled, accessible directives for common ARIA patterns",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "A linter that reports ARIA errors during ng build",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Screen-reader text for every built-in Angular pipe",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "angular-aria-vs-material-custom-styling",
+    "title": null,
+    "question": "When would you pick Angular Aria over Angular Material for a tabs component?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "Angular Material gives you pre-styled components. Angular Aria gives you the accessible behaviour without any styles, which suits a custom design system.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "angular-cdk"
+    ],
+    "options": [
+      {
+        "option": "When you need Material Design theming out of the box",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "When the app has to support server-side rendering",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "When you need your own styling but built-in a11y",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "When the tabs must be lazy-loaded per route",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "inputbinding-keeps-dynamic-input-in-sync",
+    "title": null,
+    "question": "In createComponent(Comp, { bindings: [inputBinding('value', sig)] }), what does inputBinding do?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "The bindings API passes inputs, outputs and two-way bindings when you create a component. inputBinding('value', sig) reads the signal, so the input updates whenever it changes, without calling setInput() yourself.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "dynamic-components"
+    ],
+    "options": [
+      {
+        "option": "Sets the input once, then ignores later changes",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Makes the input required at compile time",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Copies the input's value back into the signal",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Keeps the input in sync with the signal",
+        "correct": true,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "outputbinding-listens-dynamic-output",
+    "title": null,
+    "question": "Which helper in createComponent's bindings array listens to a dynamic component's saved output?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "outputBinding('saved', fn) subscribes fn to the output, and the subscription is cleaned up with the component. twoWayBinding() connects a model() to a writable signal.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "dynamic-components"
+    ],
+    "options": [
+      {
+        "option": "outputBinding('saved', fn)",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "inputBinding('saved', fn)",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "twoWayBinding('saved', fn)",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "eventBinding('saved', fn)",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "setinput-preferred-over-instance-assignment",
+    "title": null,
+    "question": "Why prefer componentRef.setInput('title', v) over componentRef.instance.title = v?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 3,
+    "marks": 3,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "setInput() goes through Angular's input handling. It updates signal inputs, which can't be assigned directly, runs ngOnChanges for decorator inputs, and notifies change detection, which matters with OnPush and zoneless.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "dynamic-components"
+    ],
+    "options": [
+      {
+        "option": "It's the only way to set inputs during server rendering",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It marks the view for check and works with signal inputs",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "It also emits the component's titleChange output",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "It makes the value available in the constructor",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "ngoptimizedimage-priority-eager-high",
+    "title": null,
+    "question": "What does adding priority to an image that uses NgOptimizedImage do?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "priority marks an important image, usually the LCP image, so it loads eagerly with fetchpriority=high, and a preload hint can be added during SSR. Without it, NgOptimizedImage lazy-loads images.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "performance-optimization-5"
+    ],
+    "options": [
+      {
+        "option": "Compresses the image during the production build",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Shows a blurred placeholder while the image loads",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Loads the image eagerly with high fetch priority",
+        "correct": true,
+        "comment": null
+      },
+      {
+        "option": "Lazy-loads the image once it nears the viewport",
+        "correct": false,
+        "comment": null
+      }
+    ]
+  },
+  {
+    "slug": "defer-on-viewport-heavy-below-fold-widget",
+    "title": null,
+    "question": "A comments widget sits below the fold and pulls in a heavy editor library. What is the simplest way to keep it out of the initial bundle?",
+    "subjectSlug": "angular",
+    "questionType": "Trivia",
+    "level": 2,
+    "marks": 2,
+    "timeAllowed": 50,
+    "tag": null,
+    "status": "Active",
+    "isWhitelisted": false,
+    "answer": "@defer moves the widget and its dependencies into a separate chunk, and on viewport loads it only when the user scrolls near it. OnPush affects change detection, not bundle size.",
+    "hint": null,
+    "orderId": 1,
+    "topicSlugs": [
+      "performance-optimization-5"
+    ],
+    "options": [
+      {
+        "option": "Mark the widget component OnPush",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Import the editor through a barrel file",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Move the widget into a shared NgModule",
+        "correct": false,
+        "comment": null
+      },
+      {
+        "option": "Wrap it in @defer (on viewport)",
+        "correct": true,
+        "comment": null
+      }
+    ]
   }
 ]
