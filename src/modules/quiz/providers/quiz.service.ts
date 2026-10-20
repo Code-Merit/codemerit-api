@@ -203,6 +203,16 @@ export class QuizService {
     // Standard quizzes, nor to the free onboarding assessment.
     if (!isStandard && !skipAccessCheck) {
       await this.enforceSubjectAccessForUserQuiz(userId, subjectIds, topicIds, subjectTrackIds);
+
+      // Resumption, not regeneration: every entry point (Dashboard, Badges, Skill
+      // Dashboard, etc.) funnels into this one method, so a single check here covers
+      // all of them. If the user already has an open (unsubmitted, same-day) UserQuiz
+      // for this exact scope, hand that back instead of minting a second one.
+      const existing = await this.findOpenUserQuiz(userId, subjectIds, topicIds);
+      if (existing) {
+        (existing as any).quizType = QuizTypeEnum.UserQuiz;
+        return { message: 'Resuming your in-progress quiz.', quiz: existing };
+      }
     }
 
     // The scopes combine (union) into one question pool.
@@ -482,6 +492,50 @@ export class QuizService {
         'DAILY_QUOTA_EXCEEDED',
       );
     }
+  }
+
+  /** Generalizes createInitialAssessmentQuiz's tag-based idempotency to ordinary practice
+   * quizzes, scoped by content instead of a fixed tag. "Open" = created today, not yet
+   * submitted (no QuizResult row). Matches only subject- or topic-scoped requests — those
+   * are the only two shapes with a persisted QuizSubject/QuizTopic link row to exact-match
+   * against; a pure subjectTrack-only request has no such signal, so it always generates
+   * fresh rather than risk resuming the wrong scope. */
+  private async findOpenUserQuiz(
+    userId: number,
+    subjectIds: number[],
+    topicIds: number[],
+  ): Promise<UserQuiz | null> {
+    if (!topicIds.length && !subjectIds.length) return null;
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const candidates = await this.userQuizRepository
+      .createQueryBuilder('q')
+      .leftJoin(QuizResult, 'qr', 'qr.userQuizId = q.id')
+      .where('q.createdBy = :userId', { userId })
+      .andWhere('q.createdAt >= :startOfDay', { startOfDay })
+      .andWhere('qr.id IS NULL')
+      .orderBy('q.createdAt', 'DESC')
+      .getMany();
+    if (!candidates.length) return null;
+
+    const candidateIds = candidates.map((c) => c.id);
+    const [subjectLinks, topicLinks] = await Promise.all([
+      this.quizSubjectRepo.find({ where: { userQuizId: In(candidateIds) } }),
+      this.dataSource.getRepository(QuizTopic).find({ where: { userQuizId: In(candidateIds) } }),
+    ]);
+
+    const sameSet = (linked: number[], requested: number[]): boolean =>
+      linked.length === requested.length && requested.every((id) => linked.includes(id));
+
+    return (
+      candidates.find((c) => {
+        const linkedSubjects = subjectLinks.filter((l) => l.userQuizId === c.id).map((l) => l.subjectId);
+        const linkedTopics = topicLinks.filter((l) => l.userQuizId === c.id).map((l) => l.topicId);
+        return sameSet(linkedSubjects, subjectIds) && sameSet(linkedTopics, topicIds);
+      }) ?? null
+    );
   }
 
   /** Questions in the user's practice quizzes generated today, per subject. Counted from
