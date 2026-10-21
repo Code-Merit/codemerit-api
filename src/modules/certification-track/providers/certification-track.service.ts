@@ -231,6 +231,7 @@ export class CertificationTrackService {
       passThreshold: track.passThreshold,
       isPublished: track.isPublished,
       note: track.note,
+      popularity: track.popularity,
       jobRoles,
       subjectTrackCount: subjectTracks.length,
       subjectTracks,

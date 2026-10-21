@@ -25,6 +25,7 @@ export class CertificationTrackResponseDto {
   passThreshold: number | null;
   isPublished: boolean;
   note: string | null;
+  popularity: number;
   jobRoles: CertTrackJobRoleDto[];
   subjectTrackCount: number;
   subjectTracks: CertTrackSubjectTrackDto[];

@@ -142,6 +142,7 @@ export class CertificateService {
       subjectTracks: [],
       myCertificate: null,
       note: raw.note,
+      popularity: raw.popularity ?? 0,
       isPublished: false,
     };
   }
@@ -261,11 +262,24 @@ export class CertificateService {
    * "subjects just quizzed" — every published track is evaluated.
    */
   async getExplorer(userId?: number): Promise<CertificateExplorerResponseDto> {
-    const [subjectNativeTracks, jobRoleBundleTracks] = await Promise.all([
+    const [subjectNativeTracks, jobRoleBundleTracks, myIssuedTrackIds] = await Promise.all([
       this.certificationTrackRepo.find({ where: { subjectId: Not(IsNull()), isPublished: true } }),
       this.findPublishedJobRoleBundleTracks(),
+      userId
+        ? this.certificateRepo
+            .find({ where: { userId, status: CertificateStatusEnum.ISSUED }, select: ['certificationTrackId'] })
+            .then((rows) => rows.map((r) => r.certificationTrackId))
+        : Promise.resolve([] as number[]),
     ]);
-    const allTracks = [...subjectNativeTracks, ...jobRoleBundleTracks];
+    // A learner keeps what they earned: a track unpublished after they earned it (e.g. pulled for
+    // lack of questions) still backs their `earned` list and certificate reveal. These tracks are
+    // NOT added to `groups` (the public catalog) or `inProgress`.
+    const publishedIds = new Set([...subjectNativeTracks, ...jobRoleBundleTracks].map((t) => t.id));
+    const earnedOnlyIds = [...new Set(myIssuedTrackIds)].filter((id) => !publishedIds.has(id));
+    const earnedOnlyTracks = earnedOnlyIds.length
+      ? await this.certificationTrackRepo.find({ where: { id: In(earnedOnlyIds) } })
+      : [];
+    const allTracks = [...subjectNativeTracks, ...jobRoleBundleTracks, ...earnedOnlyTracks];
     if (!allTracks.length) {
       const hasAnyEnrollment = userId
         ? (await this.skillEnrollmentService.getSubjectTierMap(userId)).size > 0
@@ -426,7 +440,9 @@ export class CertificateService {
         subjectTracks,
         myCertificate,
         note: track.note,
-        isPublished: true,
+        popularity: track.popularity ?? 0,
+        // false only for an earned-only track (unpublished after the learner earned it).
+        isPublished: track.isPublished,
       };
     };
 
@@ -511,7 +527,9 @@ export class CertificateService {
     if (!ids.length) return [];
     // subjectId: IsNull() keeps a track that happens to have both a subjectId and an
     // incidental job-role link filed under its subject group only, never double-counted here.
-    return this.certificationTrackRepo.find({ where: { id: In(ids), subjectId: IsNull() } });
+    // isPublished: the track's own flag gates it too. A published job-role link alone used to be
+    // enough, so unpublishing a job-role-bundle track didn't hide it from the catalog.
+    return this.certificationTrackRepo.find({ where: { id: In(ids), subjectId: IsNull(), isPublished: true } });
   }
 
   /** Same shape as AchievementService.ensureCanGrantBadge: Admin bypasses, everyone else

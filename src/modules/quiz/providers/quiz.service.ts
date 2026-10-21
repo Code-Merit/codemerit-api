@@ -8,6 +8,8 @@ import { AppCustomException } from 'src/common/exceptions/app-custom-exception.f
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
 import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
 import { QuizQuestion } from 'src/common/typeorm/entities/quiz-quesion.entity';
+import { Question } from 'src/common/typeorm/entities/question.entity';
+import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { QuizSettings } from 'src/common/typeorm/entities/quiz-settings.entity';
 import { QuizSubject } from 'src/common/typeorm/entities/quiz-subject.entity';
@@ -99,7 +101,18 @@ export class QuizService {
     // Standard quizzes list questions via QuizQuestion; UserQuiz stores them inline.
     let questionIds: number[];
     if (quiz) {
-      questionIds = quiz.quizQuestions.map((qq) => qq.questionId);
+      // Standard quizzes are curated once and live for a long time, so a question may since have
+      // been unpublished or sent back for review. Serve only Active ones; a retired question
+      // simply drops out of the quiz instead of reaching learners unreviewed.
+      const linkedIds = quiz.quizQuestions.map((qq) => qq.questionId);
+      const active = linkedIds.length
+        ? await this.dataSource.getRepository(Question).find({
+            select: ['id'],
+            where: { id: In(linkedIds), status: QuestionStatusEnum.Active },
+          })
+        : [];
+      const activeIds = new Set(active.map((q) => q.id));
+      questionIds = linkedIds.filter((id) => activeIds.has(id));
     } else {
       const userQuiz = await this.userQuizRepository
         .createQueryBuilder('quiz')
@@ -1070,8 +1083,10 @@ export class QuizService {
         .where('qr.quizId IN (:...quizIds)', { quizIds })
         .groupBy('qr.quizId')
         .getRawMany(),
+      // Count only Active questions, matching what fetchQuizBySlug actually serves.
       this.quizQuestionRepo
         .createQueryBuilder('qq')
+        .innerJoin(Question, 'qn', 'qn.id = qq.questionId AND qn.status = :active', { active: QuestionStatusEnum.Active })
         .select('qq.quizId', 'quizId')
         .addSelect('COUNT(qq.id)', 'total')
         .where('qq.quizId IN (:...quizIds)', { quizIds })

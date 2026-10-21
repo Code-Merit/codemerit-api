@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import { Activity } from 'src/common/typeorm/entities/activity.entity';
 import { ApiUsage } from 'src/common/typeorm/entities/api-usage.entity';
-import { ApiUsageDaily } from 'src/common/typeorm/entities/api-usage-daily.entity';
 import { AssessmentSession } from 'src/common/typeorm/entities/assessment-session.entity';
 import { Badge } from 'src/common/typeorm/entities/badge.entity';
 import { BadgeRule } from 'src/common/typeorm/entities/badge-rule.entity';
@@ -101,7 +100,6 @@ export const AppDataSource = new DataSource({
     PermissionRequest,
     UserPermission,
     ApiUsage,
-    ApiUsageDaily,
     Notification,
     SkillMetric,
     Interview,

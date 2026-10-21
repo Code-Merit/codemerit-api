@@ -13,6 +13,20 @@ import { smeRoutes, smeInterviewRoutes } from '../routes/sme.routes';
 import { footerRoutes } from '../routes/footer.routes';
 import { interviewRoutes, interviewManagerRoutes } from '../routes/interview.routes';
 
+// Mock interviews are switched off for now (frontend mirrors this with MOCK_INTERVIEWS_ENABLED in
+// src/app/config/features.ts). While false, no interview menu item is served to anyone: the
+// learner's "My Interviews", the SME's "My Interview Rounds", and "Manage Interviews" (standalone
+// for Interview Managers, nested under Administration for Admins).
+const MOCK_INTERVIEWS_ENABLED = false;
+const INTERVIEW_PATH_PREFIX = '/assessment/';
+
+// Drops interview destinations from a route tree (top level and one submenu level deep).
+function withoutInterviewRoutes(routes: any[]): any[] {
+  return routes
+    .filter((r) => !(typeof r.path === 'string' && r.path.startsWith(INTERVIEW_PATH_PREFIX)))
+    .map((r) => (Array.isArray(r.submenu) && r.submenu.length ? { ...r, submenu: withoutInterviewRoutes(r.submenu) } : r));
+}
+
 @Injectable()
 export class RouteService {
   private normalizeRole(role?: string): string {
@@ -55,14 +69,14 @@ export class RouteService {
 
     let routes: any[] = [
       ...welcomeRoutes,
-      ...interviewRoutes,
+      ...(MOCK_INTERVIEWS_ENABLED ? interviewRoutes : []),
       ...achievementsRoutes
     ];
 
     const permissionNames = userPermissions.map((p) => p.permissionName);
     const isAdmin = this.normalizeRole(userRole) === UserRoleEnum.ADMIN;
 
-    if (permissionNames.includes(UserPermissionEnum.Sme)) {
+    if (MOCK_INTERVIEWS_ENABLED && permissionNames.includes(UserPermissionEnum.Sme)) {
       routes = [...routes, ...smeInterviewRoutes];
     }
     if (permissionNames.includes(UserPermissionEnum.LmsManager)) {
@@ -72,7 +86,7 @@ export class RouteService {
     // permission). Admins get "Manage Interviews" nested inside the Administration menu instead
     // (see adminRoutes below) — this standalone group is only for non-admin permission holders,
     // so the same destination doesn't appear twice for an Admin who also holds the permission.
-    if (!isAdmin && permissionNames.includes(UserPermissionEnum.InterviewManager)) {
+    if (MOCK_INTERVIEWS_ENABLED && !isAdmin && permissionNames.includes(UserPermissionEnum.InterviewManager)) {
       routes = [...routes, ...interviewManagerRoutes];
     }
 
@@ -82,7 +96,7 @@ export class RouteService {
       routes = [...routes, ...manageUsersRoutes];
     }
     if (isAdmin) {
-      routes = [...routes, ...adminRoutes];
+      routes = [...routes, ...(MOCK_INTERVIEWS_ENABLED ? adminRoutes : withoutInterviewRoutes(adminRoutes))];
     }
     routes = [...routes,
       ...uiRoutes,

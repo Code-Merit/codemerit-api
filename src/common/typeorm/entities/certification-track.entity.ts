@@ -68,6 +68,12 @@ export class CertificationTrack extends AbstractEntity {
   @Column({ type: 'text', nullable: true, default: null })
   note: string | null;
 
+  // Admin-set ranking (0–100) behind the Certificates page's "Popular" sort. Curated rather than
+  // computed, so a new track can be featured before anyone has enrolled. 0 means "not ranked";
+  // ties sort by title.
+  @Column({ type: 'tinyint', unsigned: true, default: 0 })
+  popularity: number;
+
   @CreateDateColumn({ name: 'createdAt' })
   createdAt: Date;
 

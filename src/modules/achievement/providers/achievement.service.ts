@@ -884,11 +884,15 @@ export class AchievementService {
     const jobRoleIds = idsFor(BadgeScopeEnum.JOBROLE);
     const topicIds = idsFor(BadgeScopeEnum.TOPIC);
 
-    const [subjects, jobRoles, topics] = await Promise.all([
-      subjectIds.length ? this.subjectRepo.find({ where: { id: In(subjectIds) } }) : Promise.resolve([]),
+    const [jobRoles, topics] = await Promise.all([
       jobRoleIds.length ? this.jobRoleRepo.find({ where: { id: In(jobRoleIds) } }) : Promise.resolve([]),
       topicIds.length ? this.topicRepo.find({ where: { id: In(topicIds) } }) : Promise.resolve([]),
     ]);
+    // A Topic-scoped badge resolves to its PARENT subject (slug/title/image), so those subjects
+    // must be loaded too, not just the ones Subject-scoped badges name directly. Without this a
+    // single Topic badge (getBadgeDetail) got no subject at all: no image, no "Continue in" slug.
+    const allSubjectIds = [...new Set([...subjectIds, ...topics.map((t) => t.subjectId).filter((id) => id != null)])];
+    const subjects = allSubjectIds.length ? await this.subjectRepo.find({ where: { id: In(allSubjectIds) } }) : [];
     const subjectTitleById = new Map(subjects.map((s) => [s.id, s.title]));
     const jobRoleTitleById = new Map(jobRoles.map((j) => [j.id, j.title]));
     const topicTitleById = new Map(topics.map((t) => [t.id, t.title]));

@@ -67,4 +67,14 @@ export class CreateCertificationTrackDto {
   @IsString()
   @IsOptional()
   note?: string;
+
+  @ApiPropertyOptional({
+    description: 'Ranking (0–100) used by the Certificates page "Popular" sort. Defaults to 0 (not ranked).',
+    example: 60,
+  })
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  popularity?: number;
 }

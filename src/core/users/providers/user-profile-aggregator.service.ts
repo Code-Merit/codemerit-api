@@ -324,11 +324,11 @@ export class UserProfileAggregatorService {
     };
   }
 
-  /** Last-active / last-practice / last-reading timestamps and API usage windows, for an
+  /** Last-active / last-practice / last-reading timestamps and total API requests, for an
    * Admin viewing a profile. Last active = the latest authenticated request (api_usage). */
   private async getAdminActivity(userId: number) {
     const [usage, practice, reading] = await Promise.all([
-      this.apiUsageService.usageSummary(userId),
+      this.apiUsageService.findByUserId(userId),
       this.dataSource
         .createQueryBuilder()
         .select('MAX(qa.createdAt)', 'at')
@@ -346,10 +346,10 @@ export class UserProfileAggregatorService {
     ]);
     const toDate = (v: any) => (v ? new Date(v) : null);
     return {
-      lastActiveAt: usage.lastHitAt,
+      lastActiveAt: usage?.lastHitAt ?? null,
       lastPracticeAt: toDate(practice?.at),
       lastReadingAt: toDate(reading?.at),
-      apiUsage: { total: usage.total, week: usage.week, today: usage.today },
+      apiUsage: { total: usage?.count ?? 0 },
     };
   }
 

@@ -40,4 +40,11 @@ export class UpdateCertificationTrackDto {
   @IsString()
   @IsOptional()
   note?: string;
+
+  @ApiPropertyOptional({ example: 60 })
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  popularity?: number;
 }

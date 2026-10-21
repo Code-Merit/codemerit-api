@@ -111,7 +111,7 @@ export class PaymentService {
     if (!eligible) {
       // currentEnrollment is guaranteed set here — eligible is only ever false when one
       // exists (see resolveUpgradeEligibility) — so this can name the actual tier instead
-      // of a generic "already enrolled," same style as the mock-interview-quota and
+      // of a generic "already enrolled," same style as the
       // quiz-cap 403 messages elsewhere in this app (name the specific reason, not just
       // that something was blocked).
       throw new AppCustomException(

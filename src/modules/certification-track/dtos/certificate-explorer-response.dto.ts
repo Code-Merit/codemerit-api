@@ -85,9 +85,12 @@ export class CertificateExplorerTrackDto {
   // Free-text, admin-authored note — see CertificationTrack.note's own comment. Drives the
   // public "/certification/:slug" page's quote strip; that section hides entirely when null.
   note: string | null;
-  // Always true from getExplorer() (it only ever queries isPublished:true tracks) — false only
-  // on the "pending approval" fallback path in getPublicTrack(), for a real track that exists
-  // but hasn't been published yet. The public "/certification/:slug" page uses this to show an
+  // Admin-set 0–100 ranking behind the Certificates page "Popular" sort (0 = not ranked).
+  popularity: number;
+  // True for every track in getExplorer()'s `groups`. False in two cases: a track in the
+  // caller's `earned` list that was unpublished after they earned it, and the "pending
+  // approval" fallback path in getPublicTrack(), for a real track that exists but hasn't been
+  // published yet. The public "/certification/:slug" page uses this to show an
   // "undergoing approval" notice instead of the full invite experience.
   isPublished: boolean;
 }
