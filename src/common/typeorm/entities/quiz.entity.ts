@@ -75,9 +75,10 @@ export class Quiz extends AbstractEntity implements IQuiz {
   })
   isPublished: boolean;
 
+  // TEXT, not varchar(500): generated catalogue descriptions (topic lists + a closing sentence)
+  // can run past 500 chars, and the builder used to clip them mid-sentence with "…".
   @Column({
-    type: 'varchar',
-    length: 500,
+    type: 'text',
     nullable: true,
     default: null,
   })
