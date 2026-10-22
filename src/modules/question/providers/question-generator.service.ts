@@ -13,12 +13,12 @@ import { DataSource, In } from 'typeorm';
 import { GetQuestionsByIdsDto } from '../dtos/get-questions-by-ids.dto';
 import { QuestionListResponseDto } from '../dtos/question-list-response.dto';
 import { TopicAnalysisService } from 'src/modules/master/providers/topic-analysis.service';
-import { DEFAULT_QUIZ_LENGTH, MAX_QUIZ_LENGTH, TIER_CLEAR_COVERAGE_PERCENT } from 'src/common/constants/quiz-generation.constants';
+import { DEFAULT_QUIZ_LENGTH, MAX_QUIZ_LENGTH, REPRESENT_WRONG_ATTEMPTS, TIER_CLEAR_COVERAGE_PERCENT } from 'src/common/constants/quiz-generation.constants';
 
 /**
  * Single source of truth for self-serve UserQuiz question selection. Walks the scope's
- * topics in Topic.order sequence, draining each one for unique (never-correctly-answered,
- * per question_attempt) questions until numQuestions is reached or the scope runs dry —
+ * topics in Topic.order sequence, draining each one for unique (never-attempted by default,
+ * per question_attempt — see REPRESENT_WRONG_ATTEMPTS) questions until numQuestions is reached or the scope runs dry —
  * no upfront per-topic quota, no wrong-question backfill: a shortfall is reported
  * honestly (see requestedCount/actualCount) rather than padded out. Plus a difficulty
  * gate so a topic's Intermediate/Advanced questions only become eligible once the user
@@ -293,16 +293,23 @@ export class QuestionGeneratorService {
    * does) would mean a user capped to Easy-only could never reach the bar on topics
    * where Easy is a minority of the bank, permanently trapping them on Easy. A tier with
    * zero questions in this topic has nothing to gate, so it's treated as cleared.
+   *
+   * With REPRESENT_WRONG_ATTEMPTS off (unique quizzes), a tier ALSO counts as cleared once
+   * every question in it has been attempted: a missed question never comes back, so a
+   * learner below the 70% bar would otherwise have an empty pool and be stuck on that tier
+   * forever. (attemptedEasy/Medium are distinct-question counts — latest attempt per question.)
    */
   private computeMaxEligibleLevel(stat: {
-    correctEasy: number; numBasicTrivia: number;
-    correctMedium: number; numIntTrivia: number;
+    correctEasy: number; attemptedEasy: number; numBasicTrivia: number;
+    correctMedium: number; attemptedMedium: number; numIntTrivia: number;
   }): DifficultyLevelEnum {
-    const tierCleared = (correct: number, total: number) =>
-      total === 0 || (correct / total) * 100 >= TIER_CLEAR_COVERAGE_PERCENT;
+    const tierCleared = (correct: number, attempted: number, total: number) =>
+      total === 0
+      || (correct / total) * 100 >= TIER_CLEAR_COVERAGE_PERCENT
+      || (!REPRESENT_WRONG_ATTEMPTS && attempted >= total);
 
-    if (!tierCleared(stat.correctEasy, stat.numBasicTrivia)) return DifficultyLevelEnum.Easy;
-    if (!tierCleared(stat.correctMedium, stat.numIntTrivia)) return DifficultyLevelEnum.Intermediate;
+    if (!tierCleared(stat.correctEasy, stat.attemptedEasy, stat.numBasicTrivia)) return DifficultyLevelEnum.Easy;
+    if (!tierCleared(stat.correctMedium, stat.attemptedMedium, stat.numIntTrivia)) return DifficultyLevelEnum.Intermediate;
     return DifficultyLevelEnum.Advanced;
   }
 
@@ -325,8 +332,10 @@ export class QuestionGeneratorService {
   }
 
   /**
-   * Pulls up to `limit` never-correctly-answered questions for ONE topic, at or under
-   * levelCap, in a fixed/deterministic order (no RAND() — a retake with no new attempts
+   * Pulls up to `limit` eligible questions for ONE topic, at or under levelCap: never
+   * attempted at all when REPRESENT_WRONG_ATTEMPTS is off (default — unique quizzes), or
+   * never answered correctly when it's on (wrong/skipped ones may come back).
+   * Fixed/deterministic order (no RAND() — a retake with no new attempts
    * returns the same questions in the same order). Called once per topic per iteration
    * of the sequential drain loop in generateUserQuiz(); `excludeIds` is the running list
    * of question ids already placed earlier in this same generation (from any prior topic
@@ -343,6 +352,8 @@ export class QuestionGeneratorService {
     if (limit <= 0) return [];
     // Sentinel 0 keeps the array non-empty for the NOT IN clause — no question ever has id 0.
     const excludeList = excludeIds.length ? excludeIds : [0];
+    // Unique mode excludes ANY prior attempt; represent mode only correctly-answered ones.
+    const attemptFilter = REPRESENT_WRONG_ATTEMPTS ? 'AND qa.isCorrect = TRUE' : '';
 
     const rawQuery = `
       SELECT
@@ -360,7 +371,7 @@ export class QuestionGeneratorService {
         AND q.id NOT IN (?)
         AND NOT EXISTS (
           SELECT 1 FROM question_attempt qa
-          WHERE qa.questionId = q.id AND qa.userId = ? AND qa.isCorrect = TRUE
+          WHERE qa.questionId = q.id AND qa.userId = ? ${attemptFilter}
         )
       ORDER BY q.level ASC, q.orderId ASC, q.id ASC
       LIMIT ?
