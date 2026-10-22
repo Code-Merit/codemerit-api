@@ -13,7 +13,7 @@ import { UserService } from 'src/core/users/providers/user.service';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import { UserPermissionService } from 'src/modules/user-permission/providers/user-permission.service';
-import { DataSource, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { AccountVerificationDto } from '../dto/account-verification.dto';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginResponseDto } from '../dto/login-response.dto';
@@ -36,8 +36,7 @@ export class AuthService {
     private readonly linkedInOAuth: LinkedInOAuthService,
 
     @InjectRepository(UserJobRole)
-    private userJobRoleRepo: Repository<UserJobRole>,
-    private readonly dataSource: DataSource,
+    private userJobRoleRepo: Repository<UserJobRole>
   ) { }
 
   async validateUser(email: string, pass: string) {
@@ -118,9 +117,7 @@ export class AuthService {
       createdAt: enrollment.createdAt,
     }));
 
-    // Real, active access — SkillEnrollment is the sole source of truth here, split
-    // subject-wise and job-role-wise. Distinct from `userJobRoles` above, which is
-    // just career-path targeting (UserJobRole) and carries no access implication.
+    // SkillEnrollment is the sole source of truth here, split subject-wise and job-role-wise.
     const { subjectEnrollments, jobRoleEnrollments } =
       await this.skillEnrollmentService.getMyEnrollmentSummary(user.id);
 
@@ -259,8 +256,6 @@ export class AuthService {
       throw new BadRequestException('LinkedIn authentication failed. Please try again.');
     }
 
-    // Accounts are matched by email, and the doc marks `email` optional — anyone can mint a code
-    // without the `email` scope using our public client id. No email, no sign-in.
     if (!profile?.sub || !profile.email) {
       throw new BadRequestException(
         'Your LinkedIn account did not share an email address. Please allow email access or sign in another way.',

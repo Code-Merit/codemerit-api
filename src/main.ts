@@ -1,15 +1,15 @@
 import { BadRequestException, Logger, ValidationPipe } from '@nestjs/common';
-import { ValidationError } from 'class-validator';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationError } from 'class-validator';
 import { configDotenv } from 'dotenv';
 import { AppModule } from './app.module';
+import { UPLOADS_URL_PREFIX, uploadsRoot } from './common/constants/uploads.constants';
 import { GlobalExceptionsFilter } from './common/filters/global-exception.filter';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { IAppConfig, appConfig } from './config/app-config';
-import { uploadsRoot, UPLOADS_URL_PREFIX } from './common/constants/uploads.constants';
 
 configDotenv({
   path: `.env`,
