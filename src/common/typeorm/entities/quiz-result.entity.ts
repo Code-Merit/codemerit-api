@@ -131,6 +131,16 @@ export class QuizResult extends AbstractEntity implements IQuizResult {
     })
     feedback?: string;
 
+  // XP this submission earned (AchievementService.evaluateAfterQuiz). Stored so the result page
+  // can show it to anyone opening the link, not only on the live post-submit response. Null for
+  // results submitted before the column existed, or if XP evaluation failed.
+  @Column({
+        type: 'int',
+        nullable: true,
+        default: null
+    })
+    xpAwarded?: number;
+
   @Column({
         type: 'varchar',
         length: 100,

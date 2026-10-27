@@ -7,6 +7,7 @@ import { QuestionOption } from 'src/common/typeorm/entities/question-option.enti
 import { QuizResult } from 'src/common/typeorm/entities/quiz-result.entity';
 import { generateScore } from 'src/common/utils/common-functions';
 import { DataSource, SelectQueryBuilder } from 'typeorm';
+import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 
 // Per-question time limit when a question has none — matches take-quiz and Quick Practice.
 const DEFAULT_QUESTION_TIME_SECONDS = 30;
@@ -18,7 +19,7 @@ export class QuizResultService {
   ) { }
   /** Public, shareable view of one result: exposes display name/username/avatar only —
    * never user ids, email, IP, device or client. `isOwner` flags the viewer's own result. */
-  async getQuizResultByCode(resultCode: string, viewerId?: number) {
+  async getQuizResultByCode(resultCode: string, viewerId?: number, viewerRole?: string) {
     // Exactly one of quiz/userQuiz matches; COALESCE picks it.
     const base = await this.dataSource
       .createQueryBuilder(QuizResult, 'r')
@@ -36,6 +37,7 @@ export class QuizResultService {
         'r.score',
         'r.remarks',
         'r.feedback',
+        'r.xpAwarded',
         'r.createdAt',
         'u.firstName',
         'u.lastName',
@@ -44,6 +46,10 @@ export class QuizResultService {
       ])
       .leftJoin('r.quiz', 'q')
       .leftJoin('r.userQuiz', 'uq')
+      // Pass mark lives on the quiz's settings row (Standard and UserQuiz share QuizSettings).
+      .leftJoin('q.settings', 'qs')
+      .leftJoin('uq.settings', 'uqs')
+      .addSelect('COALESCE(qs.passMarks, uqs.passMarks)', 'passMarks')
       .addSelect('COALESCE(q.title, uq.title)', 'title')
       .addSelect('COALESCE(q.description, uq.description)', 'description')
       .addSelect('COALESCE(q.slug, uq.slug)', 'slug')
@@ -127,10 +133,12 @@ export class QuizResultService {
       [DifficultyLevelEnum.Advanced]: 'Advanced',
     };
 
-    // A signed-out visitor gets the summary only (score, subjects, topics) — never the
-    // per-question breakdown (question text, every option, the correct answer and the owner's
-    // pick). `breakdownLocked` tells the client to show its "take this quiz" prompt instead.
-    const breakdownLocked = viewerId == null;
+    // Only the quiz taker or an Admin gets the per-question breakdown (question text, every
+    // option, the correct answer and the owner's pick). Everyone else — a signed-out visitor or
+    // another signed-in user opening a shared link — gets the summary only (score, subjects,
+    // topics); `breakdownLocked` tells the client to show its "take this quiz" prompt instead.
+    const isOwner = viewerId != null && Number(viewerId) === Number(userId);
+    const breakdownLocked = !isOwner && viewerRole !== UserRoleEnum.ADMIN;
 
     const options = questionList.length && !breakdownLocked
       ? await this.dataSource
@@ -253,8 +261,10 @@ export class QuizResultService {
       totalTimeAllowed,
       remarks: base.r_remarks ?? '',
       feedback: base.r_feedback ?? '',
+      xpAwarded: base.r_xpAwarded != null ? Number(base.r_xpAwarded) : null,
+      passMarks: base.passMarks != null ? Number(base.passMarks) : null,
       createdAt: base.r_createdAt,
-      isOwner: viewerId != null && Number(viewerId) === Number(userId),
+      isOwner,
       user: {
         firstName: base.u_firstName,
         lastName: base.u_lastName,

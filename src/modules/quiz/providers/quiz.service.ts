@@ -925,6 +925,16 @@ export class QuizService {
       console.error('submitQuiz: achievement evaluation failed', error);
     }
 
+    // Keep the XP on the result row so the result page can show it later, to anyone.
+    if (newlyEarned && questionResult?.id) {
+      try {
+        await this.quizResultRepository.update(questionResult.id, { xpAwarded: newlyEarned.xpAwarded });
+        questionResult.xpAwarded = newlyEarned.xpAwarded;
+      } catch (error) {
+        console.error('submitQuiz: failed to store xpAwarded', error);
+      }
+    }
+
     return { ...questionResult, newlyEarned };
   }
 

@@ -113,7 +113,7 @@ export class QuizController {
   @ApiOperation({
     summary: 'Get Quiz Result',
     description:
-      'Retrieves the quiz result by a result code. Signed-out callers get the summary only ' +
+      'Retrieves the quiz result by a result code. Anyone but the quiz taker or an Admin gets the summary only ' +
       '(score, subjects, topics) with questions: [] and breakdownLocked: true.',
   })
   @Public()
@@ -123,7 +123,7 @@ export class QuizController {
     @Param('resultCode') resultCode: string,
     @Request() req: any,
   ): Promise<ApiResponse<any>> {
-    const result = await this.quizResultService.getQuizResultByCode(resultCode, req.user?.id);
+    const result = await this.quizResultService.getQuizResultByCode(resultCode, req.user?.id, req.user?.role);
     return new ApiResponse('Quiz Result Found', result);
   }
 
