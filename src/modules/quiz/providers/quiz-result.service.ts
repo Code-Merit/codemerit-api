@@ -127,7 +127,12 @@ export class QuizResultService {
       [DifficultyLevelEnum.Advanced]: 'Advanced',
     };
 
-    const options = questionList.length
+    // A signed-out visitor gets the summary only (score, subjects, topics) — never the
+    // per-question breakdown (question text, every option, the correct answer and the owner's
+    // pick). `breakdownLocked` tells the client to show its "take this quiz" prompt instead.
+    const breakdownLocked = viewerId == null;
+
+    const options = questionList.length && !breakdownLocked
       ? await this.dataSource
           .createQueryBuilder(QuestionOption, 'qo')
           .select([
@@ -148,7 +153,7 @@ export class QuizResultService {
       optionsByQuestion.get(key).push(o);
     }
 
-    const questions = questionList.map((r) => {
+    const questions = breakdownLocked ? [] : questionList.map((r) => {
       const selectedOptionId = r.selectedOptionId != null ? Number(r.selectedOptionId) : null;
       return {
         id: r.questionId,
@@ -266,6 +271,7 @@ export class QuizResultService {
       subjects,
       topics,
       questions,
+      breakdownLocked,
     };
   }
 

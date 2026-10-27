@@ -24,6 +24,7 @@ import { UserPermissionEnum } from 'src/common/policies/user-permission.enum';
 import { computeLevel } from 'src/modules/achievement/constants/gamification.constants';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
+import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
 import { UserService } from './user.service';
 import { SkillRatingService } from 'src/modules/skill-rating/providers/skill-rating.service';
 
@@ -270,6 +271,9 @@ export class UserProfileAggregatorService {
     const reviewerStats = canViewContactInfo && isReviewer ? await this.getReviewerStats(user.id) : null;
     // Admin-only engagement snapshot for the About card — never queried for anyone else.
     const adminActivity = viewer.role === UserRoleEnum.ADMIN ? await this.getAdminActivity(user.id) : null;
+    // Enrollments are payment data: counted only for the people who can open the Enrollments tab
+    // (self + Admin, the same gate as contact info); null tells the frontend to hide the KPI card.
+    const activeEnrollmentCount = canViewContactInfo ? await this.getActiveEnrollmentCount(user.id) : null;
 
     return {
       ...user,
@@ -321,7 +325,22 @@ export class UserProfileAggregatorService {
       attemptsSummary,
       reviewerStats,
       adminActivity,
+      activeEnrollmentCount,
     };
+  }
+
+  /** Subject enrollments that grant access right now: the same "active" rule as
+   * SkillEnrollmentService's isCurrentlyActive (status active and not past expiresAt). */
+  private async getActiveEnrollmentCount(userId: number): Promise<number> {
+    const row = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'n')
+      .from('skill_enrollment', 'e')
+      .where('e.userId = :userId', { userId })
+      .andWhere('e.status = :status', { status: EnrollmentStatusEnum.Active })
+      .andWhere('(e.expiresAt IS NULL OR e.expiresAt > :now)', { now: new Date() })
+      .getRawOne();
+    return Number(row?.n) || 0;
   }
 
   /** Last-active / last-practice / last-reading timestamps and total API requests, for an

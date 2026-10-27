@@ -112,7 +112,9 @@ export class QuizController {
 
   @ApiOperation({
     summary: 'Get Quiz Result',
-    description: 'Retrieves the quiz result by a result code.',
+    description:
+      'Retrieves the quiz result by a result code. Signed-out callers get the summary only ' +
+      '(score, subjects, topics) with questions: [] and breakdownLocked: true.',
   })
   @Public()
   @UseGuards(OptionalJwtAuthGuard)
