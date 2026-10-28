@@ -4810,5 +4810,1268 @@
         "content": "<ul><li>RPO is how much data you can lose; RTO is how long you can be down.</li><li>Logical backups are flexible; physical backups plus log archiving enable point-in-time recovery.</li><li>Replication is not a backup: it copies mistakes too.</li><li>Test restores regularly, time them, and keep off-site, protected copies.</li><li>Replicas give high availability and read scaling; plan for replication lag.</li><li>Partitioning splits tables within one server; sharding splits data across servers.</li><li>Scale in order: optimise, pool, cache, scale up, replicate, partition, then shard.</li></ul>"
       }
     ]
+  },
+  {
+    "slug": "nx-monorepos-and-nx",
+    "title": "Monorepos and Nx",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "monorepos-and-nx",
+    "level": 1,
+    "summary": "Why teams keep many projects in one repository, how a monorepo differs from a monolith, and what Nx core, plugins and Nx Cloud each add.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "nx",
+      "monorepo",
+      "polyrepo",
+      "nx cloud"
+    ],
+    "sections": [
+      {
+        "title": "Why One Repository?",
+        "content": "<p>Imagine a company with a web app and an admin app in two separate repositories. Both need the same date-formatting utility. There are two common options, and both hurt:</p><ul><li><strong>Copy it</strong> into each repository. The copies drift apart as each team fixes bugs in its own version.</li><li><strong>Publish it</strong> as a package. Every change now needs a new release, and each app must update to that version before it can use the fix.</li></ul><p>A <strong>monorepo</strong> removes this friction: both apps import the utility directly from the same repository, so a fix is available to everyone the moment it is merged.</p>"
+      },
+      {
+        "title": "Monorepo vs Monolith",
+        "content": "<p>The two words sound alike but describe different things.</p><ul><li>A <strong>monorepo</strong> is about <em>where code lives</em>: many separate projects, such as apps and libraries, in one repository. Each project can still be built, tested and deployed on its own.</li><li>A <strong>monolith</strong> is about <em>architecture</em>: one large application that is deployed as a single unit.</li></ul><p>You can have either without the other. A monorepo can hold a dozen small services that are deployed independently, and a monolith can live alone in its own repository. Choosing a monorepo does not mean merging your apps into one.</p>"
+      },
+      {
+        "title": "Atomic Changes",
+        "content": "<p>Because a library and every project that uses it live together, one commit can change both. Say you rename <code>formatDate</code> to <code>formatDisplayDate</code> in a shared library:</p><ul><li>in a monorepo, the same commit renames the function and updates every caller in every app</li><li>reviewers see the whole change in one pull request</li><li>the repository is never in a half-updated state where some apps are broken</li></ul><p>With separate repositories, the same rename means publishing a new library version, opening a pull request in each app, and keeping the old name around until all of them have upgraded.</p>"
+      },
+      {
+        "title": "The Scaling Problem",
+        "content": "<p>A monorepo has a cost if nothing understands its structure. With plain scripts, CI has no idea which projects a change touches, so the safe choice is to build and test everything on every pull request.</p><p>With 5 projects that is fine. With 60 projects, a one-line fix to a single library still rebuilds and retests all 60, and CI time keeps growing as the repository grows. Developers wait longer, and the benefits of sharing code start to feel like a burden.</p><p>This is the problem Nx exists to solve: make a large monorepo feel as fast as a small one.</p>"
+      },
+      {
+        "title": "What Nx Adds",
+        "content": "<p>Nx is a build system for monorepos. It adds four capabilities that the rest of this subject builds on:</p><ul><li><strong>A project graph</strong>: a map of every project and which projects depend on which.</li><li><strong>Task orchestration</strong>: running builds, tests and lints in the right order, in parallel where possible.</li><li><strong>Caching</strong>: never running the same task twice when nothing it depends on has changed.</li><li><strong>Affected runs</strong>: running tasks only for the projects a change can impact.</li></ul><p>On top of these sit tools that keep a growing codebase organised, such as module boundary rules and code generators.</p>"
+      },
+      {
+        "title": "Nx Core, Plugins and Nx Cloud",
+        "content": "<p>Nx comes in three layers, and only the first is required.</p><ul><li><strong>Nx core</strong> is the task runner. It builds the project graph, runs tasks and caches results on your machine. It works on its own, even with plain <code>package.json</code> scripts.</li><li><strong>Nx plugins</strong>, such as <code>@nx/react</code> or <code>@nx/vite</code>, teach Nx about specific tools. They create tasks from config files and provide generators for new projects.</li><li><strong>Nx Cloud</strong> is an optional hosted service. It shares the cache across the team and CI, spreads tasks across machines and adds CI features such as flaky task retries.</li></ul>"
+      },
+      {
+        "title": "Package-Based and Integrated Setups",
+        "content": "<p>Nx workspaces usually follow one of two styles.</p><ul><li><strong>Package-based</strong>: every project has its own <code>package.json</code> and dependencies, linked together by npm, pnpm or Yarn workspaces.</li><li><strong>Integrated</strong>: dependencies are declared once at the root, and projects are wired together through Nx and TypeScript configuration.</li></ul><p>Many integrated workspaces follow a <strong>single version policy</strong>: one version of each dependency, such as React, for the whole repository. Shared libraries then always work with every app. The trade-off is that an upgrade has to be made and tested across all projects at once.</p>"
+      },
+      {
+        "title": "When a Monorepo Does Not Fit",
+        "content": "<p>A monorepo pays off when projects share code or change together. It is a weaker fit when:</p><ul><li>products are unrelated and share no code</li><li>teams must not see each other's code, since one repository makes access control harder</li><li>nobody can own the shared tooling and CI</li></ul><p>Language is rarely the reason to say no. Besides JavaScript and TypeScript, official plugins support Gradle, Maven and .NET projects, so a Java backend and a TypeScript frontend can share one workspace and get the same caching and affected runs.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>A monorepo is many separate projects in one repository; a monolith is one app deployed as a unit</li><li>Monorepos make code sharing and atomic changes easy</li><li>Without tooling, a growing monorepo builds and tests everything on every change</li><li>Nx adds a project graph, task orchestration, caching and affected runs</li><li>Nx core works alone; plugins add tool knowledge; Nx Cloud is optional</li><li>Package-based setups give each project a <code>package.json</code>; integrated setups share root dependencies</li><li>A single version policy keeps projects compatible but makes every upgrade workspace-wide</li><li>Unrelated products or strict access rules are reasons to keep repositories separate</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-workspace-structure",
+    "title": "Workspace Structure",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-workspace-structure",
+    "level": 1,
+    "summary": "Create a workspace or add Nx to an existing repo, organise apps and libraries, and know what nx.json, project.json and package.json each control.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "nx",
+      "workspace",
+      "nx.json",
+      "project.json",
+      "nx init"
+    ],
+    "sections": [
+      {
+        "title": "Creating a Workspace",
+        "content": "<p>To start a new monorepo from scratch, run:</p><pre><code class=\"language-bash\">npx create-nx-workspace@latest acme</code></pre><p>The command asks a few questions, such as which stack or template to start from, and then creates a repository with Nx already set up: an <code>nx.json</code>, a <code>package.json</code> and, depending on your choices, a first app.</p><p>Starting this way means every convention, from folder layout to task configuration, is consistent from day one. For a repository that already exists, there is a gentler option, covered next.</p>"
+      },
+      {
+        "title": "Adding Nx to an Existing Repo",
+        "content": "<p>Most teams do not start fresh. To add Nx to a repository that already exists, run:</p><pre><code class=\"language-bash\">npx nx init</code></pre><p><code>nx init</code> installs Nx, creates <code>nx.json</code> and asks which scripts are safe to cache, such as <code>build</code>, <code>test</code> and <code>lint</code>. It does not move any folders.</p><p>Existing commands keep working, and the same scripts can now be run through Nx, for example <code>npx nx build web</code>, to get caching and correct ordering. Teams can then adopt more features step by step instead of restructuring everything at once.</p>"
+      },
+      {
+        "title": "Apps and Libraries",
+        "content": "<p>An Nx workspace holds two kinds of projects.</p><ul><li><strong>Apps</strong> are entry points that get deployed or run: a web app, an admin panel, an API.</li><li><strong>Libraries</strong> hold code that apps and other libraries import: UI components, data access, utilities, feature logic.</li></ul><p>A common guideline is to keep apps <strong>thin</strong>. An app wires libraries together and adds configuration, while most real code lives in libraries. Smaller projects make Nx's caching and affected runs more precise, because a change touches fewer projects. The libraries lesson covers how to split and organise them.</p>"
+      },
+      {
+        "title": "How Nx Finds Projects",
+        "content": "<p>Nx does not rely on folder names. A folder is a project when it contains:</p><ul><li>a <code>project.json</code> file, or</li><li>a <code>package.json</code> that Nx picks up, for example through the package manager's workspaces</li></ul><p>Folders such as <code>apps/</code>, <code>libs/</code> or <code>packages/</code> are conventions that help people find things. They are not requirements. Many large workspaces group projects by business area instead:</p><pre><code class=\"language-plaintext\">shop/app\nshop/feature-cart\nadmin/app\nshared/ui-buttons</code></pre><p>Whatever the layout, <code>npx nx show projects</code> lists every project Nx found.</p>"
+      },
+      {
+        "title": "nx.json: Workspace Settings",
+        "content": "<p><code>nx.json</code> at the root holds settings for the whole workspace:</p><pre><code class=\"language-json\">{\n  \"plugins\": [\"@nx/vite/plugin\"],\n  \"targetDefaults\": {\n    \"build\": { \"dependsOn\": [\"^build\"], \"cache\": true }\n  },\n  \"namedInputs\": {\n    \"default\": [\"{projectRoot}/**/*\"],\n    \"production\": [\"default\", \"!{projectRoot}/**/*.spec.ts\"]\n  },\n  \"defaultBase\": \"main\"\n}</code></pre><ul><li><code>plugins</code> registers plugins that create tasks</li><li><code>targetDefaults</code> applies settings to every target with that name</li><li><code>namedInputs</code> defines reusable file sets for caching</li><li><code>defaultBase</code> is the branch affected runs compare with</li></ul>"
+      },
+      {
+        "title": "A Project's Own Configuration",
+        "content": "<p>Each project can have its own settings in <code>project.json</code>, or in an <code>nx</code> section of its <code>package.json</code>:</p><pre><code class=\"language-json\">{\n  \"name\": \"shop\",\n  \"tags\": [\"scope:shop\", \"type:app\"],\n  \"implicitDependencies\": [\"shared-assets\"],\n  \"targets\": {\n    \"build\": { \"outputs\": [\"{projectRoot}/dist\"] }\n  }\n}</code></pre><p>Project configuration holds what is <strong>specific to that project</strong>: its tags, links Nx cannot detect on its own, and any target settings that differ from the workspace defaults. A good rule: set things once in <code>nx.json</code>, and only override in a project when it genuinely needs something different.</p>"
+      },
+      {
+        "title": "Package Manager Workspaces",
+        "content": "<p>How does an app import a library by name, as in <code>import { Button } from '@acme/ui'</code>? In package-based workspaces, the package manager does it.</p><p>npm, pnpm and Yarn all support <strong>workspaces</strong>: you list the folders that hold packages, in <code>pnpm-workspace.yaml</code> or the <code>workspaces</code> field of the root <code>package.json</code>, and the package manager links each local package into <code>node_modules</code> by its name.</p><pre><code class=\"language-yaml\">packages:\n  - \"apps/*\"\n  - \"libs/*\"</code></pre><p>The app then imports <code>@acme/ui</code> as if it came from a registry, while actually using the code in the repository.</p>"
+      },
+      {
+        "title": "Everyday Tools",
+        "content": "<p>A few details make daily work smoother.</p><ul><li><strong>Nx Console</strong> is an extension for VS Code, Cursor and JetBrains IDEs. It lists projects and their tasks, runs generators through a form and opens the project graph.</li><li><strong>npx nx</strong> always runs the Nx version installed in the workspace, so everyone, including CI, gets the same results. Upgrades happen deliberately with <code>nx migrate</code>.</li><li><strong>The .nx folder</strong> holds the local cache and data Nx computes about the workspace. It is specific to each machine, belongs in <code>.gitignore</code> and can always be rebuilt.</li></ul>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li><code>create-nx-workspace</code> starts a new workspace; <code>nx init</code> adds Nx to an existing repo without moving folders</li><li>Apps are deployed or run; libraries hold shared code. Keep apps thin</li><li>A folder with a <code>project.json</code>, or a <code>package.json</code> Nx picks up, is a project</li><li><code>apps/</code> and <code>libs/</code> are conventions, not rules</li><li><code>nx.json</code> holds workspace settings: plugins, targetDefaults, namedInputs and defaultBase</li><li>Project configuration holds tags, implicit dependencies and overrides</li><li>Package manager workspaces link local packages by name</li><li><code>npx nx</code> uses the workspace's own Nx version; <code>.nx</code> stays out of Git</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-running-tasks",
+    "title": "Running Tasks",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-running-tasks",
+    "level": 1,
+    "summary": "Run targets on one project or many, chain tasks with dependsOn pipelines, handle long-running servers with continuous tasks, and explore the workspace with nx graph.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "nx",
+      "tasks",
+      "run-many",
+      "dependsOn",
+      "continuous tasks"
+    ],
+    "sections": [
+      {
+        "title": "Targets and Tasks",
+        "content": "<p>Everything Nx runs is described with two words.</p><ul><li>A <strong>target</strong> is a named operation a project can perform, such as <code>build</code>, <code>test</code>, <code>lint</code> or <code>serve</code>.</li><li>A <strong>task</strong> is one target run on one project, such as <code>shop:build</code>.</li></ul><p>Targets come from three places: <code>package.json</code> scripts, project configuration, and plugins that create them from tool config files. However a target is defined, you run it the same way, and Nx treats every task the same when it orders, runs and caches work.</p>"
+      },
+      {
+        "title": "Running One Task",
+        "content": "<p>The everyday pattern is <code>nx</code>, then the target, then the project:</p><pre><code class=\"language-bash\">npx nx build web\nnpx nx test web\nnpx nx run web:build</code></pre><p>The first two lines run the <code>build</code> and <code>test</code> targets of the <code>web</code> project. The last line is the longer form of the first, useful when a target name could be mistaken for an Nx command.</p><p>Nx does more than run one script. It checks whether the task needs other tasks first, such as building libraries, and whether a cached result already exists.</p>"
+      },
+      {
+        "title": "Running Many Tasks",
+        "content": "<p><code>run-many</code> runs targets across several projects at once:</p><pre><code class=\"language-bash\">npx nx run-many -t test\nnpx nx run-many -t build lint -p shop admin</code></pre><ul><li><code>-t</code> (or <code>--targets</code>) lists one or more targets</li><li><code>-p</code> (or <code>--projects</code>) picks projects; without it, every project that has the target is included</li></ul><p>The first command tests every project. The second runs <code>build</code> and <code>lint</code> for only <code>shop</code> and <code>admin</code>, four tasks in total. To run tasks only for projects a change can affect, Nx has a separate command, <code>nx affected</code>, covered in the caching lesson.</p>"
+      },
+      {
+        "title": "Task Pipelines",
+        "content": "<p>Some tasks must wait for others. An app's build needs its libraries built first. You describe this with <code>dependsOn</code>, usually once in <code>nx.json</code>:</p><pre><code class=\"language-json\">\"targetDefaults\": {\n  \"build\": { \"dependsOn\": [\"^build\"] },\n  \"test\": { \"dependsOn\": [\"build\"] }\n}</code></pre><ul><li><code>^build</code> means \"run build on the projects I depend on first\"</li><li><code>build</code> without the caret means \"run my own build first\"</li></ul><p>With these rules, <code>nx build shop</code> builds every library <code>shop</code> uses, then <code>shop</code> itself. Nobody has to remember the order, and it is the same on every machine.</p>"
+      },
+      {
+        "title": "Parallel Runs",
+        "content": "<p>When you run many tasks, Nx builds a <strong>task graph</strong> and runs independent tasks at the same time. Two rules decide the schedule:</p><ul><li>a task never starts before the tasks it depends on have finished</li><li>no more than a set number of tasks run at once</li></ul><pre><code class=\"language-bash\">npx nx run-many -t build --parallel=5</code></pre><p>The <code>--parallel</code> option, or the <code>parallel</code> setting in <code>nx.json</code>, sets that limit. Match it to the machine: too low wastes cores, while too high makes tasks compete for memory and can make a small CI machine slower or unstable.</p>"
+      },
+      {
+        "title": "Continuous Tasks",
+        "content": "<p>Some tasks never finish. A dev server keeps running until you stop it. If an <code>e2e</code> target depends on <code>serve</code>, a normal dependency would make the tests wait forever.</p><p>Marking the target as <strong>continuous</strong> fixes this:</p><pre><code class=\"language-json\">\"targets\": {\n  \"serve\": { \"continuous\": true },\n  \"e2e\": { \"dependsOn\": [\"serve\"] }\n}</code></pre><p>Nx now starts <code>serve</code> and runs <code>e2e</code> alongside it instead of waiting for the server to exit. When the tests are done and nothing else needs the server, Nx stops it. Watch processes are another common continuous task.</p>"
+      },
+      {
+        "title": "The Terminal UI",
+        "content": "<p>When ten tasks run in parallel, ten streams of logs would normally be mixed together in one terminal. The Nx <strong>Terminal UI</strong> keeps them apart.</p><ul><li>a list shows every task and its status: running, finished, failed or restored from the cache</li><li>select a task to see only its output</li><li>search the task list and view several tasks side by side</li></ul><p>It turns a long multi-project run from a wall of text into something you can follow and debug. In CI and other non-interactive terminals, Nx falls back to plain logs.</p>"
+      },
+      {
+        "title": "Exploring and Wrapping Scripts",
+        "content": "<p>Two more commands come up often.</p><p><code>nx graph</code> opens an interactive map of the workspace in the browser. You can see which projects depend on which, focus on one project, trace the path between two projects and view the tasks a command would run. It is the fastest way to understand an unfamiliar codebase.</p><p><code>nx exec</code> runs any command as an Nx task, so a root script can be cached too:</p><pre><code class=\"language-json\">\"scripts\": {\n  \"docs\": \"nx exec -- node scripts/docs.js\"\n}</code></pre>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>A target is a named operation; a task is one target on one project</li><li>Run one task with <code>nx build web</code> or <code>nx run web:build</code></li><li><code>run-many -t</code> picks targets and <code>-p</code> picks projects</li><li><code>dependsOn: [\"^build\"]</code> builds dependencies first; without the caret it means the same project</li><li>Independent tasks run in parallel up to the <code>--parallel</code> limit, never before their dependencies</li><li>Mark dev servers <code>continuous: true</code> so dependent tasks do not wait forever</li><li>The Terminal UI separates each task's output</li><li><code>nx graph</code> maps the workspace; <code>nx exec</code> makes any script a cacheable task</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-project-graph-inferred-tasks",
+    "title": "Project Graph and Inferred Tasks",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-project-graph-inferred-tasks",
+    "level": 2,
+    "summary": "How Nx builds its project and task graphs, how plugins infer tasks from tool config files, and how to see and override the final configuration.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "nx",
+      "project graph",
+      "inferred tasks",
+      "plugins",
+      "targetDefaults"
+    ],
+    "sections": [
+      {
+        "title": "The Project Graph",
+        "content": "<p>The <strong>project graph</strong> is Nx's map of every project and how they depend on each other. Nx builds it automatically by:</p><ul><li>scanning source files for imports, such as <code>import { Button } from '@acme/ui'</code>, and working out which project each import belongs to</li><li>reading <code>package.json</code> dependencies between local packages</li></ul><p>Plugins can add more, for example links between Gradle projects. Almost everything smart Nx does starts here: task order, which projects a change affects, what goes into a cache hash and whether an import breaks a boundary rule. The graph updates as the code changes, with no list to maintain by hand.</p>"
+      },
+      {
+        "title": "From Project Graph to Task Graph",
+        "content": "<p>The project graph shows how <em>projects</em> relate. When you run a command, Nx turns it into a <strong>task graph</strong>, which shows how the <em>tasks for that command</em> relate.</p><p>Say <code>shop</code> uses <code>ui</code>, <code>ui</code> uses <code>util</code>, and builds have <code>dependsOn: [\"^build\"]</code>. For <code>nx build shop</code>, Nx:</p><ol><li>looks up what <code>shop</code> depends on in the project graph</li><li>applies the pipeline rule, adding <code>ui:build</code> and <code>util:build</code></li><li>orders them: <code>util:build</code>, then <code>ui:build</code>, then <code>shop:build</code></li></ol><p>That task graph is what Nx runs and caches, and <code>nx graph</code> can display it.</p>"
+      },
+      {
+        "title": "Inferred Tasks",
+        "content": "<p>Most tools already have a config file that says how a project is built or tested. With <strong>inferred tasks</strong>, a plugin reads that file and creates the targets for you.</p><p>If a project contains <code>vite.config.ts</code> and the <code>@nx/vite</code> plugin is registered, the project automatically gets targets such as <code>build</code>, <code>serve</code> and <code>test</code>, each with sensible cache inputs and outputs. Nothing has to be written in <code>project.json</code>.</p><p>Before inferred tasks, every target was written out by hand in each project's configuration, often with long, repeated options. Now project files only hold real exceptions. Delete a tool's config file and its inferred tasks disappear with it.</p>"
+      },
+      {
+        "title": "Registering Plugins",
+        "content": "<p>Plugins that infer tasks are listed in the <code>plugins</code> array of <code>nx.json</code>, either by name or as an object with options:</p><pre><code class=\"language-json\">\"plugins\": [\n  \"@nx/eslint/plugin\",\n  {\n    \"plugin\": \"@nx/jest/plugin\",\n    \"options\": { \"targetName\": \"unit-test\" }\n  }\n]</code></pre><p>Here the ESLint plugin uses its defaults, while the Jest plugin names its inferred target <code>unit-test</code> instead of <code>test</code>, for every project at once. Plugin options are the clean way to adjust inferred tasks across the workspace, without touching individual projects or editing plugin code.</p>"
+      },
+      {
+        "title": "Seeing the Final Configuration",
+        "content": "<p>With settings coming from plugins, defaults and project files, it helps to see the end result. Run:</p><pre><code class=\"language-bash\">npx nx show project shop\nnpx nx show project shop --web</code></pre><p>The output lists every target the project has, with its command, options, inputs, outputs and dependencies. The <code>--web</code> version opens the same details in the browser and shows <strong>where each setting came from</strong>: a plugin, <code>targetDefaults</code> or the project's own file.</p><p>When a task runs with settings you did not expect, this is the first place to look.</p>"
+      },
+      {
+        "title": "Who Wins: Configuration Layers",
+        "content": "<p>A target's settings can come from three layers, merged in order:</p><ol><li><strong>Plugins</strong>: what a plugin infers from the tool's config file</li><li><strong>targetDefaults</strong> in <code>nx.json</code>: settings for every target with that name</li><li><strong>Project configuration</strong> in <code>project.json</code> or <code>package.json</code></li></ol><p>Later layers win. A workspace default can override what a plugin inferred, and a single project can always override the default.</p><p>The practical rule is to fix a setting in the layer it belongs to. A change for every project goes in <code>targetDefaults</code> or plugin options; a true exception goes in the project.</p>"
+      },
+      {
+        "title": "Implicit Dependencies",
+        "content": "<p>Nx finds dependencies through imports, so a link that only exists at runtime is invisible to it. A common case: a <code>shop-e2e</code> project tests the <code>shop</code> app through a browser and never imports its code.</p><p>Declare the link by hand with <code>implicitDependencies</code>:</p><pre><code class=\"language-json\">{\n  \"name\": \"shop-e2e\",\n  \"implicitDependencies\": [\"shop\"]\n}</code></pre><p>Now a change to <code>shop</code> makes <code>shop-e2e</code> affected, and pipelines order their tasks correctly. Use this only for links Nx genuinely cannot see. Adding a fake import just to create a link hides the real reason and confuses readers.</p>"
+      },
+      {
+        "title": "Plugin Order and Config Inputs",
+        "content": "<p>Two details explain some surprising results.</p><ul><li><strong>Plugin order matters.</strong> Plugins are processed in the order they are listed. If two plugins create a target with the same name for a project, the plugin listed <em>last</em> wins. Give one of them a different target name to avoid the clash.</li><li><strong>Config files are inputs.</strong> When a plugin infers a task, it includes the tool's config file in the task's inputs, since it changes the result. Editing <code>vite.config.ts</code> therefore reruns that project's build instead of replaying it from the cache, while other projects keep their cache hits.</li></ul>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>The project graph comes from imports and <code>package.json</code> dependencies, and updates itself</li><li>For each command, Nx combines the project graph with <code>dependsOn</code> rules into a task graph</li><li>Plugins infer targets, inputs and outputs from tool config files such as <code>vite.config.ts</code></li><li>Register plugins in the <code>plugins</code> array of <code>nx.json</code>; options rename or tune their targets</li><li><code>nx show project</code> shows the final configuration and where each setting came from</li><li>Layers merge in order: plugin, then targetDefaults, then project configuration</li><li><code>implicitDependencies</code> declare links Nx cannot see in code</li><li>The last plugin listed wins a target-name clash; config files are task inputs</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-caching-affected",
+    "title": "Caching and Affected",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-caching-affected",
+    "level": 2,
+    "summary": "How Nx decides a task can be replayed from the cache, how to declare inputs and outputs correctly, and how nx affected runs only what a change can impact.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "nx",
+      "caching",
+      "inputs",
+      "outputs",
+      "affected"
+    ],
+    "sections": [
+      {
+        "title": "Doing Less Work",
+        "content": "<p>As a monorepo grows, the biggest cost is repeated work: rebuilding and retesting code that has not changed. Nx tackles this with two ideas.</p><ul><li><strong>Caching</strong>: never run the same task twice. If nothing a task depends on has changed, Nx replays the saved result.</li><li><strong>Affected</strong>: never run tasks a change cannot touch. If a pull request only changes the cart library, there is no reason to test the admin app.</li></ul><p>Both rely on the project graph, and both are only as good as the information Nx has about your tasks. This lesson shows how to give it the right information.</p>"
+      },
+      {
+        "title": "How a Task Hash Is Built",
+        "content": "<p>Before running a task, Nx computes a <strong>hash</strong>: a fingerprint of everything that could change the result. It includes:</p><ul><li>the project's input files</li><li>the command and its options</li><li>environment variables and runtime values declared as inputs</li><li>the relevant inputs or outputs of the projects it depends on</li></ul><p>If a task with the same hash ran before, locally or in a shared remote cache, Nx restores its outputs and replays its terminal output in a fraction of the time. Who runs the task, and when, plays no part in the hash.</p>"
+      },
+      {
+        "title": "Inputs and Outputs",
+        "content": "<p>Every cacheable task has two lists, and each has a different job.</p><ul><li><strong>inputs</strong> decide <em>when</em> to rerun. Change any input and the hash changes.</li><li><strong>outputs</strong> decide <em>what</em> to save. On a cache hit, these files are put back on disk.</li></ul><pre><code class=\"language-json\">\"build\": {\n  \"inputs\": [\"production\", \"^production\"],\n  \"outputs\": [\"{projectRoot}/dist\"]\n}</code></pre><blockquote class=\"lesson-warn\"><p>Missing outputs give a cache hit that restores nothing, so the folder you expected is not there. Missing inputs are worse: they give a stale result that looks correct.</p></blockquote>"
+      },
+      {
+        "title": "Named Inputs: default and production",
+        "content": "<p>Writing file patterns into every target would be repetitive, so <code>nx.json</code> defines reusable sets called <strong>namedInputs</strong>.</p><pre><code class=\"language-json\">\"namedInputs\": {\n  \"default\": [\"{projectRoot}/**/*\"],\n  \"production\": [\"default\", \"!{projectRoot}/**/*.spec.ts\"]\n}</code></pre><p><code>default</code> is every file in the project. <code>production</code> is the same set minus spec files, so builds can use it while tests use <code>default</code>.</p><p>The result: editing only a test reruns that project's tests, while its build, and the builds of apps that use it, stay cache hits. The caret in <code>^production</code> applies the same set to the projects this one depends on.</p>"
+      },
+      {
+        "title": "Declaring Environment Inputs",
+        "content": "<p>Nx can only react to what it knows about. Suppose a build bakes <code>API_URL</code> into the bundle but never declares it:</p><ul><li>someone changes <code>API_URL</code></li><li>no input changed, so the hash stays the same</li><li>Nx replays the old build, with the old URL inside</li></ul><p>The fix is to declare the variable as an input:</p><pre><code class=\"language-json\">\"build\": {\n  \"inputs\": [\"production\", \"^production\", { \"env\": \"API_URL\" }]\n}</code></pre><blockquote class=\"lesson-tip\"><p>Treat a wrong cache hit as a bug in the inputs. Running <code>nx reset</code> hides it once; declaring the missing input fixes it for good.</p></blockquote>"
+      },
+      {
+        "title": "What Not to Cache",
+        "content": "<p>Caching assumes the same inputs always give the same result. Tasks that change the outside world break that assumption.</p><ul><li><strong>Deploys and publishes</strong>: replaying one from the cache would skip the real deployment.</li><li><strong>Dev servers and watchers</strong>: they never finish with a result to store.</li></ul><p>Switch caching off for such targets:</p><pre><code class=\"language-json\">\"deploy\": { \"cache\": false }</code></pre><p>When something seems stuck locally, <code>nx reset</code> clears the local cache and workspace data and stops the Nx daemon, so the next command starts fresh. It never touches your source files.</p>"
+      },
+      {
+        "title": "Affected: Only What Changed",
+        "content": "<p><code>nx affected -t test</code> runs a target only for the projects a change can impact. Nx maps the changed files to projects, then follows the graph to every project that <strong>depends on</strong> them.</p><p>Take this workspace: <code>shop</code> and <code>admin</code> both use <code>ui</code>, and <code>ui</code> uses <code>util</code>. A change to <code>ui</code> affects:</p><ul><li><code>ui</code>, because it changed</li><li><code>shop</code> and <code>admin</code>, because they use it</li></ul><p><code>util</code> is not affected, because a change in <code>ui</code> cannot change <code>util</code>. Dependencies flow one way, which is why a library every project imports makes every change affect everything.</p>"
+      },
+      {
+        "title": "Base and Head",
+        "content": "<p>To know what changed, affected compares two points:</p><ul><li><strong>base</strong>: by default the <code>defaultBase</code> branch in <code>nx.json</code>, usually <code>main</code></li><li><strong>head</strong>: your current state, including uncommitted changes</li></ul><pre><code class=\"language-bash\">npx nx affected -t lint test build\nnpx nx affected -t test --base=origin/main --head=HEAD</code></pre><p>On a feature branch the defaults are usually right. In CI, pipelines pass explicit commits, typically the last successful run on <code>main</code>, so nothing that failed earlier slips through. The CI lesson covers how to find that commit.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Nx skips work two ways: <strong>caching</strong> (same inputs, replay the result) and <strong>affected</strong> (only projects a change can impact)</li><li>A task's hash covers its input files, command, declared env values and dependencies</li><li><strong>inputs</strong> decide when to rerun; <strong>outputs</strong> decide what is restored</li><li>Define file sets once with namedInputs; <code>production</code> keeps test edits from rebuilding apps</li><li>Declare every environment variable a task reads, or expect stale results</li><li>Set <code>cache: false</code> on deploys and other tasks with side effects</li><li>Affected includes dependents, never dependencies</li><li>affected compares the working copy with <code>defaultBase</code>; CI passes explicit base and head</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-libraries-boundaries",
+    "title": "Libraries and Module Boundaries",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-libraries-boundaries",
+    "level": 2,
+    "summary": "Split code into libraries, tag them, enforce which projects may depend on which, and keep TypeScript references and dependencies clean.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "nx",
+      "libraries",
+      "module boundaries",
+      "tags",
+      "nx sync"
+    ],
+    "sections": [
+      {
+        "title": "Why Split Code into Libraries",
+        "content": "<p>Nx caches results and works out what is affected <strong>per project</strong>. If an app holds all its code, any change reruns everything for that app. Split the same code into libraries and a change only reruns tasks for the library touched and the projects that use it.</p><p>Libraries bring other benefits too:</p><ul><li>clear ownership, since a team can own <code>shop/feature-cart</code></li><li>reuse between apps without copying</li><li>boundaries that tooling can enforce</li></ul><p>Splitting too finely has a cost: dozens of one-file libraries add configuration and make the graph hard to read. Start with libraries per feature and type, and split further when one grows large.</p>"
+      },
+      {
+        "title": "Library Types",
+        "content": "<p>A widely used convention sorts libraries into four types, each with clear rules about what it may use:</p><ul><li><strong>feature</strong>: smart components and pages for one use case; may use every other type</li><li><strong>ui</strong>: presentational components; may use only <code>ui</code> and <code>util</code></li><li><strong>data-access</strong>: API calls and state; may use <code>data-access</code> and <code>util</code></li><li><strong>util</strong>: pure helpers such as formatting; may use only <code>util</code></li></ul><p>The rules keep layers clean. A button in a <code>ui</code> library never pulls in API code, so it stays easy to reuse and test. Apps sit on top and are never imported by libraries.</p>"
+      },
+      {
+        "title": "Tagging Projects",
+        "content": "<p>To enforce rules, Nx needs to know each project's role. That is what <strong>tags</strong> are for: labels in a project's configuration.</p><pre><code class=\"language-json\">{\n  \"name\": \"shop-feature-cart\",\n  \"tags\": [\"scope:shop\", \"type:feature\"]\n}</code></pre><p>Most workspaces tag along two dimensions:</p><ul><li><strong>scope</strong>: which part of the business, such as <code>scope:shop</code>, <code>scope:admin</code> or <code>scope:shared</code></li><li><strong>type</strong>: the library type, such as <code>type:ui</code> or <code>type:util</code></li></ul><p>Tags also work in commands: <code>nx run-many -t test -p tag:scope:shop</code> tests every shop project.</p>"
+      },
+      {
+        "title": "Enforcing Boundaries",
+        "content": "<p>Tags become rules through the <code>@nx/enforce-module-boundaries</code> ESLint rule and its <code>depConstraints</code>:</p><pre><code class=\"language-json\">\"depConstraints\": [\n  { \"sourceTag\": \"scope:shop\", \"onlyDependOnLibsWithTags\": [\"scope:shop\", \"scope:shared\"] },\n  { \"sourceTag\": \"type:ui\", \"onlyDependOnLibsWithTags\": [\"type:ui\", \"type:util\"] }\n]</code></pre><p>If a shop project imports a library tagged <code>scope:admin</code>, lint fails in the editor and in CI. TypeScript and the package manager would allow the import; only this rule knows the intended architecture.</p><p>The same rule also reports circular dependencies and imports that reach into another project's internals.</p>"
+      },
+      {
+        "title": "Public APIs and Deep Imports",
+        "content": "<p>Every library has an <strong>entry point</strong>, usually an <code>index.ts</code>, that exports what other projects may use. That file is the library's public API.</p><pre><code class=\"language-typescript\">// Good: through the public API\nimport { Button } from '@acme/ui';\n\n// Bad: reaching into internals\nimport { theme } from '@acme/ui/src/lib/internal/theme';\nimport { theme } from '../../libs/ui/src/lib/internal/theme';</code></pre><p>Deep imports couple your code to files the library's owners may rename or delete at any time, and relative paths into another project tie code to the folder layout. Import by name, and if something is genuinely needed, export it from the entry point.</p>"
+      },
+      {
+        "title": "Buildable, Publishable and Non-Buildable",
+        "content": "<p>Libraries differ in whether they have a build step of their own.</p><ul><li><strong>Non-buildable</strong>: no build target. The app that imports it compiles its source as part of the app's build.</li><li><strong>Buildable</strong>: has its own build target, so it can be built and cached separately.</li><li><strong>Publishable</strong>: buildable, plus set up to be released to a registry such as npm, with a package name and version.</li></ul><p>For most libraries inside an app workspace, non-buildable is the simplest default. They still get their own lint and test targets and caching. Make a library publishable when it is used outside the repository, or buildable when separate builds clearly save time.</p>"
+      },
+      {
+        "title": "TypeScript References and nx sync",
+        "content": "<p>Modern TypeScript workspaces often use <strong>project references</strong>: each <code>tsconfig.json</code> lists the projects it depends on, so TypeScript can build and type-check them incrementally. Keeping those lists right by hand is tedious and easy to get wrong.</p><p>Nx keeps them in step with the project graph using <strong>sync generators</strong>:</p><pre><code class=\"language-bash\">npx nx sync\nnpx nx sync:check</code></pre><p><code>nx sync</code> updates the references to match the graph, and tasks can also prompt you to sync when they are out of date. <code>nx sync:check</code> changes nothing and fails if anything is stale, which makes it a good CI step.</p>"
+      },
+      {
+        "title": "Breaking Circular Dependencies",
+        "content": "<p>A circular dependency means two libraries import each other, directly or through others: <code>data-access</code> uses <code>util-format</code>, and <code>util-format</code> uses <code>data-access</code>. Neither can be understood, built or tested on its own, and tools get confused about order.</p><p>The usual fix:</p><ol><li>find the code both sides need</li><li>move it into a new, lower-level library, such as <code>util-dates</code></li><li>make both libraries import the new one</li></ol><p>Dependencies now point in one direction. The module boundaries rule reports cycles as soon as they appear, so they are caught in review instead of months later.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Nx caches and computes affected per project, so smaller libraries mean more precise runs</li><li>Feature, ui, data-access and util libraries each have rules about what they may use</li><li>Tag projects by scope and type in their configuration</li><li><code>@nx/enforce-module-boundaries</code> turns tags into lint rules through <code>depConstraints</code></li><li>Import through a library's entry point, never its internals or a relative path</li><li>Non-buildable is the default; buildable and publishable libraries are for real needs</li><li><code>nx sync</code> keeps TypeScript references in step; <code>nx sync:check</code> guards CI</li><li>Break a cycle by moving shared code into a new lower-level library</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-generators-plugins",
+    "title": "Generators and Plugins",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-generators-plugins",
+    "level": 2,
+    "summary": "Create projects and code consistently with generators, add and explore plugins, and extend Nx with local generators and plugins for your team's tools.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "nx",
+      "generators",
+      "plugins",
+      "nx add",
+      "createNodesV2"
+    ],
+    "sections": [
+      {
+        "title": "What Generators Do",
+        "content": "<p>A <strong>generator</strong> creates or updates files in the workspace. For example:</p><pre><code class=\"language-bash\">npx nx g @nx/react:library libs/shop/feature-cart</code></pre><p>This creates a React library with its source folder, test setup, lint configuration and TypeScript settings already wired together. Writing all of that by hand takes time and comes out slightly different each time.</p><p>Generators exist for apps, libraries, components and more. The <code>g</code> in <code>nx g</code> is short for <code>generate</code>. Generators also power upgrades: <code>nx migrate</code> uses them to update code when Nx changes.</p>"
+      },
+      {
+        "title": "Preview with --dry-run",
+        "content": "<p>Before a generator touches anything, you can see exactly what it would do:</p><pre><code class=\"language-bash\">npx nx g @nx/react:library libs/shop/feature-cart --dry-run</code></pre><p>The output lists every file the generator would create, update or delete, and no file is written. Adjust the options until the result looks right, then run the same command without <code>--dry-run</code>.</p><p>Dry runs are especially useful for unfamiliar generators and for generators that change existing files, such as ones that add a library to an app's configuration. Nx Console shows the same preview as you fill in its form.</p>"
+      },
+      {
+        "title": "Adding Plugins with nx add",
+        "content": "<p>Plugins must match the workspace's Nx version. The safest way to install one is:</p><pre><code class=\"language-bash\">npx nx add @nx/vite</code></pre><p><code>nx add</code> does three things that a plain <code>npm install</code> does not:</p><ul><li>picks the plugin version that matches your Nx version</li><li>installs it</li><li>runs its setup step, which typically registers it in the <code>plugins</code> array of <code>nx.json</code> so it starts inferring tasks</li></ul><p>A mismatched plugin version is a common cause of confusing errors, so <code>nx add</code> is worth making a habit.</p>"
+      },
+      {
+        "title": "Exploring a Plugin",
+        "content": "<p>To see what is installed, and what a plugin offers:</p><pre><code class=\"language-bash\">npx nx list\nnpx nx list @nx/react</code></pre><p>The first command lists installed plugins and others available to add. The second lists everything one plugin provides: its generators, such as <code>application</code>, <code>library</code> and <code>component</code>, and any executors.</p><p>Official framework plugins usually provide two things: generators that create correctly configured projects, and inferred tasks for the tools those projects use. The tools themselves, such as Vite or Vitest, remain their own packages.</p>"
+      },
+      {
+        "title": "Generator Defaults",
+        "content": "<p>Typing the same options every time is tedious and easy to forget. Set defaults once in the <code>generators</code> section of <code>nx.json</code>:</p><pre><code class=\"language-json\">\"generators\": {\n  \"@nx/react:library\": {\n    \"unitTestRunner\": \"vitest\",\n    \"bundler\": \"none\"\n  }\n}</code></pre><p>Anyone running <code>nx g @nx/react:library</code> now gets Vitest and no bundler unless they pass a different value on the command line. Defaults like these keep new projects consistent across a team without anyone having to remember the house rules.</p>"
+      },
+      {
+        "title": "Local Generators for Team Conventions",
+        "content": "<p>Teams often have conventions no official generator knows about: tags on every library, a README, a standard folder layout. Instead of checking these by hand in review, write a <strong>local generator</strong>.</p><p>A local generator lives in a plugin inside the workspace. A typical one:</p><ol><li>calls the official library generator</li><li>adds the team's tags to the new project</li><li>writes a README and any extra files from templates</li></ol><p>Now one command creates a library that is correct from the start. When a convention changes, you update one generator instead of fixing dozens of libraries, which is why a generator beats copying a template folder.</p>"
+      },
+      {
+        "title": "Local Plugins and createNodesV2",
+        "content": "<p>A <strong>local plugin</strong> is a project in the workspace, often under <code>tools/</code>, that holds generators and can also infer tasks. It is versioned with the code it serves and needs no publishing.</p><p>Suppose an in-house tool reads <code>check.config.json</code>. A local plugin can use the <code>createNodesV2</code> API to:</p><ul><li>match every <code>**/check.config.json</code> file</li><li>add a <code>check</code> target to the project that contains it</li><li>declare the target's inputs and outputs so it can be cached</li></ul><p>Official plugins infer tasks with the same API, so your tool gets the same treatment as Vite or Jest.</p>"
+      },
+      {
+        "title": "Executors vs Inferred Tasks",
+        "content": "<p>You will meet two ways of defining how a task runs.</p><ul><li><strong>Executors</strong> are functions provided by a plugin. A target names the executor and passes options, usually in <code>project.json</code>, and Nx calls the plugin's code.</li><li><strong>Inferred tasks</strong> usually run the tool's own command, such as <code>vite build</code>, reading the tool's normal config file.</li></ul><pre><code class=\"language-json\">\"build\": {\n  \"executor\": \"@nx/vite:build\",\n  \"options\": { \"outputPath\": \"dist/shop\" }\n}</code></pre><p>Both are cached and ordered the same way. Newer workspaces lean on inferred tasks, so the tool's own documentation applies directly.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Generators create or update files so new projects start correctly configured</li><li>Add <code>--dry-run</code> to preview every file a generator would change</li><li><code>nx add</code> installs a plugin at the matching Nx version and registers it</li><li><code>nx list</code> shows plugins; <code>nx list @nx/react</code> shows what one provides</li><li>Set generator defaults in the <code>generators</code> section of <code>nx.json</code></li><li>Local generators encode team conventions and are updated in one place</li><li>Local plugins can infer tasks for in-house tools with <code>createNodesV2</code></li><li>Executors run plugin code; inferred tasks run the tool's own CLI</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-ci",
+    "title": "Nx in CI",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-ci",
+    "level": 3,
+    "summary": "Build CI pipelines that only do the work a change needs, with the right base commit, remote caching, task distribution and help for flaky or failing tasks.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "nx",
+      "ci",
+      "affected",
+      "remote cache",
+      "distribution"
+    ],
+    "sections": [
+      {
+        "title": "What CI Should Do in a Monorepo",
+        "content": "<p>In a large monorepo, most pull requests touch only a few projects. A good pipeline follows two rules:</p><ul><li><strong>Only do the work a change needs.</strong> Run tasks for affected projects, not the whole repository.</li><li><strong>Never repeat work.</strong> If a task with the same inputs already ran, on any machine, reuse its result.</li></ul><p>With both in place, CI time grows with the size of the change, not the size of the repository. This lesson covers the pieces that make that work: the right base commit, remote caching, distribution across machines, and help with flaky or failing tasks.</p>"
+      },
+      {
+        "title": "A Typical Pipeline",
+        "content": "<p>Most Nx pipelines follow the same shape, whatever the CI provider:</p><ol><li>check out the code with enough Git history to reach the base commit</li><li>install dependencies, using the package manager's own cache</li><li>set the base and head commits</li><li>run affected tasks, reusing the remote cache</li><li>run checks such as <code>nx sync:check</code></li></ol><pre><code class=\"language-bash\">npm ci\nnpx nx affected -t lint test build\nnpx nx sync:check</code></pre><p>The commands stay short because the hard parts live elsewhere: choosing the base commit and sharing the cache, covered next.</p>"
+      },
+      {
+        "title": "Choosing the Base Commit",
+        "content": "<p>affected compares a <strong>base</strong> commit with a <strong>head</strong> commit, and in CI the base matters:</p><ul><li>on a pull request, the base is usually where the branch split from <code>main</code></li><li>on <code>main</code>, the base should be the <strong>last commit where CI succeeded</strong>, so anything that failed since then is checked again</li></ul><p>The <code>nx-set-shas</code> GitHub Action finds that commit and sets <code>NX_BASE</code> and <code>NX_HEAD</code>, which Nx reads automatically. Other CI systems have equivalents.</p><blockquote class=\"lesson-warn\"><p>A shallow clone with a fetch depth of 1 contains only the latest commit, so the base is missing and affected fails or treats everything as affected. Fetch enough history.</p></blockquote>"
+      },
+      {
+        "title": "Remote Caching",
+        "content": "<p>The local cache only helps the machine that ran a task. A <strong>remote cache</strong> shares results with everyone.</p><ul><li>a build that ran in CI can be a cache hit on a developer's laptop</li><li>a test a teammate already ran on the same code is replayed in your pull request</li><li>rerunning a failed pipeline only redoes the tasks that actually failed</li></ul><p>Nx Cloud provides a remote cache, and self-hosted options exist for teams that must keep artifacts on their own infrastructure. The cache key is the same task hash used locally, so remote hits are exactly as trustworthy as local ones, as long as inputs are declared correctly.</p>"
+      },
+      {
+        "title": "Keeping the Remote Cache Safe",
+        "content": "<p>A shared cache needs trusted writers. If anyone could write to it, a malicious pull request could store a tampered build output that other machines later restore as a cache hit.</p><ul><li>give untrusted runs, such as pull requests from forks, <strong>read-only</strong> access</li><li>keep access tokens in CI secrets, with separate read and read-write tokens</li><li>never let task outputs contain secrets, since outputs are shared</li><li>choose hosting, Nx Cloud or self-hosted, that meets company rules</li></ul><p>Read-only access still lets untrusted runs benefit from the cache; it only stops them from changing it.</p>"
+      },
+      {
+        "title": "Parallelism vs Distribution",
+        "content": "<p>There are two ways to run more tasks at once.</p><ul><li><strong>Parallelism</strong> runs several tasks on <em>one machine</em>, up to the <code>--parallel</code> limit. It is capped by that machine's cores and memory; past a point, more parallel tasks just compete with each other.</li><li><strong>Distribution</strong> spreads tasks across <em>several machines</em>. Nx uses the task graph to decide what runs where and in what order, and shares outputs between machines so dependent tasks have what they need.</li></ul><p>When hundreds of tasks are affected and one machine is the bottleneck, distribution adds real capacity. Nx Cloud provides it, and each machine still runs tasks in parallel.</p>"
+      },
+      {
+        "title": "Flaky Tasks and Self-Healing CI",
+        "content": "<p>Because Nx knows every task's inputs, it can spot problems other CI setups miss. Both features below are part of Nx Cloud.</p><ul><li><strong>Flaky task detection</strong>: a task that fails and then passes with exactly the same inputs must be flaky. Nx Cloud can detect this, retry such tasks automatically and report them, so one unreliable test does not fail a pull request.</li><li><strong>Self-healing CI</strong>: when a task fails, Nx Cloud can look at the failure and the change, and propose a fix. Developers review it and apply it locally or let it be pushed to the pull request. Nothing changes without someone approving it.</li></ul>"
+      },
+      {
+        "title": "When Affected Runs Everything",
+        "content": "<p>Sometimes affected is working correctly, yet almost every pull request still runs everything. The usual cause is the project graph, not CI.</p><p>If a catch-all <code>shared-utils</code> library is imported by all 50 projects, any change to it affects all 50. The fix is structural: split it into focused libraries, such as <code>util-dates</code> and <code>util-currency</code>, so a change only affects the projects that use that part.</p><p>Two smaller checks help too: compare cache hit rates, since low rates often mean inputs are too broad, and match <code>--parallel</code> to the CI machine so tasks are not starved of memory.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Good CI does only the work a change needs and never repeats work</li><li>A typical pipeline: checkout with history, install, set base and head, <code>nx affected</code>, checks</li><li>On <code>main</code>, the base is the last successful commit; <code>nx-set-shas</code> finds it</li><li>A depth-1 clone breaks affected because the base commit is missing</li><li>Remote caching shares results between CI and every developer</li><li>Untrusted runs get read-only cache access; tokens stay in CI secrets</li><li>Parallelism uses one machine; distribution spreads the task graph across many</li><li>If affected runs everything, split catch-all libraries</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-release",
+    "title": "Versioning and Releases",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-release",
+    "level": 3,
+    "summary": "Version, document and publish packages from a monorepo with nx release: fixed or independent versions, conventional commits, dependents, dry runs and CI.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "nx",
+      "nx release",
+      "versioning",
+      "changelog",
+      "conventional commits"
+    ],
+    "sections": [
+      {
+        "title": "What nx release Does",
+        "content": "<p>Libraries that others install, from npm or a private registry, need versions, changelogs and publishing. <code>nx release</code> handles all three for the packages in a workspace:</p><ol><li><strong>Version</strong>: decide each package's new version and update its <code>package.json</code></li><li><strong>Changelog</strong>: write changelog entries from the commits since the last release</li><li><strong>Publish</strong>: upload the packages to the registry</li></ol><pre><code class=\"language-bash\">npx nx release</code></pre><p>It is aimed at packages, not deployments. Deploying an app to a server is a separate concern, usually a CI job of its own. Settings live in the <code>release</code> section of <code>nx.json</code>.</p>"
+      },
+      {
+        "title": "Running Steps Separately",
+        "content": "<p>Each step also has its own command:</p><pre><code class=\"language-bash\">npx nx release version\nnpx nx release changelog\nnpx nx release publish</code></pre><p>Running steps separately helps when they belong in different places. A common setup:</p><ul><li>one job versions the packages, writes changelogs and creates the release commit and tags</li><li>a later job, after tests pass on the tagged commit, publishes</li></ul><p>It also lets teams plug individual steps into scripts they already have, for example keeping their own changelog tooling while using Nx for versioning and publishing.</p>"
+      },
+      {
+        "title": "Fixed vs Independent Versioning",
+        "content": "<p><code>nx release</code> supports two relationships between packages.</p><ul><li><strong>Fixed</strong> (the default): every released package shares one version, and they are released together. Users know that version 5.2 of every package works together.</li><li><strong>Independent</strong>: each package has its own version and is only bumped when it changes.</li></ul><pre><code class=\"language-json\">\"release\": {\n  \"projectsRelationship\": \"independent\"\n}</code></pre><p>Choose fixed for packages designed to be used together, like a framework's core and add-ons. Choose independent for separate products with their own users and pace, so a fix in one does not force new versions of the rest.</p>"
+      },
+      {
+        "title": "Release Groups",
+        "content": "<p>One workspace does not have to follow one rule. <strong>Release groups</strong> apply different settings to different sets of packages:</p><pre><code class=\"language-json\">\"release\": {\n  \"groups\": {\n    \"core\": { \"projects\": [\"core\", \"cli\"], \"projectsRelationship\": \"fixed\" },\n    \"plugins\": { \"projects\": [\"plugin-*\"], \"projectsRelationship\": \"independent\" }\n  }\n}</code></pre><p>Here <code>core</code> and <code>cli</code> always share a version, while each plugin is versioned on its own. Each group can also have its own changelog and tag settings, so one workspace can mix tightly coupled packages with loosely related ones.</p>"
+      },
+      {
+        "title": "Conventional Commits Decide the Bump",
+        "content": "<p>Choosing versions by hand is slow and inconsistent. With <strong>conventional commits</strong>, the commit messages decide.</p><pre><code class=\"language-plaintext\">feat: add CSV export          -&gt; minor (1.4.0 to 1.5.0)\nfix: handle empty input        -&gt; patch (1.4.0 to 1.4.1)\nfeat!: remove the legacy API   -&gt; major (1.4.0 to 2.0.0)</code></pre><p>A <code>feat</code> commit signals a new feature, <code>fix</code> a bug fix, and <code>!</code> or a <code>BREAKING CHANGE</code> note a breaking change. With conventional commits enabled, <code>nx release</code> reads the commits that touched each package since its last release and picks the bump. The same messages also give tidy changelog entries.</p>"
+      },
+      {
+        "title": "Updating Dependents",
+        "content": "<p>When a library gets a new version, the packages that depend on it may need one too. Suppose <code>cli</code> depends on <code>core</code>, and <code>core</code> gets a fix:</p><ul><li><code>core</code> is released as a patch</li><li><code>cli</code> should be bumped as well, so its dependency range points at the new <code>core</code></li></ul><p>The <code>updateDependents</code> setting controls whether <code>nx release</code> does this automatically. In independent mode it is what keeps dependents in step, while packages with no changes and no link to <code>core</code> keep their versions.</p><blockquote class=\"lesson-tip\"><p>Run a dry run after changing this setting to see exactly which packages would be bumped.</p></blockquote>"
+      },
+      {
+        "title": "Tags, Commits and the First Release",
+        "content": "<p>By default, <code>nx release</code> commits the version and changelog changes and creates <strong>Git tags</strong>, named by a configurable pattern such as <code>v1.4.0</code> or <code>core@1.4.0</code>. Those tags matter: the next release uses them to find the commits since the previous version.</p><p>A package that has never been released has no previous tag to look for. The <code>--first-release</code> option tells <code>nx release</code> this is the first one, so it does not fail searching:</p><pre><code class=\"language-bash\">npx nx release --first-release</code></pre><p>After that, the tags it creates are used automatically.</p>"
+      },
+      {
+        "title": "Dry Runs and Releasing from CI",
+        "content": "<p>Releases should be predictable and reviewed. Two habits help.</p><p><strong>Dry runs</strong> show the versions, changelog entries and file changes without touching files, Git or the registry:</p><pre><code class=\"language-bash\">npx nx release --dry-run</code></pre><p>Running this on pull requests catches configuration mistakes before anything ships.</p><p><strong>Publish from CI, only from main.</strong> Releases then come from reviewed code, the registry token stays in protected CI secrets instead of on laptops, and every release is reproducible. If publishing fails halfway, the tags show what was released and the publish step can be rerun on its own.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li><code>nx release</code> versions, writes changelogs and publishes packages</li><li>Each step can run alone: <code>nx release version</code>, <code>changelog</code> or <code>publish</code></li><li>Fixed versioning (the default) shares one version; independent versions each package</li><li>Release groups apply different rules to different sets of packages</li><li>Conventional commits decide bumps: feat is minor, fix is patch, a breaking change is major</li><li><code>updateDependents</code> bumps packages that depend on a changed library</li><li>Release commits and tags mark where the next release starts; use <code>--first-release</code> the first time</li><li>Dry run on pull requests and publish only from main in CI</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "nx-workspace-maintenance",
+    "title": "Maintaining a Healthy Workspace",
+    "subjectSlug": "nx-monorepo",
+    "topicSlug": "nx-workspace-maintenance",
+    "level": 3,
+    "summary": "Upgrade Nx safely with nx migrate, bring in other repositories with nx import, keep cache results trustworthy, and keep a large shared repo easy to own and debug.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "nx",
+      "nx migrate",
+      "nx import",
+      "sandboxing",
+      "codeowners"
+    ],
+    "sections": [
+      {
+        "title": "Workspaces Age",
+        "content": "<p>A monorepo that lasts for years keeps changing: new projects, new tools, new Nx versions, more teams. Without care, three things drift:</p><ul><li><strong>Versions</strong>: Nx and its plugins fall behind, and upgrades get harder</li><li><strong>Trust in the cache</strong>: new scripts read files nobody declared as inputs</li><li><strong>Ownership</strong>: it gets unclear who should review what</li></ul><p>This lesson covers the tools that keep each of these under control, plus how to debug problems and how to help AI coding agents work safely in a large workspace.</p>"
+      },
+      {
+        "title": "Upgrading with nx migrate",
+        "content": "<p>Nx upgrades in two deliberate steps:</p><pre><code class=\"language-bash\">npx nx migrate latest\nnpm install\nnpx nx migrate --run-migrations</code></pre><ol><li><code>nx migrate latest</code> updates the versions of Nx and related packages in <code>package.json</code> and writes the code changes needed into <code>migrations.json</code>. No code changes yet.</li><li>After reviewing the plan and installing packages, <code>--run-migrations</code> applies each migration, updating configuration and code for the new version.</li></ol><p>Nx Console offers a Migrate UI to review and run migrations one by one. Finish by running your tasks and committing.</p>"
+      },
+      {
+        "title": "Upgrading Across Major Versions",
+        "content": "<p>Migrations are written to move from one version to the next. If a workspace has fallen several major versions behind, jumping straight to the latest is risky.</p><p>The safer path is <strong>one major version at a time</strong>:</p><pre><code class=\"language-bash\">npx nx migrate 21\nnpx nx migrate 22</code></pre><p>After each step, install packages, run the migrations, run the affected tasks and commit. Each step stays small, the right migrations run in order, and if something breaks it is obvious which step caused it. Doing upgrades in their own branch, apart from feature work, keeps reviews simple.</p>"
+      },
+      {
+        "title": "Bringing Repositories In",
+        "content": "<p>Monorepos often grow by absorbing existing repositories. <code>nx import</code> moves another repository, or a folder of it, into the workspace:</p><pre><code class=\"language-bash\">npx nx import https://github.com/acme/billing.git apps/billing</code></pre><ul><li>the imported code <strong>keeps its Git history</strong>, so <code>git log</code> and <code>git blame</code> still work</li><li>Nx detects the tools the code uses and helps add the matching plugins</li></ul><p>Afterwards, align dependency versions with the workspace, add tags so boundary rules apply, update CI and check the result with <code>nx graph</code>. Archive the old repository once the team has switched.</p>"
+      },
+      {
+        "title": "Keeping Cache Results Trustworthy",
+        "content": "<p>The cache is only as good as the declared inputs and outputs. As a workspace grows, new scripts start reading files nobody listed, and stale cache hits creep in.</p><p>Habits that help: prefer inferred tasks, reuse namedInputs, declare environment variables, and treat every wrong cache hit as a bug in the inputs.</p><p><strong>Task sandboxing</strong>, an Nx Cloud add-on, goes further: it traces the files each task really reads and writes and compares them with what it declared. An undeclared read is reported as a violation. Fix it by adding the file to the inputs; exclusions are only for harmless reads, such as caches, because excluded files stop being tracked.</p>"
+      },
+      {
+        "title": "Ownership in a Shared Repository",
+        "content": "<p>When many teams share one repository, every change still needs the right reviewer. Most hosting platforms solve this with a <strong>CODEOWNERS</strong> file:</p><pre><code class=\"language-plaintext\">/apps/shop/          @acme/shop-team\n/libs/shop/          @acme/shop-team\n/libs/shared/ui/     @acme/design-system\n/nx.json             @acme/platform</code></pre><p>GitHub and similar platforms read this file and request a review from the matching team automatically. Combined with scope tags and boundary rules, it keeps ownership clear: teams control their own projects, and changes to shared configuration such as <code>nx.json</code> go through the platform team.</p>"
+      },
+      {
+        "title": "Diagnostics: nx report and the Daemon",
+        "content": "<p>When something goes wrong, two tools help.</p><p><code>nx report</code> prints the versions of Node.js, the package manager, Nx and every installed Nx plugin. Mismatched plugin versions are a common cause of strange errors, and this output is what to paste into a bug report.</p><p>The <strong>Nx daemon</strong> is a background process that watches the workspace and keeps the project graph ready, so commands do not recompute it each time. If the graph seems out of date or commands hang, <code>nx reset</code> stops the daemon and clears local data. Setting <code>NX_DAEMON=false</code> turns the daemon off, which some CI setups do.</p>"
+      },
+      {
+        "title": "Working with AI Agents",
+        "content": "<p>AI coding agents work best when they understand the workspace the way Nx does, instead of guessing from file names.</p><pre><code class=\"language-bash\">npx nx configure-ai-agents</code></pre><p>This command sets up instructions and Nx skills for agents such as Claude, Codex or Cursor, so they use Nx commands and can read workspace information like the project graph. A well-configured agent:</p><ul><li>checks which projects a change affects before editing</li><li>verifies its work with <code>nx affected -t lint test</code></li><li>uses generators and respects boundary rules</li></ul><p>The same structure that helps new team members helps agents.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Over time, versions, cache trust and ownership drift unless maintained</li><li><code>nx migrate latest</code> plans the upgrade; <code>--run-migrations</code> applies it</li><li>Upgrade one major version at a time, testing and committing after each</li><li><code>nx import</code> brings in a repository with its Git history</li><li>Keep inputs complete; Nx Cloud task sandboxing flags undeclared file reads</li><li>A CODEOWNERS file routes reviews to the team that owns each project</li><li><code>nx report</code> prints versions for bug reports; <code>nx reset</code> restarts the daemon</li><li><code>nx configure-ai-agents</code> teaches coding agents to work the Nx way</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-getting-started",
+    "title": "Getting Started with Express",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-getting-started",
+    "level": 1,
+    "summary": "What Express adds on top of Node.js, how to install Express 5, and how to create, start and run your first server.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "express",
+      "node.js",
+      "express 5",
+      "app.listen"
+    ],
+    "sections": [
+      {
+        "title": "What Express Is",
+        "content": "<p><strong>Express</strong> is a small web framework for Node.js. It runs on top of Node's built-in <code>http</code> module and makes the common jobs of a web server simple: matching requests to the right code, reading what the client sent and sending back a response.</p><p>Express is deliberately <strong>minimal and unopinionated</strong>. It gives you routing and middleware, and leaves the rest, such as folder structure, database and template engine, to you. That flexibility is why it powers so many APIs and websites, and why most Node.js developers meet it early.</p>"
+      },
+      {
+        "title": "Express vs Plain Node.js",
+        "content": "<p>With Node's <code>http</code> module alone, you inspect every request yourself:</p><pre><code class=\"language-javascript\">http.createServer((req, res) =&gt; {\n  if (req.method === 'GET' &amp;&amp; req.url === '/users') {\n    res.writeHead(200, { 'Content-Type': 'application/json' });\n    res.end(JSON.stringify(users));\n  }\n});</code></pre><p>Express replaces that plumbing with three things:</p><ul><li><strong>Routing</strong>: <code>app.get('/users', handler)</code></li><li><strong>Middleware</strong>: shared steps such as parsing JSON or logging</li><li><strong>Response helpers</strong>: <code>res.json()</code>, <code>res.status()</code></li></ul>"
+      },
+      {
+        "title": "Installing Express 5",
+        "content": "<p>Express 5 is the current major version and the one npm installs by default. It needs <strong>Node.js 18 or higher</strong>.</p><pre><code class=\"language-bash\">npm init -y\nnpm install express</code></pre><p>You can import it in either module system:</p><pre><code class=\"language-javascript\">// CommonJS\nconst express = require('express');\n\n// ES modules (\"type\": \"module\" in package.json)\nimport express from 'express';</code></pre><p>This subject teaches Express 5 throughout. Older tutorials written for Express 4 still work for most ideas, but some syntax has changed.</p>"
+      },
+      {
+        "title": "Your First Server",
+        "content": "<p>A complete Express server takes a few lines:</p><pre><code class=\"language-javascript\">const express = require('express');\nconst app = express();\n\napp.get('/', (req, res) =&gt; {\n  res.send('Hello from Express');\n});\n\napp.listen(3000, () =&gt; {\n  console.log('Listening on http://localhost:3000');\n});</code></pre><ul><li><code>express()</code> creates the application</li><li><code>app.get</code> registers a handler for GET requests to <code>/</code></li><li><code>app.listen</code> starts an HTTP server on port 3000 and keeps running</li></ul>"
+      },
+      {
+        "title": "How a Request Flows",
+        "content": "<p>An Express app is a <strong>pipeline</strong>. When a request arrives, Express walks through the middleware and routes in the order you registered them.</p><ol><li>Each middleware whose path matches runs and either responds or calls <code>next()</code> to continue.</li><li>The first route that matches the method and path handles the request and sends a response.</li><li>If nothing responds, Express sends its default 404, such as <code>Cannot GET /about</code>.</li></ol><p>Almost everything you build in Express fits this picture, which is why the order of your code matters so much.</p>"
+      },
+      {
+        "title": "Startup Errors in Express 5",
+        "content": "<p><code>app.listen</code> returns Node's <code>http.Server</code>, and in Express 5 startup errors, such as a port already in use, are passed to its callback:</p><pre><code class=\"language-javascript\">const server = app.listen(3000, (err) =&gt; {\n  if (err) {\n    console.error('Could not start:', err.code); // e.g. EADDRINUSE\n    process.exit(1);\n  }\n  console.log('ready');\n});</code></pre><p>Keeping the <code>server</code> reference is useful later: you call <code>server.close()</code> for a graceful shutdown or attach a WebSocket server to the same port.</p>"
+      },
+      {
+        "title": "Choosing the Port",
+        "content": "<p>Hard-coding port 3000 works on your laptop, but hosting platforms and containers usually tell the app which port to use through the <code>PORT</code> environment variable.</p><pre><code class=\"language-javascript\">const port = process.env.PORT || 3000;\napp.listen(port);</code></pre><p>Reading the variable, with a sensible fallback for local development, lets the same code run everywhere without changes. The same pattern applies to other settings, such as database URLs, covered in the lesson on structuring an app.</p>"
+      },
+      {
+        "title": "A Smooth Development Loop",
+        "content": "<p>A Node.js process loads your code once, so edits do not take effect until the server restarts. Node's built-in watch mode does that for you:</p><pre><code class=\"language-bash\">node --watch app.js</code></pre><p>Every time a watched file changes, Node restarts the app. It replaces what tools such as nodemon were commonly used for, with nothing extra to install.</p><p>Add it as a script so the whole team uses the same command:</p><pre><code class=\"language-javascript\">\"scripts\": {\n  \"dev\": \"node --watch app.js\",\n  \"start\": \"node app.js\"\n}</code></pre>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Express is a minimal, unopinionated web framework built on Node's <code>http</code> module</li><li>It adds routing, middleware and response helpers</li><li>Express 5 is the npm default and needs Node.js 18 or higher</li><li><code>express()</code> creates the app; <code>app.listen</code> starts the server and returns an <code>http.Server</code></li><li>Requests flow through middleware and routes in registration order</li><li>Unmatched requests get the default 404, such as <code>Cannot GET /about</code></li><li>In Express 5, startup errors such as EADDRINUSE arrive in the listen callback</li><li>Read the port from <code>process.env.PORT</code>; use <code>node --watch</code> during development</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-routing",
+    "title": "Routing",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-routing",
+    "level": 1,
+    "summary": "Match requests to handlers with route methods, parameters and query strings, use the Express 5 path syntax, and organise routes with express.Router.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "express",
+      "routing",
+      "express.Router",
+      "route parameters",
+      "express 5"
+    ],
+    "sections": [
+      {
+        "title": "Method, Path and Handler",
+        "content": "<p>A route has three parts: an HTTP method, a path and a handler function.</p><pre><code class=\"language-javascript\">app.get('/users', listUsers);\napp.post('/users', createUser);\napp.delete('/users/:id', deleteUser);</code></pre><p>Each method has its own function: <code>app.get</code>, <code>app.post</code>, <code>app.put</code>, <code>app.patch</code> and <code>app.delete</code>. A route only handles its own method, so <code>app.get('/users')</code> does not answer <code>POST /users</code>.</p><p>The handler receives <code>req</code> and <code>res</code>, reads what it needs from the request and sends exactly one response.</p>"
+      },
+      {
+        "title": "Route Parameters",
+        "content": "<p>A segment that starts with a colon is a <strong>route parameter</strong>. Its value lands in <code>req.params</code>:</p><pre><code class=\"language-javascript\">app.get('/users/:id', (req, res) =&gt; {\n  res.json({ id: req.params.id }); // GET /users/42 gives { id: '42' }\n});</code></pre><p>Two details catch people out:</p><ul><li>Parameter values are always <strong>strings</strong>, because they come from the URL. Convert them with <code>Number()</code> and validate them before use.</li><li>A parameter matches one whole segment, so <code>/users/:id</code> does not match <code>/users/42/orders</code>.</li></ul>"
+      },
+      {
+        "title": "Query Strings",
+        "content": "<p>Everything after the <code>?</code> is the <strong>query string</strong>. It is not part of route matching, and Express parses it into <code>req.query</code>:</p><pre><code class=\"language-javascript\">// GET /search?q=express&amp;page=2\napp.get('/search', (req, res) =&gt; {\n  const { q, page } = req.query; // 'express', '2'\n  res.json({ q, page: Number(page) });\n});</code></pre><p>Use parameters for <em>which</em> resource, and query values for optional modifiers such as filters, sorting and pagination. In Express 5, the default parser keeps keys flat, so <code>?filter[name]=ana</code> gives the key <code>filter[name]</code>, not a nested object.</p>"
+      },
+      {
+        "title": "Route Order Matters",
+        "content": "<p>Express checks routes in the order they are defined and uses the first match. That can surprise you:</p><pre><code class=\"language-javascript\">app.get('/users/:id', getUser);\napp.get('/users/new', newUserForm); // never reached</code></pre><p><code>/users/new</code> matches <code>/users/:id</code> first, so <code>getUser</code> runs with <code>req.params.id</code> set to <code>'new'</code>.</p><blockquote class=\"lesson-tip\"><p>Register specific routes before general ones: <code>/users/new</code> first, then <code>/users/:id</code>.</p></blockquote>"
+      },
+      {
+        "title": "Wildcards in Express 5",
+        "content": "<p>Express 5 changed how wildcards work. A wildcard must have a <strong>name</strong>, and its value is an array of path segments:</p><pre><code class=\"language-javascript\">app.get('/files/*splat', (req, res) =&gt; {\n  // GET /files/docs/a.txt gives ['docs', 'a.txt']\n  res.send(req.params.splat.join('/'));\n});</code></pre><p>A wildcard needs at least one segment, so <code>/*splat</code> does not match the root path. Wrap it in braces to make it optional: <code>/{*splat}</code> matches <code>/</code> and every deeper path, which is handy for catch-all routes. A bare <code>/*</code> is no longer valid.</p>"
+      },
+      {
+        "title": "Optional Segments, No Regex",
+        "content": "<p>Express 5 marks optional parts of a path with <strong>braces</strong>:</p><pre><code class=\"language-javascript\">app.get('/:file{.:ext}', (req, res) =&gt; {\n  // /report     gives { file: 'report' }\n  // /report.pdf gives { file: 'report', ext: 'pdf' }\n  res.json(req.params);\n});</code></pre><p>Regular expressions inside path strings, such as <code>/:id(\\d+)</code>, were removed, partly because some patterns allowed regular expression denial of service. Such a route now throws an error. Match <code>/users/:id</code> and validate the format in middleware or the handler instead.</p>"
+      },
+      {
+        "title": "Grouping Routes with express.Router",
+        "content": "<p>A <strong>router</strong> is a mini app with its own routes and middleware. Mount it with <code>app.use</code> to give all its routes a common prefix:</p><pre><code class=\"language-javascript\">const router = express.Router();\nrouter.get('/', listUsers);      // GET /api/users\nrouter.get('/:id', getUser);     // GET /api/users/42\n\napp.use('/api/users', router);</code></pre><p>Inside a mounted router, paths are <strong>relative</strong> to the mount point. <code>req.baseUrl</code> holds the mount path, <code>/api/users</code>, and <code>req.path</code> holds the rest, <code>/42</code>. Routers are how large apps stay organised, one per feature.</p>"
+      },
+      {
+        "title": "app.route and app.all",
+        "content": "<p>Two helpers reduce repetition.</p><p><code>app.route(path)</code> chains several methods on one path:</p><pre><code class=\"language-javascript\">app.route('/books')\n  .get(listBooks)\n  .post(createBook);</code></pre><p><code>app.all(path, handler)</code> matches a path for <strong>every</strong> HTTP method. It is useful for things like a health check or a method-not-allowed response:</p><pre><code class=\"language-javascript\">app.all('/health', (req, res) =&gt; res.sendStatus(200));</code></pre><p>Neither matches deeper paths: <code>/health/db</code> needs its own route.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>A route is a method, a path and a handler: <code>app.get('/users', handler)</code></li><li>Route parameters go to <code>req.params</code> and are always strings</li><li>Query strings are not part of matching; they go to <code>req.query</code></li><li>Routes match in definition order, so put specific routes before parameter routes</li><li>Express 5 wildcards are named, <code>/*splat</code>, and give an array; <code>/{*splat}</code> also matches <code>/</code></li><li>Optional parts use braces, <code>/:file{.:ext}</code>; regex in paths was removed</li><li><code>express.Router</code> groups routes; mounted paths are relative, with <code>req.baseUrl</code></li><li><code>app.route</code> chains methods; <code>app.all</code> matches every method</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-request-response",
+    "title": "Request and Response",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-request-response",
+    "level": 1,
+    "summary": "Read params, query, body, headers and cookies from req, and send JSON, status codes, redirects and files with res, exactly once per request.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "express",
+      "req",
+      "res",
+      "res.json",
+      "status codes"
+    ],
+    "sections": [
+      {
+        "title": "Two Objects, Two Jobs",
+        "content": "<p>Every handler and middleware receives two objects:</p><ul><li><code>req</code>, the <strong>request</strong>: everything the client sent, including the path, query string, headers and body</li><li><code>res</code>, the <strong>response</strong>: everything you send back, including the status code, headers and body</li></ul><p>Both are Node's own request and response objects with extra Express helpers attached. The same two objects travel through every middleware for that request, which is how earlier steps can share information with later ones.</p>"
+      },
+      {
+        "title": "Params, Query and Body",
+        "content": "<p>A request carries data in three places, each with its own property:</p><pre><code class=\"language-javascript\">// POST /orders/7?notify=true   body: { \"item\": \"pen\" }\napp.post('/orders/:id', (req, res) =&gt; {\n  req.params.id;    // '7'\n  req.query.notify; // 'true'\n  req.body.item;    // 'pen' (only after express.json() has run)\n});</code></pre><p>In Express 5, <code>req.body</code> is <code>undefined</code> until a body parser such as <code>express.json()</code> runs. Values from the path and query string are always strings, so convert and validate them before use.</p>"
+      },
+      {
+        "title": "Headers and Cookies",
+        "content": "<p>Read headers with <code>req.get</code>, which ignores case:</p><pre><code class=\"language-javascript\">req.get('Content-Type');  // same as req.get('content-type')\nreq.get('Authorization');</code></pre><p>Express can <strong>set</strong> cookies, but not read them. Add the <code>cookie-parser</code> middleware to fill <code>req.cookies</code>:</p><pre><code class=\"language-javascript\">app.use(cookieParser());\n\nres.cookie('theme', 'dark', {\n  httpOnly: true,   // hidden from page JavaScript\n  secure: true,     // HTTPS only\n  sameSite: 'lax',  // limits cross-site sending\n});</code></pre>"
+      },
+      {
+        "title": "Sending JSON and Status Codes",
+        "content": "<p>For APIs, <code>res.json</code> is the workhorse: it serialises the value and sets the <code>application/json</code> content type.</p><pre><code class=\"language-javascript\">res.json(user);                       // 200 by default\nres.status(201).json(newUser);        // created\nres.status(400).json({ error: 'Invalid email' });\nres.sendStatus(204);                  // no body</code></pre><p><code>res.status</code> sets the code and returns <code>res</code>, so it chains. <code>res.sendStatus</code> sets the code and sends immediately; for 204 No Content the body is empty. In Express 5, <code>res.status</code> only accepts valid codes from 100 to 999 and throws otherwise.</p>"
+      },
+      {
+        "title": "One Response per Request",
+        "content": "<p>Sending a response does <strong>not</strong> stop your function. Forget a <code>return</code> and the code keeps going:</p><pre><code class=\"language-javascript\">app.get('/user/:id', (req, res) =&gt; {\n  const user = users[req.params.id];\n  if (!user) {\n    return res.status(404).json({ error: 'Not found' });\n  }\n  res.json(user);\n});</code></pre><p>Without that <code>return</code>, an unknown id would send the 404 and then try to send a second response, which fails with <strong>Cannot set headers after they are sent</strong>. Make every response the last thing its code path does.</p>"
+      },
+      {
+        "title": "Redirects",
+        "content": "<p><code>res.redirect</code> sends the client to another URL. The status comes <strong>first</strong> in Express 5, and defaults to 302:</p><pre><code class=\"language-javascript\">res.redirect('/login');          // 302 Found\nres.redirect(301, '/new-home');  // permanent</code></pre><p>Express 5 removed the old <code>res.redirect(url, status)</code> order and the special <code>'back'</code> value. To send users back where they came from, use the Referrer header with a fallback:</p><pre><code class=\"language-javascript\">res.redirect(req.get('Referrer') || '/');</code></pre><p>Never redirect to a URL taken straight from user input; that creates an open redirect.</p>"
+      },
+      {
+        "title": "Sending Files",
+        "content": "<p>Two helpers stream a file to the client:</p><pre><code class=\"language-javascript\">const path = require('node:path');\n\n// Displayed in the browser where possible\nres.sendFile(path.join(__dirname, 'files', 'report.pdf'));\n\n// Saved as a download, with a file name\nres.download(path.join(__dirname, 'files', 'report.pdf'), 'report.pdf');</code></pre><p><code>res.sendFile</code> needs an <strong>absolute</strong> path, or a <code>root</code> option; a relative path throws an error. <code>res.download</code> adds <code>Content-Disposition: attachment</code>, so the browser offers to save the file instead of showing it.</p>"
+      },
+      {
+        "title": "res.locals: Data for One Request",
+        "content": "<p><code>res.locals</code> is an object that lives for a single request. Middleware can put values there for later handlers and templates:</p><pre><code class=\"language-javascript\">const { randomUUID } = require('node:crypto');\n\napp.use((req, res, next) =&gt; {\n  res.locals.requestId = randomUUID();\n  next();\n});\n\napp.get('/', (req, res) =&gt; {\n  res.render('home'); // the template can read requestId\n});</code></pre><p>Values in <code>res.locals</code> are available to every template rendered with <code>res.render</code> for that request. App-wide values, such as the site name, belong in <code>app.locals</code> instead.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li><code>req</code> holds what the client sent; <code>res</code> builds what you send back</li><li>Path values go to <code>req.params</code>, the query string to <code>req.query</code>, the parsed body to <code>req.body</code></li><li><code>req.body</code> is <code>undefined</code> until a parser runs; params and query values are strings</li><li><code>req.get</code> reads headers case-insensitively; reading cookies needs <code>cookie-parser</code></li><li>Use <code>res.status(code).json(data)</code>, or <code>res.sendStatus(204)</code> for no body</li><li>Send exactly one response: <code>return</code> after early responses</li><li><code>res.redirect(301, url)</code> puts the status first in Express 5</li><li><code>res.sendFile</code> needs an absolute path; <code>res.download</code> saves the file</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-middleware",
+    "title": "Middleware",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-middleware",
+    "level": 1,
+    "summary": "How middleware functions run in order and call next, where to register them, which built-in and third-party middleware to use, and how to write your own.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "express",
+      "middleware",
+      "next",
+      "express.json",
+      "cors"
+    ],
+    "sections": [
+      {
+        "title": "What Middleware Is",
+        "content": "<p><strong>Middleware</strong> is a function that runs as part of the request pipeline:</p><pre><code class=\"language-javascript\">function logger(req, res, next) {\n  console.log(req.method, req.originalUrl);\n  next();\n}\n\napp.use(logger);</code></pre><p>A middleware can read or change <code>req</code> and <code>res</code>, end the request by sending a response, or call <code>next()</code> to pass control on. Almost everything in Express is built this way: parsing bodies, logging, authentication, CORS, and even routers themselves.</p>"
+      },
+      {
+        "title": "next() and Ending the Request",
+        "content": "<p>Every middleware must do one of two things:</p><ul><li><strong>call <code>next()</code></strong> to let the next middleware or route run, or</li><li><strong>send a response</strong> to end the request.</li></ul><p>If it does neither, Express waits forever and the client eventually times out. The reverse mistake is just as common: calling <code>next()</code> after sending a response lets a later handler try to respond again, which fails with <strong>Cannot set headers after they are sent</strong>.</p><p>Calling <code>next(err)</code> with an error is different again: Express skips straight to the error-handling middleware.</p>"
+      },
+      {
+        "title": "Order Is Everything",
+        "content": "<p>Express runs middleware and routes <strong>in registration order</strong>, and stops at the first response. This bug is a classic:</p><pre><code class=\"language-javascript\">app.use('/api', apiRouter);\napp.use(express.json()); // too late for /api</code></pre><p>The router answers <code>/api</code> requests before the JSON parser runs, so <code>req.body</code> is <code>undefined</code> in every API route. A reliable order for most apps:</p><ol><li>security and logging</li><li>body parsers</li><li>routes</li><li>the 404 handler</li><li>the error handler</li></ol>"
+      },
+      {
+        "title": "Where Middleware Applies",
+        "content": "<p>The same function can run for different scopes depending on how you register it:</p><pre><code class=\"language-javascript\">app.use(logger);                     // every request\napp.use('/api', apiKeyCheck);        // paths under /api\n\nconst admin = express.Router();\nadmin.use(requireAuth);              // only this router's routes\n\napp.get('/reports', requireAuth, getReports); // one route only</code></pre><p>Route-level middleware runs left to right: <code>requireAuth</code> runs first, and <code>getReports</code> only runs if it calls <code>next()</code>. Router-level middleware is a clean way to protect a whole feature at once.</p>"
+      },
+      {
+        "title": "Built-in Body Parsers",
+        "content": "<p>Express ships with parsers for common body types:</p><pre><code class=\"language-javascript\">app.use(express.json({ limit: '100kb' }));  // application/json\napp.use(express.urlencoded());              // HTML form posts</code></pre><ul><li>Each parser only handles its own <strong>Content-Type</strong>. A JSON body sent as <code>text/plain</code> is skipped, and <code>req.body</code> stays <code>undefined</code>.</li><li>In Express 5, <code>express.urlencoded()</code> defaults to <code>extended: false</code>, so <code>user[name]=ana</code> stays a flat key. Pass <code>{ extended: true }</code> for nested objects.</li><li><code>limit</code> caps the body size; larger bodies are rejected with 413.</li></ul>"
+      },
+      {
+        "title": "Third-Party Middleware",
+        "content": "<p>Much of Express's power comes from its middleware ecosystem. A few you will see in almost every API:</p><ul><li><strong>morgan</strong> or <strong>pino-http</strong>: a log line for each request</li><li><strong>cors</strong>: lets browser apps on other origins call the API</li><li><strong>helmet</strong>: sets security headers</li><li><strong>cookie-parser</strong>: fills <code>req.cookies</code></li><li><strong>express-rate-limit</strong>: limits requests per client</li></ul><pre><code class=\"language-javascript\">app.use(helmet());\napp.use(cors({ origin: 'https://app.example.com' }));\napp.use(morgan('tiny'));</code></pre><p>Each is just a function with the <code>(req, res, next)</code> signature, configured once and registered like any other middleware.</p>"
+      },
+      {
+        "title": "Writing Your Own",
+        "content": "<p>Custom middleware often attaches data for later steps. This one measures how long each request takes:</p><pre><code class=\"language-javascript\">function requestTimer(req, res, next) {\n  const start = Date.now();\n  res.on('finish', () =&gt; {\n    console.log(`${req.method} ${req.originalUrl} took ${Date.now() - start}ms`);\n  });\n  next();\n}\n\napp.use(requestTimer);</code></pre><p>The response finishes <em>after</em> <code>next()</code> returns, so the timer listens for the <code>finish</code> event. Register it early so it times everything.</p>"
+      },
+      {
+        "title": "Configurable Middleware",
+        "content": "<p>When middleware needs settings, write a function that <strong>returns</strong> a middleware. This is the pattern behind <code>express.json(options)</code> and <code>cors(options)</code>:</p><pre><code class=\"language-javascript\">const requireRole = (role) =&gt; (req, res, next) =&gt; {\n  if (req.user?.role === role) return next();\n  res.status(403).json({ error: 'Forbidden' });\n};\n\napp.delete('/users/:id', requireAuth, requireRole('admin'), deleteUser);</code></pre><p>Calling <code>requireRole('admin')</code> creates a middleware configured for one role. The same factory serves every role without duplicating code.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Middleware has the signature <code>(req, res, next)</code></li><li>Each middleware must call <code>next()</code> or send a response, never both</li><li><code>next(err)</code> jumps to error-handling middleware</li><li>Order decides what runs: security and parsers first, then routes, then 404 and error handlers</li><li>Register globally, by path, per router or per route</li><li>Parsers only handle their own Content-Type; Express 5 urlencoded defaults to <code>extended: false</code></li><li>Ecosystem middleware covers logging, CORS, security headers, cookies and rate limits</li><li>A function that returns middleware makes it configurable</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-static-views",
+    "title": "Static Files and Views",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-static-views",
+    "level": 1,
+    "summary": "Serve static assets with express.static, handle Express 5 dotfile rules and caching, render server-side pages with a template engine, and serve a single-page app.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "express",
+      "express.static",
+      "template engine",
+      "res.render",
+      "single-page app"
+    ],
+    "sections": [
+      {
+        "title": "Serving Static Files",
+        "content": "<p>Images, stylesheets and browser scripts do not need any code to serve. Express's built-in <code>express.static</code> middleware maps URLs to files in a folder:</p><pre><code class=\"language-javascript\">app.use(express.static('public'));</code></pre><p>With <code>public/logo.png</code> on disk, a request for <code>/logo.png</code> returns that file. Requests that do not match a file simply continue to the next middleware or route, so static files and API routes can live in the same app.</p>"
+      },
+      {
+        "title": "Absolute Paths and Prefixes",
+        "content": "<p>A relative folder name is resolved from the directory the process <strong>starts</strong> in. Start the app from somewhere else, as process managers and containers often do, and it points to the wrong place. Build an absolute path instead:</p><pre><code class=\"language-javascript\">const path = require('node:path');\n\napp.use('/static', express.static(path.join(__dirname, 'public')));</code></pre><p>The first argument is a <strong>virtual prefix</strong>: <code>public/logo.png</code> is now served at <code>/static/logo.png</code>. The folder name itself never appears in the URL.</p>"
+      },
+      {
+        "title": "Several Folders and Caching",
+        "content": "<p>Static folders are middleware, so they are tried <strong>in order</strong>. The first folder that has the file wins:</p><pre><code class=\"language-javascript\">app.use(express.static('public'));\napp.use(express.static('assets')); // only used for files public lacks</code></pre><p>The <code>maxAge</code> option sets a <code>Cache-Control</code> header, so browsers and CDNs can reuse files without asking again:</p><pre><code class=\"language-javascript\">app.use(express.static('public', { maxAge: '1d' }));</code></pre><p>Long cache times work best with fingerprinted names such as <code>app.3f9c.js</code>, which change whenever the content changes.</p>"
+      },
+      {
+        "title": "Dotfiles in Express 5",
+        "content": "<p>Express 5 ignores <strong>dotfiles</strong> by default, and now also checks folders: anything under a hidden folder such as <code>.well-known</code> returns 404. That protects files like <code>.env</code> from being served by accident.</p><p>When you do need a hidden folder, for example for domain verification or <code>security.txt</code>, opt in for that path only:</p><pre><code class=\"language-javascript\">app.use('/.well-known',\n  express.static(path.join(__dirname, 'public/.well-known'), { dotfiles: 'allow' }));</code></pre><blockquote class=\"lesson-warn\"><p>Never set <code>dotfiles: 'allow'</code> on a folder that might contain secrets.</p></blockquote>"
+      },
+      {
+        "title": "Template Engines",
+        "content": "<p>For server-rendered pages, Express works with template engines such as <strong>EJS</strong> or <strong>Pug</strong>. Install one and tell Express to use it:</p><pre><code class=\"language-javascript\">app.set('view engine', 'ejs');\napp.set('views', path.join(__dirname, 'views'));</code></pre><p>By default Express looks for templates in a <code>views</code> folder under the working directory; setting <code>views</code> explicitly avoids surprises, just like static paths. In production, with <code>NODE_ENV=production</code>, Express caches compiled templates for speed.</p>"
+      },
+      {
+        "title": "Rendering with Data",
+        "content": "<p><code>res.render</code> fills a template with data and sends the HTML:</p><pre><code class=\"language-javascript\">app.get('/profile', (req, res) =&gt; {\n  res.render('profile', { name: 'Ana', orders: 3 });\n});</code></pre><p>Here Express renders <code>views/profile.ejs</code>, where the template can use <code>name</code> and <code>orders</code>. Values in <code>res.locals</code> and <code>app.locals</code> are available too.</p><p>In Express 5, <code>res.render</code> is asynchronous for every engine, so rendering errors reach the error handler consistently. Pass a callback if you need the HTML as a string instead of sending it.</p>"
+      },
+      {
+        "title": "Serving a Single-Page App",
+        "content": "<p>A React, Angular or Vue build is static files plus client-side routing. Refreshing <code>/settings</code> would return 404, because no such file exists. Add a fallback that sends <code>index.html</code>:</p><pre><code class=\"language-javascript\">app.use('/api', apiRouter);\napp.use(express.static(path.join(__dirname, 'dist')));\napp.get('/{*splat}', (req, res) =&gt; {\n  res.sendFile(path.join(__dirname, 'dist', 'index.html'));\n});</code></pre><p>Order matters: API routes first, then static files, then the catch-all, so <code>/api</code> paths are never answered with the app's HTML.</p>"
+      },
+      {
+        "title": "Static Files in Production",
+        "content": "<p><code>express.static</code> is fine for small apps, but at scale, static files are usually served by something closer to the user:</p><ul><li>a <strong>CDN</strong> caches files at locations around the world</li><li>a <strong>reverse proxy</strong> such as nginx serves files efficiently and frees Node for application logic</li></ul><p>Even then, keep the same habits: absolute paths, long cache times for fingerprinted assets, a short or no cache for <code>index.html</code>, and dotfiles kept out of anything that is served.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li><code>express.static</code> serves files from a folder; unmatched requests continue</li><li>Build static and view paths with <code>path.join(__dirname, ...)</code></li><li>A mount path is a virtual prefix: <code>/static/logo.png</code></li><li>Several static folders are tried in order; <code>maxAge</code> sets Cache-Control</li><li>Express 5 ignores dotfiles and hidden folders unless you allow them per path</li><li>Set <code>view engine</code> and <code>views</code>, then <code>res.render(view, data)</code></li><li>A single-page app needs a final <code>/{*splat}</code> fallback to <code>index.html</code></li><li>At scale, a CDN or reverse proxy usually serves static files</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-error-handling",
+    "title": "Error Handling",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-error-handling",
+    "level": 2,
+    "summary": "Catch errors from sync and async handlers in one place with error-handling middleware, add a 404 handler, map custom errors to status codes and never leak internals.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "express",
+      "error handling",
+      "async",
+      "express 5",
+      "404"
+    ],
+    "sections": [
+      {
+        "title": "One Place for Errors",
+        "content": "<p>Databases go down, input is invalid and bugs slip through. A good API fails <strong>predictably</strong>: the same JSON shape, the right status code and no internal details, whatever went wrong.</p><p>Express makes this possible by sending errors to special <strong>error-handling middleware</strong>. Instead of a try/catch with its own response in every route, routes and services throw errors, and one handler at the end of the pipeline decides what the client sees. This lesson builds that setup step by step.</p>"
+      },
+      {
+        "title": "Error-Handling Middleware",
+        "content": "<p>An error handler is middleware with <strong>four</strong> parameters. Express recognises it by that signature:</p><pre><code class=\"language-javascript\">app.use((err, req, res, next) =&gt; {\n  console.error(err);\n  res.status(500).json({ error: 'Internal error' });\n});</code></pre><ul><li>Declare all four parameters, even if <code>next</code> is unused; with three, Express treats it as normal middleware.</li><li>Register it <strong>after all routes</strong>. Errors travel forward through the stack, so a handler registered before a route never sees that route's errors.</li><li>It must send a response or call <code>next(err)</code>, or the request hangs.</li></ul>"
+      },
+      {
+        "title": "How Errors Reach the Handler",
+        "content": "<p>An error gets to the error handler in three ways:</p><pre><code class=\"language-javascript\">// 1. Thrown synchronously\napp.get('/a', () =&gt; { throw new Error('boom'); });\n\n// 2. Passed to next\napp.get('/b', (req, res, next) =&gt; next(new Error('fail')));\n\n// 3. A rejected promise from an async handler (Express 5)\napp.get('/c', async () =&gt; { await db.query('...'); });</code></pre><p>Calling <code>next(err)</code> makes Express skip every remaining normal middleware and route and jump to the next error handler.</p>"
+      },
+      {
+        "title": "Async Handlers in Express 5",
+        "content": "<p>In Express 4, a rejected promise from an async handler was ignored: the request hung and Node reported an unhandled rejection. Teams wrapped every route in a helper like <code>asyncHandler</code> to fix it.</p><p>Express 5 does this itself. When a handler returns a promise that rejects, Express calls <code>next</code> with the error:</p><pre><code class=\"language-javascript\">app.get('/users/:id', async (req, res) =&gt; {\n  const user = await db.users.find(req.params.id); // may reject\n  res.json(user);\n});</code></pre><p>No try/catch, no wrapper. Existing wrappers still work, but they are no longer needed.</p>"
+      },
+      {
+        "title": "Errors Outside the Request",
+        "content": "<p>Express only sees errors thrown during the handler call or from the promise it returns. Code that runs <strong>later</strong>, in a callback, escapes it:</p><pre><code class=\"language-javascript\">app.get('/later', (req, res, next) =&gt; {\n  setTimeout(() =&gt; {\n    try {\n      doWork();\n      res.send('done');\n    } catch (err) {\n      next(err); // hand it to Express yourself\n    }\n  }, 10);\n});</code></pre><p>Without the try/catch, an error thrown inside the timer becomes an uncaught exception and can crash the process. Prefer promises you <code>await</code>, which Express 5 handles automatically.</p>"
+      },
+      {
+        "title": "A Catch-All 404 Handler",
+        "content": "<p>When no route matches, Express sends a small HTML page. APIs usually want their own JSON instead. A 404 handler is just <strong>normal middleware</strong> registered after every route:</p><pre><code class=\"language-javascript\">app.use('/api', apiRouter);\n\napp.use((req, res) =&gt; {\n  res.status(404).json({ error: `No route for ${req.method} ${req.path}` });\n});\n\napp.use(errorHandler); // last of all</code></pre><p>It only runs when nothing earlier responded. It goes before the error handler, which is reserved for real errors.</p>"
+      },
+      {
+        "title": "Custom Error Classes",
+        "content": "<p>Give errors a status code where they are created, and let one handler use it:</p><pre><code class=\"language-javascript\">class NotFoundError extends Error {\n  constructor(message) {\n    super(message);\n    this.statusCode = 404;\n    this.expose = true; // safe to show the message\n  }\n}\n\n// in a service\nif (!user) throw new NotFoundError('User not found');</code></pre><p>The error handler then picks the status from the error, falling back to 500 for anything unexpected. Services stay free of HTTP details, and every route reports errors the same way.</p>"
+      },
+      {
+        "title": "Safe, Consistent Responses",
+        "content": "<p>A production error handler protects both clients and the system:</p><pre><code class=\"language-javascript\">app.use((err, req, res, next) =&gt; {\n  if (res.headersSent) return next(err);\n  const status = err.statusCode ?? 500;\n  if (status &gt;= 500) logger.error({ err, reqId: req.id });\n  res.status(status).json({\n    error: err.expose ? err.message : 'Internal error',\n  });\n});</code></pre><ul><li>If a response already started, pass the error to Express's default handler, which closes the connection.</li><li>Log full details on the server; send clients only safe messages.</li><li>Never send stack traces in production. Express's own default handler hides them when <code>NODE_ENV</code> is production.</li></ul>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Error handlers have four parameters, <code>(err, req, res, next)</code>, and go after all routes</li><li>Errors arrive from throws, <code>next(err)</code> and, in Express 5, rejected async handlers</li><li><code>next(err)</code> skips normal middleware and jumps to error handlers</li><li>Async wrappers are no longer needed in Express 5</li><li>Errors thrown in later callbacks escape Express; catch them and call <code>next(err)</code></li><li>A 404 handler is normal middleware placed after the routes</li><li>Custom error classes carry a status code for one central handler</li><li>Check <code>res.headersSent</code>, log details, send safe messages, never stack traces</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-validation-uploads",
+    "title": "Validation and File Uploads",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-validation-uploads",
+    "level": 2,
+    "summary": "Validate body, params and query with a schema before your logic runs, return clear 400 errors, limit body sizes and accept file uploads safely with multer.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "express",
+      "validation",
+      "zod",
+      "express-validator",
+      "multer"
+    ],
+    "sections": [
+      {
+        "title": "Never Trust Input",
+        "content": "<p>Anything in a request can be wrong or hostile: a missing field, a string where a number belongs, an extra <code>role: \"admin\"</code>, or a 50 MB body. Checks in the frontend help users, but anyone can call the API directly with curl or a script.</p><p>So an Express API validates <strong>at the edge</strong>: as soon as a request arrives, before any business logic or database call. Invalid requests are rejected early with a clear 400, and the rest of the code can trust the data it receives.</p>"
+      },
+      {
+        "title": "Validating with a Schema",
+        "content": "<p>A schema library such as <strong>Zod</strong> describes the shape you expect. A small middleware factory makes it reusable:</p><pre><code class=\"language-javascript\">const { z } = require('zod');\n\nconst createUser = z.object({\n  email: z.string().email(),\n  name: z.string().min(1).max(100),\n});\n\nconst validate = (schema) =&gt; (req, res, next) =&gt; {\n  const result = schema.safeParse(req.body);\n  if (!result.success) {\n    return res.status(400).json({ errors: result.error.issues });\n  }\n  req.body = result.data; // only the validated fields\n  next();\n};\n\napp.post('/users', validate(createUser), createUserHandler);</code></pre><p><code>safeParse</code> never throws; it returns <code>success</code> and either <code>data</code> or <code>error</code>.</p>"
+      },
+      {
+        "title": "Using express-validator",
+        "content": "<p><strong>express-validator</strong> takes a different approach: each rule is a middleware in the route.</p><pre><code class=\"language-javascript\">const { body, validationResult } = require('express-validator');\n\napp.post('/signup',\n  body('email').isEmail(),\n  body('password').isLength({ min: 12 }),\n  (req, res) =&gt; {\n    const errors = validationResult(req);\n    if (!errors.isEmpty()) {\n      return res.status(400).json({ errors: errors.array() });\n    }\n    // ... create the account\n  });</code></pre><blockquote class=\"lesson-warn\"><p>The rules only record problems. If the handler forgets to call <code>validationResult</code>, invalid data goes straight through.</p></blockquote>"
+      },
+      {
+        "title": "Params and Query Are Strings",
+        "content": "<p>Validation is not only for the body. Route parameters and query values come from the URL, so they are always strings:</p><pre><code class=\"language-javascript\">// items have numeric ids\nitems.find((i) =&gt; i.id === req.params.id); // never matches: 7 !== '7'</code></pre><p>Validate and convert them like any other input, for example with a schema that coerces types:</p><pre><code class=\"language-javascript\">const idParam = z.object({ id: z.coerce.number().int().positive() });\n\nconst parsed = idParam.safeParse(req.params);\nif (!parsed.success) return res.status(400).json({ error: 'Invalid id' });</code></pre>"
+      },
+      {
+        "title": "Clear Errors, Clean Data",
+        "content": "<p>When validation fails, respond with <strong>400 Bad Request</strong> and say which fields failed and why, so the client can fix the request:</p><pre><code class=\"language-javascript\">{ \"errors\": [ { \"field\": \"email\", \"message\": \"Invalid email\" } ] }</code></pre><p>When it passes, use the <strong>validated result</strong>, not the raw body. Passing <code>req.body</code> straight to the database lets a client set fields they should never touch, such as <code>role</code> or <code>isVerified</code>. This is called mass assignment. A schema that lists only the allowed fields prevents it.</p>"
+      },
+      {
+        "title": "Limiting Body Size",
+        "content": "<p>Body parsers read the whole body into memory, so size limits protect the server from huge payloads:</p><pre><code class=\"language-javascript\">app.use(express.json({ limit: '100kb' }));</code></pre><p>A larger body is rejected with <strong>413 Payload Too Large</strong>, which reaches your error handler. 100 kB is also the default, so raising the limit should be a deliberate choice, ideally only on the routes that need it:</p><pre><code class=\"language-javascript\">app.post('/imports', express.json({ limit: '5mb' }), importHandler);</code></pre>"
+      },
+      {
+        "title": "File Uploads with multer",
+        "content": "<p>File uploads arrive as <code>multipart/form-data</code>, which <code>express.json()</code> ignores. <strong>multer</strong> parses them:</p><pre><code class=\"language-javascript\">const multer = require('multer');\nconst upload = multer({ dest: 'uploads/' });\n\napp.post('/avatar', upload.single('avatar'), (req, res) =&gt; {\n  // req.file: path, size, mimetype, originalname\n  // req.body: the text fields from the same form\n  res.status(201).json({ size: req.file.size });\n});</code></pre><p><code>upload.single</code> accepts one file from one field and fills <code>req.file</code>. <code>upload.array</code> and <code>upload.fields</code> accept several files into <code>req.files</code>.</p>"
+      },
+      {
+        "title": "Uploading Safely",
+        "content": "<p>The file name and type are chosen by the <strong>client</strong>, so treat them as untrusted:</p><pre><code class=\"language-javascript\">const upload = multer({\n  dest: 'uploads/',\n  limits: { fileSize: 2 * 1024 * 1024, files: 1 },\n  fileFilter: (req, file, cb) =&gt; cb(null, ['image/png', 'image/jpeg'].includes(file.mimetype)),\n});</code></pre><ul><li>Limit size and count; oversized files are rejected with an error.</li><li>Filter types, and check the real content where it matters.</li><li>Use generated names and store files outside the web root or in object storage.</li><li>Serve uploads with <code>X-Content-Type-Options: nosniff</code> and as attachments.</li></ul>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Validate every input on the server, at the edge, before business logic</li><li>Schemas such as Zod describe the expected shape; <code>safeParse</code> returns success or errors</li><li>express-validator rules need a <code>validationResult</code> check in the handler</li><li>Params and query values are strings: validate and convert them</li><li>Respond 400 with field-level errors; use only the validated data</li><li>Set body size limits; oversized bodies get 413</li><li>multer parses multipart uploads into <code>req.file</code> or <code>req.files</code></li><li>Limit upload size and type, generate names and store uploads safely</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-authentication",
+    "title": "Authentication and Authorization",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-authentication",
+    "level": 2,
+    "summary": "Implement session-based and token-based login in Express, protect routes with authentication and role middleware, store passwords safely and handle logout.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "express",
+      "authentication",
+      "express-session",
+      "jwt",
+      "authorization"
+    ],
+    "sections": [
+      {
+        "title": "Two Questions",
+        "content": "<p>Protecting an API means answering two separate questions on every request:</p><ul><li><strong>Authentication</strong>: who is making this request?</li><li><strong>Authorization</strong>: is this person allowed to do this?</li></ul><p>In Express, each answer is usually its own middleware. An authentication middleware identifies the user and attaches them to <code>req</code>; authorization middleware then checks roles or ownership. Keeping them separate makes routes easy to read: <code>requireAuth, requireRole('admin'), handler</code>.</p>"
+      },
+      {
+        "title": "Session Login with express-session",
+        "content": "<p>With sessions, login state lives on the <strong>server</strong>, and the browser holds only a cookie with a session ID:</p><pre><code class=\"language-javascript\">const session = require('express-session');\n\napp.use(session({\n  secret: process.env.SESSION_SECRET,\n  resave: false,\n  saveUninitialized: false,\n  cookie: { httpOnly: true, secure: true, sameSite: 'lax' },\n}));\n\napp.post('/login', async (req, res, next) =&gt; {\n  const user = await checkCredentials(req.body);\n  if (!user) return res.status(401).json({ error: 'Invalid login' });\n  req.session.regenerate((err) =&gt; {\n    if (err) return next(err);\n    req.session.userId = user.id;\n    res.sendStatus(204);\n  });\n});</code></pre>"
+      },
+      {
+        "title": "Secure Sessions",
+        "content": "<p>A few settings make the difference between sessions that are safe and sessions that leak:</p><ul><li><strong>Cookie flags</strong>: <code>httpOnly</code> hides the cookie from page scripts, <code>secure</code> sends it only over HTTPS and <code>sameSite</code> limits cross-site sending.</li><li><strong>A real store</strong>: the default MemoryStore leaks memory, loses sessions on restart and is not shared between processes. Use Redis or a database in production.</li><li><strong>Regenerate on login</strong>: <code>req.session.regenerate()</code> issues a fresh ID, which prevents session fixation.</li><li><code>saveUninitialized: false</code> avoids storing empty sessions for anonymous visitors.</li></ul>"
+      },
+      {
+        "title": "Token Login with JWTs",
+        "content": "<p>With tokens, the server signs a <strong>JSON Web Token</strong> at login and the client sends it with each request:</p><pre><code class=\"language-javascript\">const jwt = require('jsonwebtoken');\n\napp.post('/login', async (req, res) =&gt; {\n  const user = await checkCredentials(req.body);\n  if (!user) return res.status(401).json({ error: 'Invalid login' });\n  const token = jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET, {\n    expiresIn: '15m',\n  });\n  res.json({ token });\n});</code></pre><p>The client sends it in the <code>Authorization</code> header as <code>Bearer</code> followed by the token. The server keeps no record of it: the signature proves it is genuine, and the expiry limits how long it works.</p>"
+      },
+      {
+        "title": "An Authentication Middleware",
+        "content": "<p>One middleware verifies the token and attaches the user to the request:</p><pre><code class=\"language-javascript\">function requireAuth(req, res, next) {\n  const token = req.get('Authorization')?.replace('Bearer ', '');\n  try {\n    req.user = jwt.verify(token, process.env.JWT_SECRET);\n    next();\n  } catch {\n    res.status(401).json({ error: 'Unauthorized' });\n  }\n}\n\nrouter.use(requireAuth); // protects every route in this router</code></pre><p><code>jwt.verify</code> checks the signature and expiry, and throws for a missing, tampered or expired token. Later handlers simply read <code>req.user</code>.</p>"
+      },
+      {
+        "title": "Role-Based Authorization",
+        "content": "<p>Once <code>req.user</code> is set, authorization middleware decides what the user may do:</p><pre><code class=\"language-javascript\">const requireRole = (role) =&gt; (req, res, next) =&gt;\n  req.user.role === role ? next() : res.status(403).json({ error: 'Forbidden' });\n\napp.delete('/users/:id', requireAuth, requireRole('admin'), deleteUser);</code></pre><ul><li><strong>401 Unauthorized</strong>: no valid credentials; the client is not authenticated.</li><li><strong>403 Forbidden</strong>: the user is known but not allowed.</li></ul><p>Roles cover broad permissions. Rules about specific records, such as users editing only their own orders, belong in the service, which checks ownership against <code>req.user</code>.</p>"
+      },
+      {
+        "title": "Storing Passwords",
+        "content": "<p>Passwords must never be stored in a form that can be turned back into the password. Hash them with an algorithm designed to be <strong>slow and salted</strong>, such as bcrypt or argon2:</p><pre><code class=\"language-javascript\">const bcrypt = require('bcrypt');\n\nconst hash = await bcrypt.hash(password, 12);   // at sign-up\nconst ok = await bcrypt.compare(password, hash); // at login</code></pre><p>Fast hashes such as plain SHA-256 are the wrong tool: attackers can test billions of guesses per second against a stolen database. Pair safe hashing with rate limiting on the login route.</p>"
+      },
+      {
+        "title": "Logout and Passport",
+        "content": "<p>Logout is simple with sessions: <code>req.session.destroy()</code> deletes the session on the server, and the cookie becomes useless.</p><p>JWTs are harder, because the server does not store them: a copied token keeps working until it expires. Common answers are short-lived access tokens plus revocable refresh tokens, or a denylist of revoked token IDs.</p><p>For logins through providers such as Google or GitHub, <strong>Passport</strong> offers ready-made strategies that plug into Express. Storing users and building login pages remains your job.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Authentication asks who you are; authorization asks what you may do</li><li>Sessions keep state on the server; the browser holds only a session ID cookie</li><li>Use httpOnly, secure and sameSite cookies, a real session store and regenerate on login</li><li>JWTs are signed tokens sent as <code>Authorization: Bearer</code>, verified on every request</li><li>An auth middleware sets <code>req.user</code> or responds 401</li><li>Role middleware responds 403 when a known user lacks permission</li><li>Hash passwords with bcrypt or argon2, never plain or fast hashes</li><li>JWTs need short expiry plus refresh tokens or a denylist for logout</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-app-structure",
+    "title": "Structuring an Express App",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-app-structure",
+    "level": 2,
+    "summary": "Organise routes, controllers and services by feature, separate the app from the server, load configuration safely, share resources and refactor large route files.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "express",
+      "project structure",
+      "controllers",
+      "services",
+      "configuration"
+    ],
+    "sections": [
+      {
+        "title": "Why Structure Matters",
+        "content": "<p>Express does not prescribe a project layout. That is freedom on day one and a problem on day three hundred, when a single file holds hundreds of routes, business rules are copied between handlers and nobody can test anything without starting the server.</p><p>A good structure makes three things easy: <strong>finding</strong> the code for a feature, <strong>testing</strong> logic without HTTP, and <strong>changing</strong> one part without breaking another. The patterns in this lesson are widely used conventions, not rules Express enforces.</p>"
+      },
+      {
+        "title": "Routes, Controllers and Services",
+        "content": "<p>Split each feature into three layers:</p><ul><li><strong>Routes</strong> map paths and methods to controllers and attach middleware.</li><li><strong>Controllers</strong> translate HTTP: read <code>req</code>, call a service, send the response.</li><li><strong>Services</strong> hold business logic and data access, with no knowledge of <code>req</code> or <code>res</code>.</li></ul><pre><code class=\"language-javascript\">// users.controller.js\nexports.getUser = async (req, res) =&gt; {\n  const user = await userService.get(Number(req.params.id));\n  res.json(user);\n};</code></pre><p>Because services are plain functions, they can be reused by background jobs and tested directly.</p>"
+      },
+      {
+        "title": "Feature-Based Folders",
+        "content": "<p>Group files by <strong>feature</strong> rather than by type:</p><pre><code class=\"language-plaintext\">src/\n  app.js\n  server.js\n  config.js\n  users/\n    users.routes.js\n    users.controller.js\n    users.service.js\n    users.test.js\n  orders/\n    ...\n  middleware/\n    auth.js\n    error-handler.js</code></pre><p>Everything about users lives in one folder, so a change to that feature stays in one place. Type-based folders, with all controllers in one directory and all services in another, scatter a single feature across the whole project as it grows.</p>"
+      },
+      {
+        "title": "Separating App from Server",
+        "content": "<p>Keep the code that <strong>builds</strong> the app apart from the code that <strong>starts</strong> it:</p><pre><code class=\"language-javascript\">// app.js\nconst app = express();\napp.use(express.json());\napp.use('/api/users', usersRouter);\napp.use(errorHandler);\nmodule.exports = app;\n\n// server.js\nconst app = require('./app');\napp.listen(process.env.PORT || 3000);</code></pre><p>Tests import <code>app</code> and send requests in memory with Supertest, without opening a port. <code>server.js</code> is the place for listening, connecting to the database and graceful shutdown.</p>"
+      },
+      {
+        "title": "Configuration",
+        "content": "<p>Settings such as the database URL and secrets come from <strong>environment variables</strong>, never from code committed to Git. Read them in one module and validate them at startup:</p><pre><code class=\"language-javascript\">// config.js\nconst { z } = require('zod');\n\nconst env = z.object({\n  PORT: z.coerce.number().default(3000),\n  DATABASE_URL: z.string().url(),\n  JWT_SECRET: z.string().min(32),\n}).parse(process.env);\n\nmodule.exports = env;</code></pre><p>A missing setting now fails immediately with a clear message. Recent Node.js versions load a local <code>.env</code> file with <code>node --env-file=.env server.js</code>; keep <code>.env</code> out of Git.</p>"
+      },
+      {
+        "title": "Sharing Resources",
+        "content": "<p>Expensive resources, such as a database connection pool, are created <strong>once</strong> at startup and shared. Connecting per request is slow and can exhaust the database's connection limit.</p><p>Passing dependencies in, rather than importing them everywhere, keeps code testable:</p><pre><code class=\"language-javascript\">function createUserRouter(userService) {\n  const router = express.Router();\n  router.get('/:id', async (req, res) =&gt; {\n    res.json(await userService.get(Number(req.params.id)));\n  });\n  return router;\n}\n\napp.use('/api/users', createUserRouter(userService));</code></pre><p>Tests can build the same router with a fake service.</p>"
+      },
+      {
+        "title": "Nested Routers and Versioning",
+        "content": "<p>Routers can nest. For resources like a user's orders, the child router needs <code>mergeParams</code> to read the parent's parameters:</p><pre><code class=\"language-javascript\">const orders = express.Router({ mergeParams: true });\norders.get('/', (req, res) =&gt; listOrders(req.params.userId));\n\nusers.use('/:userId/orders', orders);</code></pre><p>Without <code>mergeParams</code>, <code>req.params</code> would be empty inside the child.</p><p>Mounting everything under a version prefix such as <code>/api/v1</code> lets you introduce <code>/api/v2</code> later for breaking changes, while existing clients keep working.</p>"
+      },
+      {
+        "title": "Refactoring a Large Route File",
+        "content": "<p>When one file has grown to thousands of lines, refactor in small, safe steps:</p><ol><li><strong>Add tests</strong> around the current routes, so behavior is locked in.</li><li><strong>Split by feature</strong> into routers mounted with <code>app.use</code>.</li><li><strong>Extract services</strong> from handlers, one feature at a time.</li><li><strong>Move repeated steps into middleware</strong>, such as auth checks, validation and loading a record by id.</li><li><strong>Centralise errors</strong>: replace scattered try/catch blocks with thrown errors and one handler.</li></ol><p>Keep the tests green after each step instead of attempting one big rewrite.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Routes map URLs, controllers translate HTTP, services hold business logic</li><li>Group code by feature so each change stays in one place</li><li><code>app.js</code> builds and exports the app; <code>server.js</code> starts it</li><li>Read settings from environment variables and validate them at startup</li><li>Create pools and clients once; pass dependencies into router factories</li><li>Child routers need <code>mergeParams: true</code> to read parent params</li><li>Version APIs with prefixes such as <code>/api/v1</code></li><li>Refactor large files in small steps, with tests first</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-security",
+    "title": "Security in Express",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-security",
+    "level": 3,
+    "summary": "Harden an Express app with security headers, strict CORS, rate limiting, trust proxy, injection-safe queries, CSRF protection, safe redirects and patched dependencies.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "express",
+      "security",
+      "helmet",
+      "cors",
+      "rate limiting"
+    ],
+    "sections": [
+      {
+        "title": "Security Is Opt-In",
+        "content": "<p>Express is minimal, and that includes security: a fresh app sends no security headers, accepts requests from any origin and has no rate limits. None of that is a flaw; it simply means protection is something you <strong>add deliberately</strong>.</p><p>This lesson covers the baseline every production Express API should have. Validation, authentication and safe error responses, covered in earlier lessons, are part of the same picture: security comes from several layers working together, not from one package.</p>"
+      },
+      {
+        "title": "Security Headers with helmet",
+        "content": "<p><strong>helmet</strong> sets a group of response headers that tell browsers to block common attacks:</p><pre><code class=\"language-javascript\">const helmet = require('helmet');\n\napp.use(helmet());</code></pre><ul><li><code>Content-Security-Policy</code> limits where scripts and other resources may load from</li><li><code>Strict-Transport-Security</code> tells browsers to use HTTPS only</li><li><code>X-Content-Type-Options: nosniff</code> stops browsers guessing content types</li></ul><p>helmet also removes <code>X-Powered-By: Express</code>, which advertises your framework. Without helmet, <code>app.disable('x-powered-by')</code> does that one job.</p>"
+      },
+      {
+        "title": "CORS Done Right",
+        "content": "<p><strong>CORS</strong> is a browser rule: a page from one origin can only read responses from another origin if that server allows it. Tools such as curl and Postman ignore it, which is why an API can work there and still fail in the browser.</p><pre><code class=\"language-javascript\">const cors = require('cors');\n\napp.use(cors({\n  origin: ['https://app.example.com'],\n  credentials: true, // only if the browser must send cookies\n}));</code></pre><p>List the exact origins that need access. Never combine credentials with a wildcard origin. And remember CORS is not authentication: it protects users' browsers, so every route still needs proper auth.</p>"
+      },
+      {
+        "title": "Rate Limiting and trust proxy",
+        "content": "<p><strong>express-rate-limit</strong> caps requests per client, which slows down password guessing and abuse:</p><pre><code class=\"language-javascript\">const { rateLimit } = require('express-rate-limit');\n\napp.use('/login', rateLimit({ windowMs: 15 * 60 * 1000, limit: 5 }));</code></pre><p>The sixth attempt within 15 minutes gets <strong>429 Too Many Requests</strong>. Limits are counted per IP, so behind a load balancer every client appears as the proxy's address. Tell Express how many proxies to trust:</p><pre><code class=\"language-javascript\">app.set('trust proxy', 1); // req.ip now comes from X-Forwarded-For</code></pre><p>Use the real number of proxies, not <code>true</code>, or clients could fake their IP.</p>"
+      },
+      {
+        "title": "Preventing Injection",
+        "content": "<p>Never build a query by pasting request input into it:</p><pre><code class=\"language-javascript\">// Vulnerable: name could be  ' OR '1'='1\ndb.query(`SELECT * FROM users WHERE name = '${req.query.name}'`);\n\n// Safe: the driver sends the value separately\ndb.query('SELECT * FROM users WHERE name = $1', [req.query.name]);</code></pre><p>Parameterised queries, or a query builder or ORM that uses them, keep data from ever being read as SQL. The same idea applies elsewhere: do not pass request input into shell commands, file paths or NoSQL query objects without validating it first.</p>"
+      },
+      {
+        "title": "CSRF and Cookies",
+        "content": "<p>Browsers attach cookies to requests automatically, including requests triggered by <em>other</em> websites. With cookie-based sessions, a malicious page can make a logged-in user's browser send a request your app trusts. This is <strong>cross-site request forgery</strong>.</p><ul><li>Set session cookies to <code>sameSite: 'lax'</code> or <code>'strict'</code>.</li><li>Add CSRF tokens to state-changing forms and requests in cookie-based apps.</li><li>Never change data on GET requests.</li></ul><p>APIs that only accept tokens in an <code>Authorization</code> header are not exposed in the same way, because browsers never add that header by themselves.</p>"
+      },
+      {
+        "title": "Redirects and Uploaded Files",
+        "content": "<p>Two smaller holes are easy to leave open.</p><p><strong>Open redirects.</strong> <code>res.redirect(req.query.next)</code> lets an attacker craft a link to your real login page that sends users to their site afterwards. Only redirect to relative paths or an allowlist:</p><pre><code class=\"language-javascript\">const next = req.query.next;\nres.redirect(typeof next === 'string' &amp;&amp; next.startsWith('/') &amp;&amp; !next.startsWith('//') ? next : '/');</code></pre><p><strong>Uploaded files.</strong> A file claiming to be an image could be HTML that runs scripts on your domain. Serve uploads with <code>X-Content-Type-Options: nosniff</code> and <code>Content-Disposition: attachment</code>, ideally from a separate domain.</p>"
+      },
+      {
+        "title": "Keeping Dependencies Patched",
+        "content": "<p>A typical Express app depends on hundreds of packages, and vulnerabilities are found in them regularly. Keeping them patched is part of security, not just maintenance:</p><pre><code class=\"language-bash\">npm audit\nnpm audit fix</code></pre><ul><li>Run <code>npm audit</code> in CI so new vulnerabilities fail the build.</li><li>Use automated update pull requests, such as Dependabot or Renovate, and merge them often.</li><li>Stay on a supported Express and Node.js version; old majors stop receiving fixes.</li></ul>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Express ships without security defaults; add protections deliberately</li><li><code>helmet()</code> sets security headers and removes X-Powered-By</li><li>CORS is a browser rule: allow exact origins, and still authenticate every route</li><li><code>express-rate-limit</code> returns 429; set <code>trust proxy</code> to the real number of proxies</li><li>Use parameterised queries, never string-built SQL</li><li>Cookie sessions need sameSite cookies and CSRF tokens</li><li>Redirect only to safe paths; serve uploads as nosniff attachments</li><li>Audit and update dependencies continuously</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-testing",
+    "title": "Testing Express Apps",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-testing",
+    "level": 3,
+    "summary": "Test Express APIs over HTTP with Supertest, assert status, headers and bodies, cover error paths, auth and sessions, unit test middleware and keep tests reliable.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "express",
+      "testing",
+      "supertest",
+      "jest",
+      "integration tests"
+    ],
+    "sections": [
+      {
+        "title": "What to Test",
+        "content": "<p>For an Express API, the best value usually comes from <strong>HTTP-level integration tests</strong>: send a real request through the app and check the response. One test exercises routing, middleware, validation, the service and the error handler together, and still runs in milliseconds.</p><p>Around those, add:</p><ul><li><strong>unit tests</strong> for complex services and individual middleware</li><li>tests for <strong>error paths</strong>: bad input, missing auth, failing dependencies</li></ul><p>Testing Express's own router is unnecessary; test your contract with clients.</p>"
+      },
+      {
+        "title": "Supertest Basics",
+        "content": "<p><strong>Supertest</strong> sends requests to an Express app and lets you assert on the response. It works with any runner, such as Jest, Vitest or Node's built-in <code>node:test</code>:</p><pre><code class=\"language-javascript\">const request = require('supertest');\nconst app = require('../src/app');\n\ntest('lists users', async () =&gt; {\n  await request(app)\n    .get('/api/users')\n    .expect(200)\n    .expect('Content-Type', /json/);\n});</code></pre><p>You never call <code>app.listen</code>: given an app that is not listening, Supertest binds it to a temporary port for the request, so test files do not clash over ports.</p>"
+      },
+      {
+        "title": "A Testable App",
+        "content": "<p>Supertest needs the <strong>app</strong>, not a running server, so the module that builds the app must not start it:</p><pre><code class=\"language-javascript\">// src/app.js: builds and exports, never listens\nmodule.exports = createApp({ userService });\n\n// src/server.js: the only place that listens\nrequire('./app').listen(process.env.PORT || 3000);</code></pre><p>Going one step further, a factory such as <code>createApp({ userService, db })</code> lets each test pass in its own dependencies, including fakes that throw on demand.</p>"
+      },
+      {
+        "title": "Asserting Responses",
+        "content": "<p>A useful test checks what clients rely on: the status, key headers and the important fields of the body.</p><pre><code class=\"language-javascript\">const res = await request(app)\n  .post('/api/users')\n  .send({ name: 'Ana', email: 'ana@example.com' })\n  .expect(201)\n  .expect('Content-Type', /json/);\n\nexpect(res.body).toMatchObject({ name: 'Ana', email: 'ana@example.com' });\nexpect(res.body.id).toBeDefined();</code></pre><p>A test that only checks that nothing threw would still pass if the API returned the wrong status or data, so always assert on the response itself.</p>"
+      },
+      {
+        "title": "Error Paths and Auth",
+        "content": "<p>Errors are where APIs break most often, so test them on purpose:</p><pre><code class=\"language-javascript\">test('invalid email gives 400', async () =&gt; {\n  await request(app).post('/api/users').send({ email: 'nope' }).expect(400);\n});\n\ntest('database failure gives a safe 500', async () =&gt; {\n  const app = createApp({ userService: { create: async () =&gt; { throw new Error('db down'); } } });\n  const res = await request(app).post('/api/users').send(validUser).expect(500);\n  expect(res.body.error).toBe('Internal error');\n});</code></pre><p>For protected routes, sign a token with the test secret and send it with <code>.set('Authorization', 'Bearer ' + token)</code>, so the real auth middleware is tested too.</p>"
+      },
+      {
+        "title": "Sessions with request.agent",
+        "content": "<p>A plain <code>request(app)</code> forgets cookies after each request, so session logins do not carry over. An <strong>agent</strong> keeps them, like a browser:</p><pre><code class=\"language-javascript\">const agent = request.agent(app);\n\nawait agent.post('/login').send({ email, password }).expect(204);\nawait agent.get('/profile').expect(200); // session cookie sent automatically\n\nawait request(app).get('/profile').expect(401); // a fresh client is not logged in</code></pre><p>Use one agent per simulated user to test flows such as login, actions and logout end to end.</p>"
+      },
+      {
+        "title": "Testing Middleware Alone",
+        "content": "<p>Middleware is just a function, so you can call it directly with simple fakes:</p><pre><code class=\"language-javascript\">test('requireAuth rejects a missing token', () =&gt; {\n  const req = { get: () =&gt; undefined };\n  const res = { status: jest.fn().mockReturnThis(), json: jest.fn() };\n  const next = jest.fn();\n\n  requireAuth(req, res, next);\n\n  expect(res.status).toHaveBeenCalledWith(401);\n  expect(next).not.toHaveBeenCalled();\n});</code></pre><p><code>mockReturnThis</code> lets <code>res.status(401).json(...)</code> chain as it does in Express. These tests are fast and pin down edge cases precisely.</p>"
+      },
+      {
+        "title": "Reliable Test Data",
+        "content": "<p>Tests that pass alone but fail randomly in CI usually share something they should not:</p><ul><li><strong>Use a separate test database</strong>, selected by an environment variable, never the development one.</li><li><strong>Reset data</strong> before each test, or wrap each test in a transaction that is rolled back.</li><li><strong>Close resources</strong> such as database pools in teardown hooks, so the runner can exit.</li><li><strong>Await every request</strong> and avoid fixed sleeps.</li></ul><p>Test doubles are faster and great for forcing failures; a real test database catches query bugs. Most teams use both.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>HTTP-level tests with Supertest give the most confidence per test</li><li>Supertest needs the app, not <code>app.listen</code>; it uses a temporary port</li><li>Export the app separately from the server, ideally from a factory</li><li>Assert status, Content-Type and body fields, not just that nothing threw</li><li>Test error paths and auth with real tokens and failing fakes</li><li><code>request.agent</code> keeps session cookies between requests</li><li>Unit test middleware with fake req, res and next</li><li>Isolate test data: separate database, reset between tests, close resources</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-performance-deployment",
+    "title": "Performance and Deployment",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-performance-deployment",
+    "level": 3,
+    "summary": "Run Express reliably in production: NODE_ENV, compression and caching, non-blocking handlers, using every core, logging, health checks, graceful shutdown and timeouts.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "express",
+      "production",
+      "performance",
+      "graceful shutdown",
+      "deployment"
+    ],
+    "sections": [
+      {
+        "title": "Production Is Different",
+        "content": "<p>An app that works on your laptop is not yet ready for production. Real traffic brings many simultaneous users, slow clients, deployments that stop and start processes, and failures you only discover through logs.</p><p>Running Express well in production comes down to a handful of habits: the right environment settings, efficient responses, code that never blocks, several processes, good observability, and clean starts and stops. None is complicated on its own; together they make an app reliable.</p>"
+      },
+      {
+        "title": "NODE_ENV=production",
+        "content": "<p>Express and many libraries change behavior based on <code>NODE_ENV</code>:</p><pre><code class=\"language-bash\">NODE_ENV=production node server.js</code></pre><ul><li>Express <strong>caches compiled view templates</strong> instead of reading them on every render.</li><li>Its default error handler <strong>stops sending stack traces</strong> to clients.</li><li>Many libraries skip development-only checks and logging.</li></ul><p>Forgetting it means slower pages and leaked internals. Platforms usually let you set it as an environment variable for the service.</p>"
+      },
+      {
+        "title": "Compression and Caching",
+        "content": "<p>Smaller and fewer responses are the cheapest speedup.</p><pre><code class=\"language-javascript\">const compression = require('compression');\napp.use(compression()); // gzip responses when the client supports it</code></pre><ul><li><strong>Compression</strong> shrinks JSON and HTML considerably. Many deployments let the reverse proxy or CDN do it instead, saving Node's CPU.</li><li><strong>ETags</strong>: Express adds an <code>ETag</code> to responses by default. A client that sends it back in <code>If-None-Match</code> gets <strong>304 Not Modified</strong> with no body when nothing changed.</li><li><strong>Cache-Control</strong> on static files lets browsers and CDNs skip requests entirely.</li></ul>"
+      },
+      {
+        "title": "Never Block the Event Loop",
+        "content": "<p>Node runs your JavaScript on one thread. While a handler does slow synchronous work, <strong>every other request waits</strong>:</p><pre><code class=\"language-javascript\">// Blocks the whole server while the file is read\napp.get('/report', (req, res) =&gt; {\n  res.send(fs.readFileSync('big-report.csv'));\n});\n\n// Streams it without blocking\napp.get('/report', (req, res) =&gt; {\n  res.sendFile(path.join(__dirname, 'big-report.csv'));\n});</code></pre><p>Avoid synchronous file, crypto and compression calls in handlers, and move CPU-heavy work, such as image processing or big reports, to worker threads or a background job queue.</p>"
+      },
+      {
+        "title": "Using Every Core",
+        "content": "<p>One Node.js process uses roughly <strong>one CPU core</strong>. To use more, run several processes behind a load balancer:</p><ul><li>the built-in <code>cluster</code> module</li><li>a process manager such as PM2 in cluster mode</li><li>several containers, the usual approach on Kubernetes and similar platforms</li></ul><p>This only works if the app is <strong>stateless</strong>: sessions in a shared store such as Redis, uploads in object storage, and shared counters, such as rate limits, in a shared store. Anything kept in one process's memory is invisible to the others.</p>"
+      },
+      {
+        "title": "Logging and Health Checks",
+        "content": "<p>In production you learn what happened from <strong>logs</strong>. Use a structured logger that writes JSON with levels and context:</p><pre><code class=\"language-javascript\">const pinoHttp = require('pino-http');\napp.use(pinoHttp()); // one structured log line per request, with a request id\n\napp.get('/health', async (req, res) =&gt; {\n  await db.query('SELECT 1');\n  res.json({ status: 'ok' });\n});</code></pre><p>A <strong>health endpoint</strong> lets load balancers and orchestrators check whether an instance can serve traffic, and route around or restart it when it cannot.</p>"
+      },
+      {
+        "title": "Graceful Shutdown",
+        "content": "<p>Deployments stop processes all the time, usually with <code>SIGTERM</code>. A graceful shutdown finishes in-flight requests instead of cutting them off:</p><pre><code class=\"language-javascript\">const server = app.listen(port);\n\nprocess.on('SIGTERM', () =&gt; {\n  server.close(async () =&gt; {   // stop new connections, wait for current ones\n    await db.end();            // then release resources\n    process.exit(0);\n  });\n  setTimeout(() =&gt; process.exit(1), 10_000).unref(); // never hang forever\n});</code></pre><p>Failing the health check first gives the load balancer time to stop sending new traffic before the server closes.</p>"
+      },
+      {
+        "title": "Proxies, Managers and Timeouts",
+        "content": "<p>A few more pieces complete a production setup:</p><ul><li>A <strong>reverse proxy</strong> such as nginx, or the platform's load balancer, terminates HTTPS, buffers slow clients and can serve static files. Set <code>trust proxy</code> to match.</li><li>A <strong>process manager</strong> or orchestrator restarts crashed processes and handles rolling deployments.</li><li><strong>Server timeouts</strong> stop slow clients from holding connections open:</li></ul><pre><code class=\"language-javascript\">server.headersTimeout = 10_000;  // time to send request headers\nserver.requestTimeout = 30_000;  // time to send the whole request</code></pre>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Set <code>NODE_ENV=production</code> for view caching and hidden stack traces</li><li>Compress responses and use ETags and Cache-Control to avoid repeat work</li><li>Never block the event loop; stream files and offload CPU-heavy work</li><li>Run several processes or containers, and keep the app stateless</li><li>Use structured logs with request IDs and a health check endpoint</li><li>On SIGTERM, <code>server.close()</code>, finish requests, release resources, exit</li><li>Put a reverse proxy and process manager or orchestrator in front</li><li>Set server timeouts so slow clients cannot tie up connections</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "express-5-migration",
+    "title": "Upgrading to Express 5",
+    "subjectSlug": "expressjs",
+    "topicSlug": "express-5-migration",
+    "level": 3,
+    "summary": "Upgrade an Express 4 app safely: prepare with tests and Node.js 18, run the official codemods, fix route paths and removed APIs, review behavior changes and roll out gradually.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "express",
+      "express 5",
+      "migration",
+      "codemod",
+      "upgrade"
+    ],
+    "sections": [
+      {
+        "title": "Why Upgrade",
+        "content": "<p>Many production apps still run Express 4. Express 5 keeps the same programming model, routes and middleware, but fixes long-standing rough edges:</p><ul><li><strong>Promise support</strong>: rejected async handlers reach the error handler automatically.</li><li><strong>Safer routing</strong>: a newer path matcher that removed patterns open to regular expression denial of service.</li><li><strong>A cleaner API</strong>: long-deprecated methods are gone.</li><li><strong>Modern Node.js</strong>: Express 5 targets Node.js 18 and later.</li></ul><p>Most apps need a modest amount of work. This lesson walks through it in a safe order.</p>"
+      },
+      {
+        "title": "Prepare First",
+        "content": "<p>Two things make an upgrade safe before any code changes:</p><ol><li><strong>Tests</strong> that cover the important routes, including error paths and auth. They are what tells you the upgrade worked.</li><li><strong>A supported Node.js version</strong>, 18 or higher, upgraded and deployed on its own first, so any problems are not mixed with the Express change.</li></ol><p>Then do the upgrade in a dedicated branch, separate from feature work, so the change is easy to review and to roll back.</p><pre><code class=\"language-bash\">npm install express@5</code></pre>"
+      },
+      {
+        "title": "Run the Codemods",
+        "content": "<p>The Express team publishes codemods that rewrite many breaking changes automatically:</p><pre><code class=\"language-bash\">npx codemod@latest @expressjs/v5-migration-recipe</code></pre><p>They handle mechanical changes such as renamed methods and old <code>res.send</code> and <code>res.redirect</code> signatures. They cannot understand every pattern, especially route paths and behavior that depends on how your app uses requests, so review the diff and work through the following slides by hand.</p>"
+      },
+      {
+        "title": "Route Path Changes",
+        "content": "<p>Route paths are where most upgrades need manual work:</p><pre><code class=\"language-javascript\">// Express 4                     // Express 5\napp.get('*', handler);           app.get('/{*splat}', handler);\napp.get('/files/*', handler);    app.get('/files/*splat', handler);\napp.get('/:file.:ext?', h);      app.get('/:file{.:ext}', h);\napp.get('/user/:id(\\\\d+)', h);   app.get('/user/:id', h); // validate id in code</code></pre><ul><li>Wildcards must be named, and their value is now an array of segments.</li><li>Optional parts use braces instead of <code>?</code>.</li><li>Regex groups throw at startup, which at least makes them easy to find.</li></ul>"
+      },
+      {
+        "title": "Removed and Renamed APIs",
+        "content": "<p>Calls that were deprecated in Express 4 are gone:</p><pre><code class=\"language-javascript\">app.del(path, h)           // use app.delete(path, h)\nreq.param('id')            // use req.params.id, req.body.id or req.query.id\nres.sendfile(p)            // use res.sendFile(p)\nres.send(404)              // use res.sendStatus(404)\nres.json(obj, 400)         // use res.status(400).json(obj)\nres.redirect(url, 301)     // use res.redirect(301, url)\nres.redirect('back')       // use res.redirect(req.get('Referrer') || '/')\nreq.acceptsCharset()       // use req.acceptsCharsets()</code></pre><p>One is quietly dangerous: <code>res.send(404)</code> no longer sends a 404. It sends status 200 with the body <code>404</code>, so search for it explicitly.</p>"
+      },
+      {
+        "title": "Behavior Changes",
+        "content": "<p>Some code compiles fine but behaves differently. Review anything that relies on:</p><ul><li><code>req.body</code> being <code>{}</code>: it is now <code>undefined</code> until a parser runs.</li><li><strong>Nested query objects</strong>: the default query parser no longer expands <code>filter[name]</code>; set <code>app.set('query parser', 'extended')</code> if you need it.</li><li><strong>Writing to <code>req.query</code></strong>: it is now a read-only getter, and assignments are silently ignored.</li><li><code>req.host</code>: it now includes the port; use <code>req.hostname</code> for the name alone.</li><li><code>res.clearCookie</code>: it ignores <code>maxAge</code> and <code>expires</code>.</li></ul>"
+      },
+      {
+        "title": "Defaults That Changed",
+        "content": "<p>A few defaults changed too:</p><ul><li><code>express.urlencoded()</code> uses <code>extended: false</code>; pass <code>{ extended: true }</code> to keep nested form fields.</li><li><code>express.static</code> ignores dotfiles and now hidden folders as well; allow folders like <code>.well-known</code> explicitly.</li><li><code>app.listen</code> passes startup errors such as EADDRINUSE to its callback.</li><li><code>res.render</code> is asynchronous for every template engine.</li></ul><p>Also check your <strong>middleware packages</strong>: most popular ones support Express 5, but older or unmaintained ones may rely on removed APIs.</p>"
+      },
+      {
+        "title": "Roll Out Safely",
+        "content": "<p>Once the tests pass, release the upgrade like any risky change:</p><ol><li>Remove async wrappers and try/catch blocks that only forwarded errors; Express 5 does it for you.</li><li>Deploy to a staging environment and exercise the main user flows.</li><li>Roll out gradually, for example to a few instances first, while watching error rates, 404s and latency.</li><li>Keep the previous version ready to roll back.</li></ol><p>A sudden rise in 404s usually points to a route path that changed meaning; a rise in 500s often points to code relying on old request behavior.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Express 5 keeps the model but adds promise support, safer routing and a cleaner API</li><li>Prepare with good tests and Node.js 18 or higher, in a dedicated branch</li><li>Run <code>npx codemod@latest @expressjs/v5-migration-recipe</code>, then review by hand</li><li>Rewrite wildcards as named, optional parts with braces, and drop regex groups</li><li>Replace removed APIs; <code>res.send(404)</code> now sends a 200</li><li>Check code relying on <code>req.body</code>, nested queries, <code>req.query</code> writes and <code>req.host</code></li><li>Note changed defaults for urlencoded, static dotfiles, listen errors and render</li><li>Roll out gradually and watch 404 and 500 rates</li></ul>"
+      }
+    ]
   }
 ]
