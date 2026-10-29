@@ -11,11 +11,16 @@ import { User } from 'src/common/typeorm/entities/user.entity';
 import { UserRoleEnum } from 'src/core/users/enums/user-roles.enum';
 import { LessonAccessLevelEnum } from 'src/common/enum/lesson-access-level.enum';
 import { sanitizeLessonHtml } from 'src/common/utils/lesson-html-sanitizer.util';
+import { Question } from 'src/common/typeorm/entities/question.entity';
+import { QuestionOption } from 'src/common/typeorm/entities/question-option.entity';
+import { QuestionTopic } from 'src/common/typeorm/entities/quesion-topic.entity';
+import { QuestionTypeEnum } from 'src/common/enum/question-type.enum';
+import { QuestionStatusEnum } from 'src/common/enum/question-status.enum';
 
-// Scoped, idempotent seed for TypeScript topic copy and lessons. Unlike seed-nx.ts and seed-expressjs.ts it
-// does not touch tracks, certificates, job roles, questions or badges: the TypeScript curriculum already
-// exists, so only the topic text (02-curriculum) and this subject's lessons (05-lessons) are synced. Topics
-// are matched by slug and must already exist. Safe to re-run at any time:
+// Scoped, idempotent seed for TypeScript topic copy, questions and lessons. Unlike seed-nx.ts and
+// seed-expressjs.ts it does not touch tracks, certificates, job roles or badges: the TypeScript curriculum
+// already exists, so only the topic text (02-curriculum), this subject's questions (04-questions) and its
+// lessons (05-lessons) are synced. Topics are matched by slug and must already exist. Safe to re-run at any time:
 //   npx ts-node -r tsconfig-paths/register src/database/seeds/seed-typescript.ts
 
 const SUBJECT_SLUG = 'typescript';
@@ -38,6 +43,65 @@ async function syncTopicCopy(m: EntityManager, subject: Subject) {
     if (!declared.has(t.slug)) console.warn(`  ⚠ topic in DB but not in seed JSON: ${t.slug} (t${t.id})`);
   }
   console.log(`  ✔ Topics: ${topicsData.length} updated`);
+}
+
+async function syncQuestions(m: EntityManager, subject: Subject) {
+  const all = readJson('04-questions.seed.json').filter((q: any) => q.subjectSlug === SUBJECT_SLUG);
+  const topics = await m.find(Topic, { where: { subjectId: subject.id } });
+  const topicBySlug = new Map(topics.map((t) => [t.slug, t]));
+  let created = 0, updated = 0, optionChanges = 0, linkChanges = 0;
+
+  for (const q of all) {
+    const fields = {
+      title: q.title, question: q.question, subjectId: subject.id, questionType: q.questionType as QuestionTypeEnum,
+      level: q.level, marks: q.marks, timeAllowed: q.timeAllowed, tag: q.tag, status: q.status as QuestionStatusEnum,
+      isWhitelisted: q.isWhitelisted, answer: q.answer, hint: q.hint, orderId: q.orderId,
+    };
+    let row = await m.findOneBy(Question, { slug: q.slug });
+    if (row) {
+      if (row.subjectId !== subject.id) throw new Error(`Slug ${q.slug} belongs to another subject (q${row.id})`);
+      await m.update(Question, row.id, fields);
+      updated++;
+    } else {
+      row = await m.save(m.create(Question, { slug: q.slug, ...fields }));
+      created++;
+    }
+
+    // Options: update in place when the count matches (keeps option ids stable), else replace.
+    const want: any[] = q.options ?? [];
+    const have = await m.find(QuestionOption, { where: { questionId: row.id }, order: { id: 'ASC' } });
+    if (have.length === want.length) {
+      for (let i = 0; i < want.length; i++) {
+        const h = have[i], w = want[i];
+        if (h.option !== w.option || !!h.correct !== !!w.correct || (h.comment ?? null) !== (w.comment ?? null)) {
+          await m.update(QuestionOption, h.id, { option: w.option, correct: w.correct, comment: w.comment ?? null });
+          optionChanges++;
+        }
+      }
+    } else {
+      if (have.length) await m.delete(QuestionOption, have.map((o) => o.id));
+      for (const w of want) await m.save(m.create(QuestionOption, { questionId: row.id, option: w.option, correct: w.correct, comment: w.comment ?? null }));
+      optionChanges += want.length;
+    }
+
+    // Topic links: exactly the declared topics.
+    const wantTopicIds = new Set<number>(q.topicSlugs.map((s: string) => {
+      const t = topicBySlug.get(s);
+      if (!t) throw new Error(`Question ${q.slug} references unknown topic ${s}`);
+      return t.id;
+    }));
+    const links = await m.find(QuestionTopic, { where: { questionId: row.id } });
+    const stale = links.filter((l) => !wantTopicIds.has(l.topicId));
+    if (stale.length) { await m.delete(QuestionTopic, stale.map((l) => l.id)); linkChanges += stale.length; }
+    const haveIds = new Set(links.map((l) => l.topicId));
+    for (const id of wantTopicIds) if (!haveIds.has(id)) { await m.save(m.create(QuestionTopic, { questionId: row.id, topicId: id })); linkChanges++; }
+  }
+
+  const strays = all.length
+    ? await m.query(`SELECT id, slug FROM question WHERE subjectId = ? AND (slug IS NULL OR slug NOT IN (?))`, [subject.id, all.map((q: any) => q.slug)])
+    : await m.query(`SELECT id, slug FROM question WHERE subjectId = ?`, [subject.id]);
+  for (const s of strays) console.warn(`  ⚠ question in DB but not in seed JSON: q${s.id} ${s.slug ?? '(no slug)'}`);
+  console.log(`  ✔ Questions: ${all.length} declared (${created} created, ${updated} updated, ${optionChanges} option changes, ${linkChanges} topic-link changes)`);
 }
 
 // A slug match updates the lesson's fields and its sections in place by position (orderIndex), adding or
@@ -88,6 +152,8 @@ async function main() {
       const subject = await m.findOneByOrFail(Subject, { slug: SUBJECT_SLUG });
       console.log('Topic copy...');
       await syncTopicCopy(m, subject);
+      console.log('Questions...');
+      await syncQuestions(m, subject);
       console.log('Lessons...');
       await syncLessons(m, subject);
     });
