@@ -6073,5 +6073,591 @@
         "content": "<ul><li>Express 5 keeps the model but adds promise support, safer routing and a cleaner API</li><li>Prepare with good tests and Node.js 18 or higher, in a dedicated branch</li><li>Run <code>npx codemod@latest @expressjs/v5-migration-recipe</code>, then review by hand</li><li>Rewrite wildcards as named, optional parts with braces, and drop regex groups</li><li>Replace removed APIs; <code>res.send(404)</code> now sends a 200</li><li>Check code relying on <code>req.body</code>, nested queries, <code>req.query</code> writes and <code>req.host</code></li><li>Note changed defaults for urlencoded, static dotfiles, listen errors and render</li><li>Roll out gradually and watch 404 and 500 rates</li></ul>"
       }
     ]
+  },
+  {
+    "slug": "introduction-to-typescript",
+    "title": "What TypeScript Is and How It Runs",
+    "subjectSlug": "typescript",
+    "topicSlug": "introduction-to-typescript",
+    "level": 1,
+    "summary": "Understand what TypeScript adds to JavaScript, why types disappear at runtime, how to add annotations, and how to check, compile and run TypeScript with tsc, Node.js and tsx.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "typescript",
+      "tsc",
+      "type annotations",
+      "type inference",
+      "node.js"
+    ],
+    "sections": [
+      {
+        "title": "Why TypeScript",
+        "content": "<p>In JavaScript, many mistakes only show up when the code runs: a misspelled property, a missing argument, a value that is sometimes <code>undefined</code>. You find them in testing, or your users find them in production.</p><p><strong>TypeScript</strong> is JavaScript with a type system on top, created and maintained by Microsoft. It describes what kind of value each variable, parameter and property holds, and checks your code <strong>before it runs</strong>:</p><pre><code class=\"language-typescript\">function total(price: number, quantity: number) {\n  return price * quantity;\n}\n\ntotal(9.99, '3'); // Error: a string is not a number</code></pre><p>Editors use the same information for autocompletion, inline documentation and safe renaming.</p>"
+      },
+      {
+        "title": "A Superset That Compiles Away",
+        "content": "<p>TypeScript is a <strong>superset</strong> of JavaScript: it is all of JavaScript plus type syntax. Browsers and Node.js run JavaScript, so the types are <strong>removed</strong> before the code runs:</p><pre><code class=\"language-typescript\">// greet.ts: what you write\nfunction greet(name: string): string {\n  return 'Hello, ' + name;\n}</code></pre><pre><code class=\"language-typescript\">// greet.js: what actually runs\nfunction greet(name) {\n  return 'Hello, ' + name;\n}</code></pre><p>Apart from the removed types, the output is the same code. TypeScript does not add a runtime library or change how your logic works. This is why learning TypeScript is mostly learning to describe JavaScript you already know.</p>"
+      },
+      {
+        "title": "Types Exist Only at Compile Time",
+        "content": "<p>Because types are erased, they give <strong>no protection at runtime</strong>. TypeScript trusts what you tell it about data that comes from outside your code:</p><pre><code class=\"language-typescript\">interface User {\n  name: string;\n}\n\nconst user = JSON.parse('{\"nmae\": \"Ana\"}') as User;\nconsole.log(user.name.toUpperCase()); // compiles, then crashes at runtime</code></pre><p>The compiler cannot see a JSON string, an API response or a form field. For data from outside, such as requests, files and environment variables, check the values at runtime with your own code or a validation library such as Zod. Inside your program, the types keep everything consistent.</p>"
+      },
+      {
+        "title": "Annotations and Inference",
+        "content": "<p>A <strong>type annotation</strong> is a colon followed by a type, after a variable or parameter name, or after the parameter list for the return type:</p><pre><code class=\"language-typescript\">let city: string = 'Pune';\n\nfunction square(n: number): number {\n  return n * n;\n}\n\nlet count = 10;     // inferred as number\ncount = 'ten';      // Error: still a number</code></pre><p>You rarely need annotations everywhere. TypeScript <strong>infers</strong> types from values, so <code>count</code> is a <code>number</code> without one. A good habit is to annotate the boundaries, such as function parameters and exported functions, and let inference handle local variables.</p>"
+      },
+      {
+        "title": "Checking and Compiling with tsc",
+        "content": "<p><code>tsc</code> is the TypeScript compiler. Install it in the project and run it through npx:</p><pre><code class=\"language-bash\">npm install --save-dev typescript\nnpx tsc --init     # create tsconfig.json\nnpx tsc            # type check and write .js files\nnpx tsc --noEmit   # type check only</code></pre><p>One surprise for beginners: <code>tsc</code> reports type errors but, by default, <strong>still writes the JavaScript</strong>. Errors do not block output unless you set <code>noEmitOnError</code>. Many projects let another tool produce the JavaScript and use <code>tsc --noEmit</code> purely as a type checker, for example in CI.</p>"
+      },
+      {
+        "title": "Running TypeScript Directly",
+        "content": "<p>For scripts and servers you often skip the build step:</p><ul><li><strong>Node.js</strong> 22.18 and later runs <code>.ts</code> files directly by stripping the types. It does not type check, and it only supports syntax that can simply be erased, so features like <code>enum</code> need another tool.</li><li><strong>tsx</strong> runs TypeScript files with full syntax support and a fast watch mode.</li><li>The <strong>TypeScript Playground</strong> at typescriptlang.org/play lets you try code in the browser and see the JavaScript output.</li></ul><pre><code class=\"language-bash\">node app.ts          # Node.js 22.18+\nnpx tsx watch app.ts  # restarts on every change</code></pre><p>Older guides use <code>ts-node</code>; these options are simpler today.</p>"
+      },
+      {
+        "title": "Structural Typing",
+        "content": "<p>TypeScript compares types by their <strong>shape</strong>, not by their name. If a value has the properties a type requires, it fits, no matter where it came from:</p><pre><code class=\"language-typescript\">interface Point {\n  x: number;\n  y: number;\n}\n\nfunction plot(p: Point) {\n  console.log(p.x, p.y);\n}\n\nconst location = { x: 3, y: 7, label: 'home' };\nplot(location); // OK: it has x and y</code></pre><p>This is called <strong>structural typing</strong>, and it matches how JavaScript code is written: you pass objects around based on what they contain. Languages such as Java and C# instead require a declared relationship, which is called nominal typing.</p>"
+      },
+      {
+        "title": "Adopting TypeScript Gradually",
+        "content": "<p>You do not need to convert a JavaScript project in one go. TypeScript's type system is <strong>gradual</strong>: typed and untyped code can live side by side.</p><ul><li><code>allowJs</code> lets <code>.js</code> and <code>.ts</code> files import each other in one project.</li><li><code>checkJs</code> type checks plain JavaScript files, using JSDoc comments as types.</li><li>Rename files to <code>.ts</code> one at a time, starting with shared utilities.</li><li><code>any</code> switches checking off for a value. It is an escape hatch while migrating, not a long-term answer.</li></ul><pre><code class=\"language-json\">{\n  \"compilerOptions\": {\n    \"allowJs\": true,\n    \"checkJs\": true\n  }\n}</code></pre>"
+      },
+      {
+        "title": "TypeScript 7",
+        "content": "<p>TypeScript 7.0, released in 2026, is a rewrite of the compiler in Go. The <strong>language is the same</strong>: code that compiles cleanly on TypeScript 6 compiles the same way on 7. What changes is speed. Full builds are often around ten times faster, and the editor responds faster in large projects.</p><p>Versions 6 and 7 also modernized the defaults. Strict checking is on by default, ES modules are the default module format, and several old options were removed. You will still meet TypeScript 5 projects for a while, so it helps to know that some older tutorials show settings that no longer apply.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>TypeScript is JavaScript plus a type system that catches mistakes before the code runs</li><li>Types are erased during compilation; the output is plain JavaScript</li><li>Types give no runtime protection, so validate data from outside your code</li><li>Annotate parameters and boundaries; let inference type local variables</li><li><code>tsc</code> still writes JavaScript when there are type errors, unless <code>noEmitOnError</code> is set</li><li><code>tsc --noEmit</code> type checks without producing files</li><li>Node.js 22.18+ and tsx run <code>.ts</code> files directly, without type checking</li><li>Types are compared by shape: structural typing</li><li>Adopt gradually with <code>allowJs</code>, <code>checkJs</code> and JSDoc</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-configuration",
+    "title": "Configuring a Project with tsconfig.json",
+    "subjectSlug": "typescript",
+    "topicSlug": "typescript-configuration",
+    "level": 1,
+    "summary": "Set up tsconfig.json: choose files and output, pick module settings for Node.js or a bundler, understand strict mode and extra safety flags, add path aliases and know the TypeScript 6 and 7 defaults.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "typescript",
+      "tsconfig",
+      "strict mode",
+      "module resolution",
+      "compiler options"
+    ],
+    "sections": [
+      {
+        "title": "What tsconfig.json Does",
+        "content": "<p>A <code>tsconfig.json</code> file marks the root of a TypeScript project. It tells the compiler <strong>which files</strong> belong to the project and <strong>how to check and compile</strong> them. Editors read the same file, so the errors you see while typing match what <code>tsc</code> reports.</p><pre><code class=\"language-bash\">npx tsc --init   # generate a starter tsconfig.json\nnpx tsc          # compile the project it describes\nnpx tsc -p packages/api   # use the tsconfig.json in another folder</code></pre><p>Run <code>tsc</code> without file names. In TypeScript 6 and later, passing file names while a <code>tsconfig.json</code> is present is an error, because it would silently ignore your settings.</p>"
+      },
+      {
+        "title": "Choosing the Files",
+        "content": "<p><code>include</code> and <code>exclude</code> decide which files are part of the project, using glob patterns:</p><pre><code class=\"language-json\">{\n  \"include\": [\"src\"],\n  \"exclude\": [\"src/**/*.test.ts\"]\n}</code></pre><ul><li><code>include</code> lists folders or patterns to compile. <code>src</code> means every TypeScript file inside it.</li><li><code>exclude</code> removes files from that set. It only filters <code>include</code>: a file that is imported by an included file is still compiled.</li><li><code>files</code> lists exact files instead, which is rarely needed.</li></ul><p>Keeping tests or scripts in a separate tsconfig is a common way to give them different settings.</p>"
+      },
+      {
+        "title": "Output Settings",
+        "content": "<p>These options control the JavaScript that <code>tsc</code> writes:</p><pre><code class=\"language-json\">{\n  \"compilerOptions\": {\n    \"target\": \"es2022\",\n    \"lib\": [\"es2022\", \"dom\"],\n    \"rootDir\": \"src\",\n    \"outDir\": \"dist\",\n    \"sourceMap\": true,\n    \"declaration\": true\n  }\n}</code></pre><ul><li><code>target</code>: the JavaScript version to output. Newer syntax is rewritten for older targets.</li><li><code>lib</code>: which built-in APIs exist, such as the DOM. It changes types only, never output.</li><li><code>rootDir</code> and <code>outDir</code>: <code>src/app.ts</code> becomes <code>dist/app.js</code>.</li><li><code>sourceMap</code>: debuggers show your TypeScript lines. <code>declaration</code>: writes <code>.d.ts</code> files for libraries.</li></ul>"
+      },
+      {
+        "title": "Module Settings",
+        "content": "<p><code>module</code> and <code>moduleResolution</code> must match where the code runs. In practice there are two choices:</p><ul><li><strong>Node.js</strong>: <code>\"module\": \"nodenext\"</code>. TypeScript follows Node's real rules for ES modules and CommonJS, including writing the <code>.js</code> extension in the imports of ES modules.</li><li><strong>A bundler</strong> such as Vite, esbuild or webpack: <code>\"module\": \"esnext\"</code> with <code>\"moduleResolution\": \"bundler\"</code>. Extensions can be left out, as bundlers allow.</li></ul><pre><code class=\"language-typescript\">// With nodenext, import the file the code will load at runtime\nimport { sum } from './math.js'; // math.ts compiles to math.js</code></pre><p>The old <code>node</code> (or <code>node10</code>) resolution and <code>classic</code> are removed in TypeScript 7.</p>"
+      },
+      {
+        "title": "Strict Mode",
+        "content": "<p><code>\"strict\": true</code> turns on a family of checks, and it is the default since TypeScript 6. The two most important members:</p><pre><code class=\"language-typescript\">// noImplicitAny: parameters need a type\nfunction double(n) { return n * 2; } // Error: n is implicitly any\n\n// strictNullChecks: null and undefined must be handled\nconst names = ['Ana', 'Ben'];\nconst found = names.find((n) =&gt; n.startsWith('C'));\nfound.toUpperCase(); // Error: found may be undefined\nfound?.toUpperCase(); // OK</code></pre><p>Other members include <code>strictFunctionTypes</code> for safer callback types and <code>strictPropertyInitialization</code>, which requires class properties to be assigned. Keep <code>strict</code> on for new projects; turning it off hides exactly the bugs TypeScript is good at finding.</p>"
+      },
+      {
+        "title": "Safety Beyond Strict",
+        "content": "<p>A few useful flags are not part of <code>strict</code>. <code>tsc --init</code> now enables the first two:</p><pre><code class=\"language-typescript\">const scores: number[] = [90, 75];\nconst first = scores[0]; // number | undefined with noUncheckedIndexedAccess\nconst doubled = first * 2; // Error: first may be undefined</code></pre><ul><li><code>noUncheckedIndexedAccess</code>: array and record lookups may be <code>undefined</code>, because the index may not exist.</li><li><code>exactOptionalPropertyTypes</code>: an optional property may be missing, but cannot be set to <code>undefined</code> explicitly.</li><li><code>noImplicitOverride</code>: methods that override a base class method must say <code>override</code>.</li></ul>"
+      },
+      {
+        "title": "Path Aliases",
+        "content": "<p>Deep relative imports such as <code>../../../shared/date</code> are hard to read and break when files move. <code>paths</code> defines aliases:</p><pre><code class=\"language-json\">{\n  \"compilerOptions\": {\n    \"paths\": {\n      \"@shared/*\": [\"./src/shared/*\"]\n    }\n  }\n}</code></pre><pre><code class=\"language-typescript\">import { formatDate } from '@shared/date';    // bundler resolution\nimport { formatDate } from '@shared/date.js'; // nodenext: extension needed</code></pre><p>Paths are resolved relative to the tsconfig file. Older projects also set <code>baseUrl</code>, which is removed in TypeScript 7; write the full relative path in each entry instead.</p><p>Remember that <code>paths</code> only informs the type checker. The tool that runs or bundles the code must understand the same aliases, through bundler settings or Node's <code>imports</code> field.</p>"
+      },
+      {
+        "title": "TypeScript 6 and 7 Defaults",
+        "content": "<p>TypeScript 6.0 changed several defaults, and TypeScript 7 keeps them:</p><ul><li><code>strict</code> is <code>true</code>, and <code>module</code> is <code>esnext</code>.</li><li><code>target</code> follows the latest JavaScript version.</li><li><code>types</code> is <code>[]</code>: packages under <code>@types</code> are no longer included automatically. Add <code>\"types\": [\"node\"]</code> if Node.js globals such as <code>process</code> suddenly cannot be found.</li><li><code>esModuleInterop</code> is always on.</li></ul><p>Removed options include <code>baseUrl</code>, <code>outFile</code>, <code>target: \"es5\"</code> and the AMD, UMD and SystemJS module formats. When upgrading, TypeScript 6 warns about each one, which makes it a useful stepping stone to 7.</p>"
+      },
+      {
+        "title": "Fast Transpilers and Large Projects",
+        "content": "<p>Many projects let a fast tool such as esbuild, swc or Vite turn TypeScript into JavaScript, file by file, while <code>tsc --noEmit</code> does the checking. These tools cannot see other files, so two flags keep your code compatible:</p><ul><li><code>isolatedModules</code>: reports code that cannot be compiled one file at a time.</li><li><code>verbatimModuleSyntax</code>: requires <code>import type</code> for imports used only as types, so tools know exactly which imports to remove.</li></ul><p>For large codebases and monorepos, <strong>project references</strong> split the code into smaller projects. Each one sets <code>\"composite\": true</code>, and <code>tsc --build</code> rebuilds only the projects that changed.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li><code>tsconfig.json</code> marks a project root; run <code>tsc</code> without file names</li><li><code>include</code> and <code>exclude</code> choose files; imported files are still compiled</li><li><code>target</code> sets output syntax; <code>lib</code> only sets available API types</li><li>Use <code>nodenext</code> for Node.js and <code>bundler</code> for bundled apps</li><li><code>strict</code> is on by default; keep it, especially <code>strictNullChecks</code></li><li><code>noUncheckedIndexedAccess</code> makes index lookups possibly <code>undefined</code></li><li><code>paths</code> creates aliases; the runtime or bundler must understand them too</li><li>TypeScript 6+ defaults to <code>types: []</code>; add <code>\"node\"</code> when needed</li><li>Use <code>isolatedModules</code> and <code>verbatimModuleSyntax</code> with fast transpilers</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-core-types",
+    "title": "Core Types",
+    "subjectSlug": "typescript",
+    "topicSlug": "core-types",
+    "level": 1,
+    "summary": "Learn the building blocks of TypeScript: primitives, inference and widening, arrays and tuples, null and undefined, any versus unknown, void and never, unions, type aliases and enums.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "typescript",
+      "types",
+      "union types",
+      "unknown",
+      "enums"
+    ],
+    "sections": [
+      {
+        "title": "Primitive Types",
+        "content": "<p>TypeScript has a type for each JavaScript primitive:</p><pre><code class=\"language-typescript\">let title: string = 'TypeScript';\nlet price: number = 49.5;      // integers and decimals alike\nlet inStock: boolean = true;\nlet views: bigint = 9007199254740993n; // integers beyond number's safe range\nlet id: symbol = Symbol('id');  // a unique value, often a property key</code></pre><p>Always use the <strong>lowercase</strong> names. <code>String</code>, <code>Number</code> and <code>Boolean</code> with a capital letter refer to JavaScript's wrapper objects, which you almost never want.</p><p>There is a single <code>number</code> type for all numbers, as in JavaScript. Use <code>bigint</code> only when you need whole numbers larger than about 9 quadrillion.</p>"
+      },
+      {
+        "title": "Inference and Widening",
+        "content": "<p>TypeScript infers a type from the value you assign, and the keyword you use matters:</p><pre><code class=\"language-typescript\">let status = 'active';    // string: it can change later\nconst mode = 'dark';      // 'dark': it can never change\n\nstatus = 'paused';  // OK\nlet theme: 'dark' | 'light' = mode; // OK: mode is exactly 'dark'</code></pre><p>For <code>const</code>, TypeScript keeps the exact value as a <strong>literal type</strong>, because the value cannot change. For <code>let</code>, it <strong>widens</strong> the type to <code>string</code>, since you may assign another string later.</p><p>Narrowing is the opposite direction: checks in your code let TypeScript treat a broad type as a more specific one. You will see it shortly.</p>"
+      },
+      {
+        "title": "Arrays and Tuples",
+        "content": "<p>An <strong>array</strong> holds any number of values of one type. A <strong>tuple</strong> has a fixed length with a type for each position:</p><pre><code class=\"language-typescript\">const tags: string[] = ['ts', 'js'];\nconst ids: Array&lt;number&gt; = [1, 2, 3]; // same as number[]\n\nconst days: readonly string[] = ['Mon', 'Tue'];\ndays.push('Wed'); // Error: no push on a readonly array\n\nconst point: [number, number] = [10, 20];\nconst entry: [name: string, age?: number] = ['Ana']; // labeled, optional</code></pre><p><code>readonly</code> arrays have no methods that modify them, which is handy for function parameters you promise not to change. Tuples suit small, fixed groupings, such as a coordinate or a React <code>useState</code> pair; for anything larger, an object with named properties is clearer.</p>"
+      },
+      {
+        "title": "null and undefined",
+        "content": "<p>With strict mode on, <code>null</code> and <code>undefined</code> are not part of other types. A value that may be missing has to say so:</p><pre><code class=\"language-typescript\">let nickname: string | undefined;\nnickname.length;        // Error: possibly undefined\nnickname?.length;       // optional chaining: undefined if missing\nconst shown = nickname ?? 'Guest'; // fallback for null or undefined\n\nfunction greet(name?: string) { // optional parameter: string | undefined\n  return 'Hi ' + (name ?? 'there');\n}</code></pre><p>By convention, <code>undefined</code> means a value was never set, and <code>null</code> means it was deliberately set to nothing. Pick one style per codebase. The point is that TypeScript makes you handle the missing case before using the value.</p>"
+      },
+      {
+        "title": "any vs unknown",
+        "content": "<p>Both accept any value, but they behave very differently afterwards:</p><pre><code class=\"language-typescript\">let a: any = JSON.parse('{\"n\": 1}');\na.foo.bar(); // compiles, crashes at runtime\n\nlet u: unknown = JSON.parse('{\"n\": 1}');\nu.foo; // Error: check the type first\nif (typeof u === 'object' &amp;&amp; u !== null &amp;&amp; 'n' in u) {\n  console.log(u.n); // OK after checking\n}</code></pre><ul><li><code>any</code> turns type checking off for that value, and the lack of checking spreads to everything it touches.</li><li><code>unknown</code> means \"I don't know yet\". You must narrow it before using it, which keeps you safe.</li></ul><p>For data from outside your code, prefer <code>unknown</code>.</p>"
+      },
+      {
+        "title": "void and never",
+        "content": "<p>Two special types describe functions that do not return a normal value:</p><pre><code class=\"language-typescript\">function log(message: string): void {\n  console.log(message); // returns nothing useful\n}\n\nfunction fail(message: string): never {\n  throw new Error(message); // never returns at all\n}</code></pre><ul><li><code>void</code>: the function finishes but its return value should not be used.</li><li><code>never</code>: the function never finishes normally, because it always throws or loops forever.</li></ul><p><code>never</code> also means \"no possible value\". TypeScript uses it when every case of a union has been handled, which makes it the key to exhaustive checks, covered in a later lesson.</p>"
+      },
+      {
+        "title": "Union Types and Narrowing",
+        "content": "<p>A <strong>union type</strong> says a value can be one of several types:</p><pre><code class=\"language-typescript\">function formatId(id: string | number) {\n  id.toUpperCase(); // Error: not available on number\n  if (typeof id === 'string') {\n    return id.toUpperCase(); // here id is a string\n  }\n  return id.toFixed(0);      // here id is a number\n}</code></pre><p>On a union, you can only use what every member has in common. To use something specific, you <strong>narrow</strong> the type with a check such as <code>typeof</code>. TypeScript follows your <code>if</code> statements and returns, and knows which member you have in each branch.</p>"
+      },
+      {
+        "title": "Type Aliases",
+        "content": "<p>A <strong>type alias</strong> gives a name to any type, so you can reuse it and describe intent:</p><pre><code class=\"language-typescript\">type UserId = string | number;\ntype Status = 'active' | 'paused' | 'closed';\n\nfunction setStatus(id: UserId, status: Status) {\n  console.log(id, status);\n}\n\nsetStatus(42, 'paused');  // OK\nsetStatus(42, 'deleted'); // Error: not one of the allowed values</code></pre><p>A union of string literals like <code>Status</code> is one of the most useful patterns in TypeScript: the editor suggests the allowed values, and typos become compile errors. An alias is only a name; it does not create a new, separate type.</p>"
+      },
+      {
+        "title": "Enums and Literal Unions",
+        "content": "<p>An <strong>enum</strong> is a named set of constants:</p><pre><code class=\"language-typescript\">enum Direction { Up, Down }         // numbers 0, 1\nenum Role { Admin = 'ADMIN', User = 'USER' }\n\nconst ROLES = { Admin: 'ADMIN', User: 'USER' } as const;\ntype RoleValue = (typeof ROLES)[keyof typeof ROLES]; // 'ADMIN' | 'USER'</code></pre><p>Unlike most TypeScript features, enums produce JavaScript objects at runtime, so they are not simply erased. That is why Node.js type stripping rejects them. <code>const enum</code> is inlined at compile time, but it causes problems with tools that compile one file at a time.</p><p>Many teams prefer a <strong>union of literals</strong>, optionally with an <code>as const</code> object like <code>ROLES</code>, which works everywhere.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Use lowercase <code>string</code>, <code>number</code>, <code>boolean</code>, <code>bigint</code> and <code>symbol</code></li><li><code>const</code> keeps a literal type; <code>let</code> widens it</li><li>Arrays hold one type; tuples have a type per position; <code>readonly</code> blocks changes</li><li>Under strict mode, possibly missing values need <code>| undefined</code> and a check</li><li>Prefer <code>unknown</code> to <code>any</code>; narrow it before use</li><li><code>void</code>: nothing useful returned; <code>never</code>: never returns</li><li>Narrow unions with checks such as <code>typeof</code></li><li>Type aliases name types; literal unions catch typos</li><li>Enums exist at runtime; literal unions are often simpler</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-interfaces-type-aliases",
+    "title": "Interfaces and Type Aliases",
+    "subjectSlug": "typescript",
+    "topicSlug": "interfaces-type-aliases",
+    "level": 1,
+    "summary": "Describe object shapes with interface and type, understand structural typing and excess property checks, compose with extends and intersections, use index signatures and know when to choose each tool.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "typescript",
+      "interface",
+      "type alias",
+      "structural typing",
+      "intersection types"
+    ],
+    "sections": [
+      {
+        "title": "Describing Object Shapes",
+        "content": "<p>Most TypeScript code describes objects. An <code>interface</code> and a <code>type</code> alias can both do it:</p><pre><code class=\"language-typescript\">interface User {\n  readonly id: number;\n  name: string;\n  email?: string;   // optional: may be missing\n}\n\ntype Product = {\n  sku: string;\n  price: number;\n};\n\nconst u: User = { id: 1, name: 'Ana' };\nu.id = 2; // Error: id is readonly</code></pre><p><code>?</code> marks a property as optional, and <code>readonly</code> prevents reassignment. Note that <code>readonly</code> is <strong>shallow</strong>: a readonly property holding an object still lets you change that object's own properties.</p>"
+      },
+      {
+        "title": "Excess Property Checks",
+        "content": "<p>Structural typing means extra properties are normally fine. There is one exception: an object literal written directly where a type is expected.</p><pre><code class=\"language-typescript\">interface Options {\n  width: number;\n  height?: number;\n}\n\nconst a: Options = { width: 100, heigth: 50 }; // Error: heigth does not exist\n\nconst raw = { width: 100, heigth: 50 };\nconst b: Options = raw; // OK: not a fresh literal</code></pre><p>For a fresh object literal, an unknown property is almost always a typo, so TypeScript reports it. Once the object is stored in a variable, it may legitimately carry other data, so only the required shape is checked. This explains why the same object sometimes errors and sometimes does not.</p>"
+      },
+      {
+        "title": "Extending Interfaces",
+        "content": "<p>An interface can build on one or more others with <code>extends</code>:</p><pre><code class=\"language-typescript\">interface Entity {\n  id: number;\n  createdAt: Date;\n}\n\ninterface Named {\n  name: string;\n}\n\ninterface Customer extends Entity, Named {\n  email: string;\n}\n\nconst c: Customer = { id: 1, createdAt: new Date(), name: 'Ana', email: 'ana@example.com' };</code></pre><p><code>Customer</code> has every property of <code>Entity</code> and <code>Named</code> plus its own. If an extended property is redeclared with an incompatible type, TypeScript reports an error on the interface itself, which makes mistakes easy to locate.</p>"
+      },
+      {
+        "title": "Intersection Types",
+        "content": "<p>Type aliases combine types with <code>&amp;</code>, an <strong>intersection</strong>: the result has all members of both sides.</p><pre><code class=\"language-typescript\">type Entity = { id: number };\ntype Named = { name: string };\ntype Customer = Entity &amp; Named &amp; { email: string };\n\ntype A = { value: string };\ntype B = { value: number };\ntype Both = A &amp; B; // value is string &amp; number, which is never\n\nconst x: Both = { value: 'a' }; // Error: no value can satisfy both</code></pre><p>A conflicting property quietly becomes <code>never</code>, and you only find out when you create a value. Interface <code>extends</code> reports the conflict where it is declared, one reason to prefer it for object hierarchies.</p>"
+      },
+      {
+        "title": "Index Signatures and Record",
+        "content": "<p>When property names are not known in advance, such as a lookup table, use an <strong>index signature</strong>:</p><pre><code class=\"language-typescript\">interface PriceList {\n  [sku: string]: number;\n}\n\nconst prices: PriceList = { 'A-1': 9.5, 'B-2': 12 };\nprices['C-3'] = 7;\n\ntype Stock = Record&lt;string, number&gt;; // the same idea, shorter\ntype Flags = Record&lt;'dark' | 'beta', boolean&gt;; // exactly these keys</code></pre><p>An index signature promises that <strong>any</strong> key returns a value, which is not true at runtime for missing keys. The <code>noUncheckedIndexedAccess</code> flag corrects this by adding <code>undefined</code> to lookups. When the keys are a known set, <code>Record</code> with a union of keys is more precise.</p>"
+      },
+      {
+        "title": "Declaration Merging",
+        "content": "<p>Declaring the same interface twice <strong>merges</strong> the two declarations into one. A type alias cannot be redeclared:</p><pre><code class=\"language-typescript\">interface Settings {\n  theme: string;\n}\ninterface Settings {\n  language: string;\n}\nconst s: Settings = { theme: 'dark', language: 'en' }; // both apply\n\ninterface Settings {\n  theme: number; // Error: must keep the same type\n}\n\ntype Config = { a: string }; // Error: duplicate identifier\ntype Config = { b: string }; // Error: reported on both</code></pre><p>Merging is how libraries let you extend their types, for example adding a <code>user</code> property to Express's request type. Merged properties must agree on their types.</p>"
+      },
+      {
+        "title": "What Only One Can Do",
+        "content": "<p>For plain object shapes, both work. Beyond that, each has abilities the other lacks:</p><ul><li><strong>Only a type alias</strong> can name unions, primitives, tuples and computed types such as mapped and conditional types.</li><li><strong>Only an interface</strong> can be reopened through declaration merging.</li></ul><pre><code class=\"language-typescript\">type Id = string | number;           // union\ntype Pair = [string, number];         // tuple\ntype Handler = (e: Event) =&gt; void;     // function type\ntype ReadonlyUser = Readonly&lt;{ name: string }&gt;; // computed</code></pre><p>Interfaces also report conflicts when extending, and their errors usually show the interface's name, which keeps error messages short.</p>"
+      },
+      {
+        "title": "Classes and implements",
+        "content": "<p>A class can promise to match a shape with <code>implements</code>, using an interface <strong>or</strong> an object type alias:</p><pre><code class=\"language-typescript\">interface Shape {\n  area(): number;\n}\ntype Named = { name: string };\n\nclass Circle implements Shape, Named {\n  name = 'circle';\n  constructor(private r: number) {}\n  area() {\n    return Math.PI * this.r ** 2;\n  }\n}\n\ntype Either = { a: string } | { b: string };\nclass Bad implements Either {} // Error: cannot implement a union</code></pre><p>The only restriction is that the type must be an object type with statically known members, so a union cannot be implemented. <code>implements</code> only checks the class; it adds nothing to it.</p>"
+      },
+      {
+        "title": "Choosing Between Them",
+        "content": "<p>Because both describe objects equally well, teams settle on a simple rule. A common one:</p><ul><li>Use <code>interface</code> for object shapes, especially public APIs, class contracts and anything others may extend.</li><li>Use <code>type</code> for unions, tuples, function types and types built from other types.</li></ul><p>Some teams use <code>type</code> for everything, and that is fine too. What matters more is consistency within a codebase, so pick a rule, write it down and let a lint rule such as <code>consistent-type-definitions</code> enforce it.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Both <code>interface</code> and <code>type</code> describe object shapes</li><li><code>?</code> marks optional properties; <code>readonly</code> is shallow</li><li>Fresh object literals get excess property checks; variables do not</li><li><code>extends</code> reports conflicts; intersections turn them into <code>never</code></li><li>Index signatures and <code>Record</code> type dynamic keys</li><li>Interfaces merge across declarations; type aliases cannot be redeclared</li><li>Only type aliases name unions, tuples and computed types</li><li>Classes can implement interfaces and object type aliases, but not unions</li><li>Pick one consistent rule for your codebase</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-functions-classes",
+    "title": "Typed Functions and Classes",
+    "subjectSlug": "typescript",
+    "topicSlug": "functions-classes",
+    "level": 1,
+    "summary": "Type functions and callbacks, use optional, default and rest parameters, write overloads, and build classes with parameter properties, access modifiers, #private fields, abstract classes and override.",
+    "format": "tutorial",
+    "accessLevel": "Public",
+    "tags": [
+      "typescript",
+      "functions",
+      "classes",
+      "overloads",
+      "access modifiers"
+    ],
+    "sections": [
+      {
+        "title": "Parameters and Return Types",
+        "content": "<p>Parameters always need a type, either written or inferred from context. Return types are usually inferred:</p><pre><code class=\"language-typescript\">function add(a: number, b: number) {\n  return a + b; // return type inferred as number\n}\n\nexport function parseAge(input: string): number {\n  return Number.parseInt(input, 10);\n}\n\nadd(1, 2, 3); // Error: expected 2 arguments</code></pre><p>Writing the return type explicitly is a good idea for exported functions. It documents the contract, and if the implementation accidentally returns something else, the error appears inside the function rather than at every caller.</p><p>Unlike JavaScript, TypeScript also checks the <strong>number</strong> of arguments.</p>"
+      },
+      {
+        "title": "Optional, Default and Rest Parameters",
+        "content": "<p>Three ways to make calls more flexible:</p><pre><code class=\"language-typescript\">function greet(name: string, greeting?: string) {\n  return (greeting ?? 'Hello') + ', ' + name; // greeting: string | undefined\n}\n\nfunction pad(text: string, width = 10) {\n  return text.padStart(width); // width inferred as number\n}\n\nfunction sum(...values: number[]) {\n  return values.reduce((t, v) =&gt; t + v, 0);\n}\n\nsum(1, 2, 3); // OK\nsum(1, '2');  // Error: '2' is not a number</code></pre><p>An <strong>optional</strong> parameter may be <code>undefined</code> inside the function, so you must handle that. A <strong>default</strong> parameter is optional for callers but always has a value inside. Optional parameters must come after required ones.</p>"
+      },
+      {
+        "title": "Function Types and Callbacks",
+        "content": "<p>A function type describes parameters and the return value:</p><pre><code class=\"language-typescript\">type Formatter = (value: number) =&gt; string;\n\nconst asPrice: Formatter = (v) =&gt; '$' + v.toFixed(2); // v is a number\n\nconst labels = [1, 2].map((n) =&gt; 'Item ' + n);  // n inferred from the array\n\nfunction onEach(items: string[], fn: (item: string) =&gt; void) {\n  items.forEach(fn);\n}\nconst seen: string[] = [];\nonEach(['a'], (item) =&gt; seen.push(item)); // OK even though push returns a number</code></pre><p>When a function is passed where a type is expected, its parameters are typed from that context. This <strong>contextual typing</strong> is why callbacks rarely need annotations. A callback typed as returning <code>void</code> may return a value; it is simply ignored.</p>"
+      },
+      {
+        "title": "Function Overloads",
+        "content": "<p><strong>Overloads</strong> describe a function that returns different types depending on how it is called:</p><pre><code class=\"language-typescript\">function parse(input: string): number;\nfunction parse(input: string[]): number[];\nfunction parse(input: string | string[]) {\n  return Array.isArray(input) ? input.map(Number) : Number(input);\n}\n\nconst one = parse('42');         // number\nconst many = parse(['1', '2']);  // number[]</code></pre><p>The first lines are the <strong>signatures</strong> callers see. The last is the implementation, which callers cannot call directly and which must handle every signature.</p><p>Use overloads only when the return type depends on the input. If every call returns the same type, a single signature with a union parameter is simpler.</p>"
+      },
+      {
+        "title": "The this Parameter",
+        "content": "<p>In JavaScript, <code>this</code> depends on how a function is called. TypeScript lets you declare what <code>this</code> must be with a fake first parameter:</p><pre><code class=\"language-typescript\">interface Counter {\n  count: number;\n}\n\nfunction increment(this: Counter) {\n  this.count++;\n}\n\nconst counter = { count: 0, increment };\ncounter.increment(); // OK: this is counter\nincrement();         // Error: this would be void</code></pre><p>The <code>this</code> parameter is erased from the output and is not a real argument. It catches the classic bug of passing a method as a callback and losing its object. Arrow functions do not have their own <code>this</code>, so they cannot declare one.</p>"
+      },
+      {
+        "title": "Class Properties",
+        "content": "<p>TypeScript classes declare their properties, and strict mode checks that each one is assigned:</p><pre><code class=\"language-typescript\">class User {\n  name: string;\n  email: string; // Error: not assigned in the constructor\n  constructor(name: string) {\n    this.name = name;\n  }\n}\n\nclass Account {\n  constructor(public owner: string, private balance = 0) {}\n}\nconst acc = new Account('Ana');\nconsole.log(acc.owner);</code></pre><p><strong>Parameter properties</strong>, like <code>public owner</code> in <code>Account</code>, declare and assign a property in one step. They are TypeScript-only syntax, so Node.js type stripping does not support them. Writing <code>name!: string</code> silences the assignment check, but only use it when a framework truly assigns the value.</p>"
+      },
+      {
+        "title": "private vs #private",
+        "content": "<p>TypeScript has <code>public</code> (the default), <code>protected</code> (the class and its subclasses) and <code>private</code> (the class only). JavaScript also has its own private fields, written with <code>#</code>:</p><pre><code class=\"language-typescript\">class Wallet {\n  private pin = '1234';  // checked by TypeScript only\n  #secret = 'abc';       // private in JavaScript itself\n  readonly id = 1;\n}\n\nconst w = new Wallet();\nw.pin;     // Error: private\nw.id = 2;  // Error: readonly\n(w as any).pin; // compiles, and works at runtime</code></pre><p>TypeScript's <code>private</code> disappears after compilation, so other code can still reach the value at runtime. <code>#secret</code> is enforced by the JavaScript engine. Use <code>#</code> when real privacy matters.</p>"
+      },
+      {
+        "title": "Abstract Classes and override",
+        "content": "<p>An <strong>abstract class</strong> is a partial base class: it cannot be created directly, and its abstract methods must be implemented by subclasses.</p><pre><code class=\"language-typescript\">abstract class Shape {\n  abstract area(): number;\n  describe() {\n    return `Area: ${this.area().toFixed(1)}`;\n  }\n}\n\nclass Square extends Shape {\n  constructor(private side: number) { super(); }\n  override area() { return this.side ** 2; }\n}\n\nnew Shape(); // Error: cannot create an abstract class</code></pre><p>Unlike an interface, an abstract class can share real code, like <code>describe</code>. <code>override</code> marks a method that replaces a base method, so renaming the base method becomes an error instead of a silent bug. <code>noImplicitOverride</code> makes the keyword required.</p>"
+      },
+      {
+        "title": "Static Members and Class Expressions",
+        "content": "<p><code>static</code> members belong to the class itself, not to its instances. They suit counters, caches and factory methods:</p><pre><code class=\"language-typescript\">class Temperature {\n  static readonly freezing = 0;\n  private constructor(readonly celsius: number) {}\n  static fromFahrenheit(f: number) {\n    return new Temperature(((f - 32) * 5) / 9);\n  }\n}\n\nconst t = Temperature.fromFahrenheit(212);\nnew Temperature(100); // Error: the constructor is private\n\nconst Logger = class {\n  log(message: string) { console.log(message); }\n};</code></pre><p>A <code>private</code> constructor forces callers to use the static factory. A <strong>class expression</strong>, like <code>Logger</code>, defines a class as a value, which is occasionally useful for mixins.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Parameters need types; return types are inferred but worth writing on exported functions</li><li>Optional parameters may be <code>undefined</code>; defaults always have a value</li><li>Callbacks are typed from context; a <code>void</code> callback's return value is ignored</li><li>Use overloads only when the return type depends on the arguments</li><li>A <code>this</code> parameter declares what <code>this</code> must be</li><li>Parameter properties declare and assign in one step</li><li><code>private</code> is compile-time only; <code>#private</code> is enforced at runtime</li><li>Abstract classes share code; <code>override</code> guards against renamed base methods</li><li><code>static</code> members belong to the class, not to instances</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-generics",
+    "title": "Generics",
+    "subjectSlug": "typescript",
+    "topicSlug": "generics",
+    "level": 2,
+    "summary": "Write reusable code without losing type information: generic functions and types, inference, constraints with extends and keyof, default and const type parameters, NoInfer and real-world patterns.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "typescript",
+      "generics",
+      "type parameters",
+      "constraints",
+      "keyof"
+    ],
+    "sections": [
+      {
+        "title": "The Problem Generics Solve",
+        "content": "<p>Suppose you want a function that returns the first item of any array. With <code>any</code>, it works but forgets what it returned:</p><pre><code class=\"language-typescript\">function firstAny(items: any[]): any {\n  return items[0];\n}\nconst a = firstAny(['x', 'y']); // any: no checking from here on\na.toFixed(); // compiles, crashes at runtime\n\nfunction first&lt;T&gt;(items: T[]): T | undefined {\n  return items[0];\n}\nconst b = first(['x', 'y']); // string | undefined\nb?.toFixed(); // Error: toFixed does not exist on string</code></pre><p>A <strong>generic</strong> function takes a <strong>type parameter</strong>, here <code>T</code>, alongside its normal parameters. It links the input type to the output type, so the function is reusable without losing type information.</p>"
+      },
+      {
+        "title": "Generic Functions and Inference",
+        "content": "<p>You rarely pass type arguments yourself. TypeScript <strong>infers</strong> them from the values:</p><pre><code class=\"language-typescript\">function wrap&lt;T&gt;(value: T) {\n  return { value };\n}\n\nconst n = wrap(42);        // { value: number }\nconst s = wrap('hi');      // { value: string }\nconst d = wrap&lt;Date&gt;(new Date()); // explicit, rarely needed\n\nconst pair = &lt;A, B&gt;(a: A, b: B): [A, B] =&gt; [a, b];\nconst p = pair('id', 7);   // [string, number]</code></pre><p>Think of <code>T</code> as a variable for a type: each call fills it in. The name is a convention. <code>T</code> is common for a single parameter, while descriptive names such as <code>TItem</code> or <code>Key</code> read better when there are several.</p>"
+      },
+      {
+        "title": "Generic Types and Classes",
+        "content": "<p>Interfaces, type aliases and classes can be generic too. This is how you describe containers once and reuse them for any content:</p><pre><code class=\"language-typescript\">interface ApiResponse&lt;T&gt; {\n  data: T;\n  status: number;\n}\n\ntype User = { id: number; name: string };\nconst res: ApiResponse&lt;User[]&gt; = { data: [], status: 200 };\n\nclass Stack&lt;T&gt; {\n  private items: T[] = [];\n  push(item: T) { this.items.push(item); }\n  pop(): T | undefined { return this.items.pop(); }\n}\n\nconst stack = new Stack&lt;number&gt;();\nstack.push(1);\nstack.push('2'); // Error: not a number</code></pre><p>You already use generic types daily: <code>Array&lt;T&gt;</code>, <code>Promise&lt;T&gt;</code>, <code>Map&lt;K, V&gt;</code> and <code>Set&lt;T&gt;</code> are all generic.</p>"
+      },
+      {
+        "title": "Constraints with extends",
+        "content": "<p>Inside a generic function, <code>T</code> could be anything, so you can only do things that work for every type. A <strong>constraint</strong> limits what <code>T</code> may be:</p><pre><code class=\"language-typescript\">function longest&lt;T extends { length: number }&gt;(a: T, b: T): T {\n  return a.length &gt;= b.length ? a : b; // OK: T has length\n}\n\nlongest('apple', 'fig');   // string\nlongest([1, 2], [3]);      // number[]\nlongest(10, 20);           // Error: number has no length</code></pre><p><code>T extends { length: number }</code> reads \"T can be any type that has a numeric <code>length</code>\". The function keeps the exact type of what was passed, a string stays a string, while still being allowed to use <code>length</code>.</p>"
+      },
+      {
+        "title": "keyof Constraints",
+        "content": "<p>A very common constraint ties one type parameter to the keys of another:</p><pre><code class=\"language-typescript\">function getProperty&lt;T, K extends keyof T&gt;(obj: T, key: K): T[K] {\n  return obj[key];\n}\n\nconst user = { id: 1, name: 'Ana', active: true };\n\nconst name = getProperty(user, 'name');     // string\nconst active = getProperty(user, 'active'); // boolean\ngetProperty(user, 'email'); // Error: not a key of user</code></pre><p><code>keyof T</code> is the union of <code>T</code>'s property names, here <code>'id' | 'name' | 'active'</code>. <code>T[K]</code> is the type of the property at key <code>K</code>. Together they give you safe dynamic property access, with the exact result type for each key.</p>"
+      },
+      {
+        "title": "Multiple and Default Type Parameters",
+        "content": "<p>Functions can take several type parameters, and type parameters can have defaults, just like normal parameters:</p><pre><code class=\"language-typescript\">function mapValues&lt;K extends string, V, R&gt;(obj: Record&lt;K, V&gt;, fn: (v: V) =&gt; R): Record&lt;K, R&gt; {\n  const out = {} as Record&lt;K, R&gt;;\n  for (const key in obj) out[key] = fn(obj[key]);\n  return out;\n}\nconst lengths = mapValues({ a: 'x', b: 'yy' }, (v) =&gt; v.length); // Record&lt;'a' | 'b', number&gt;\n\ninterface Page&lt;T = unknown&gt; {\n  items: T[];\n  total: number;\n}\nconst any: Page = { items: [], total: 0 };          // T is unknown\nconst users: Page&lt;string&gt; = { items: ['Ana'], total: 1 };</code></pre><p>Use multiple parameters when several types are related but different. A default helps when one choice is common, so most users can simply write <code>Page</code>.</p>"
+      },
+      {
+        "title": "const Type Parameters",
+        "content": "<p>Inference normally widens literals: an array of strings becomes <code>string[]</code>. Adding <code>const</code> before a type parameter (TypeScript 5.0) keeps the exact values:</p><pre><code class=\"language-typescript\">function routes&lt;T extends readonly string[]&gt;(paths: T) {\n  return paths;\n}\nconst a = routes(['home', 'about']); // string[]\n\nfunction constRoutes&lt;const T extends readonly string[]&gt;(paths: T) {\n  return paths;\n}\nconst b = constRoutes(['home', 'about']); // readonly ['home', 'about']\ntype Route = (typeof b)[number];          // 'home' | 'about'</code></pre><p>It behaves as if callers wrote <code>as const</code> themselves. It is useful for configuration-style APIs, such as routes, event names or column lists, where the exact strings matter later.</p>"
+      },
+      {
+        "title": "When Inference Fails",
+        "content": "<p>If nothing tells TypeScript what a type parameter is, it falls back to <code>unknown</code>, or to the constraint or default if there is one:</p><pre><code class=\"language-typescript\">function createList&lt;T&gt;(): T[] {\n  return [];\n}\nconst list = createList();          // unknown[]\nconst names = createList&lt;string&gt;(); // string[]\n\nfunction paint&lt;C extends string&gt;(colors: C[], fallback?: NoInfer&lt;C&gt;) {\n  return fallback ?? colors[0];\n}\npaint(['red', 'green'], 'red');  // OK\npaint(['red', 'green'], 'blue'); // Error: not one of the colors</code></pre><p>Pass the type argument explicitly in such cases. <code>NoInfer</code> (TypeScript 5.4) solves the opposite problem: it stops a parameter from influencing inference, so <code>fallback</code> must be one of the colors instead of widening <code>C</code>.</p>"
+      },
+      {
+        "title": "Real Patterns and Over-Generic Code",
+        "content": "<p>Generics shine in reusable building blocks:</p><pre><code class=\"language-typescript\">interface Entity { id: number }\n\nclass Repository&lt;T extends Entity&gt; {\n  private rows = new Map&lt;number, T&gt;();\n  save(row: T) { this.rows.set(row.id, row); }\n  find(id: number): T | undefined { return this.rows.get(id); }\n}\n\nconst users = new Repository&lt;{ id: number; name: string }&gt;();</code></pre><p>A useful rule: a type parameter should appear <strong>at least twice</strong>, typically linking an input to an output or two inputs to each other. If it appears only once, it adds nothing:</p><pre><code class=\"language-typescript\">function logBad&lt;T&gt;(value: T): void { console.log(value); } // T used once\nfunction logGood(value: unknown): void { console.log(value); }</code></pre>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Generics make code reusable without losing type information</li><li>Type arguments are usually inferred from the values passed</li><li>Interfaces, type aliases and classes can be generic, like <code>Array&lt;T&gt;</code></li><li><code>T extends X</code> constrains what <code>T</code> may be</li><li><code>K extends keyof T</code> with <code>T[K]</code> gives safe property access</li><li>Type parameters can have defaults</li><li><code>const T</code> keeps literal types during inference</li><li>Uninferred type parameters become <code>unknown</code>; <code>NoInfer</code> blocks unwanted inference</li><li>A type parameter used only once is a sign it is not needed</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-narrowing-type-transformations",
+    "title": "Narrowing and Type Transformations",
+    "subjectSlug": "typescript",
+    "topicSlug": "advanced-type-system",
+    "level": 2,
+    "summary": "Narrow unions safely with type guards and discriminated unions, then build new types from existing ones with keyof, typeof, indexed access, conditional, mapped and template literal types, and satisfies.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "typescript",
+      "narrowing",
+      "discriminated unions",
+      "conditional types",
+      "mapped types"
+    ],
+    "sections": [
+      {
+        "title": "Literal Types and as const",
+        "content": "<p>A <strong>literal type</strong> is a single exact value used as a type, such as <code>'GET'</code> or <code>404</code>. Unions of literals describe a fixed set of allowed values:</p><pre><code class=\"language-typescript\">type Method = 'GET' | 'POST';\n\nconst config = { method: 'GET', retries: 3 };\n// config.method is string, so it no longer fits Method\nconst m: Method = config.method; // Error: string is not Method\n\nconst fixed = { method: 'GET', retries: 3 } as const;\nconst ok: Method = fixed.method; // OK: exactly 'GET'</code></pre><p>Object properties are widened because they could change. <code>as const</code> tells TypeScript the value will not change: every property becomes <code>readonly</code> and keeps its literal type. Arrays become readonly tuples.</p>"
+      },
+      {
+        "title": "The Narrowing Toolkit",
+        "content": "<p>TypeScript narrows a union whenever your code checks it. Each JavaScript check has a matching narrowing rule:</p><pre><code class=\"language-typescript\">type Pet = { name: string; meow?: () =&gt; void } | { name: string; bark: () =&gt; void };\n\nfunction show(value: string | number | Date | null) {\n  if (value === null) return 'none';               // equality\n  if (typeof value === 'string') return value.trim(); // typeof\n  if (value instanceof Date) return value.toISOString(); // instanceof\n  return value.toFixed(2);                          // only number is left\n}\n\nfunction speak(pet: Pet) {\n  if ('bark' in pet) pet.bark();                     // in\n}</code></pre><p>Truthiness checks such as <code>if (value)</code> also remove <code>null</code> and <code>undefined</code>, but they remove <code>0</code> and empty strings too, so be careful with numbers and strings.</p>"
+      },
+      {
+        "title": "Type Predicates and Assertion Functions",
+        "content": "<p>Move complex checks into functions that declare what they prove:</p><pre><code class=\"language-typescript\">interface User { id: number; name: string }\n\nfunction isUser(value: unknown): value is User {\n  return typeof value === 'object' &amp;&amp; value !== null &amp;&amp; 'id' in value &amp;&amp; 'name' in value;\n}\n\nfunction assertDefined&lt;T&gt;(value: T, message: string): asserts value is NonNullable&lt;T&gt; {\n  if (value == null) throw new Error(message);\n}\n\nconst data: unknown = JSON.parse('{\"id\": 1, \"name\": \"Ana\"}');\nif (isUser(data)) console.log(data.name); // data is User here\n\nconst el = [1, 2].find((n) =&gt; n &gt; 1);\nassertDefined(el, 'not found');\nconsole.log(el.toFixed()); // el is number from here on</code></pre><p>A <code>value is User</code> predicate narrows inside an <code>if</code>. An <code>asserts</code> function throws on failure, so it narrows for the rest of the scope. TypeScript trusts both blindly.</p>"
+      },
+      {
+        "title": "Discriminated Unions",
+        "content": "<p>Give each member of a union a shared property with a different literal value, its <strong>discriminant</strong>. Checking it narrows to exactly one member:</p><pre><code class=\"language-typescript\">type Result =\n  | { status: 'success'; data: string }\n  | { status: 'error'; message: string }\n  | { status: 'loading' };\n\nfunction render(r: Result): string {\n  switch (r.status) {\n    case 'success': return r.data;     // r has data\n    case 'error': return r.message;    // r has message\n    case 'loading': return 'Loading...';\n    default: {\n      const unreachable: never = r;    // fails if a case is missing\n      return unreachable;\n    }\n  }\n}</code></pre><p>The <code>never</code> line is an <strong>exhaustive check</strong>: if a fourth status is added later, every switch that does not handle it becomes a compile error.</p>"
+      },
+      {
+        "title": "Types from Values and Keys",
+        "content": "<p>Three operators let you derive types instead of writing them twice:</p><pre><code class=\"language-typescript\">const defaults = { theme: 'dark', fontSize: 14 };\n\ntype Settings = typeof defaults;     // { theme: string; fontSize: number }\ntype SettingKey = keyof Settings;    // 'theme' | 'fontSize'\ntype FontSize = Settings['fontSize']; // number\n\nconst roles = ['admin', 'editor', 'viewer'] as const;\ntype Role = (typeof roles)[number];  // 'admin' | 'editor' | 'viewer'</code></pre><ul><li><code>typeof value</code> in a type position gives the type of a value.</li><li><code>keyof T</code> gives the union of <code>T</code>'s keys.</li><li><code>T['key']</code>, an <strong>indexed access type</strong>, gives the type of one property; <code>[number]</code> gives an array's element type.</li></ul>"
+      },
+      {
+        "title": "Conditional Types and infer",
+        "content": "<p>A <strong>conditional type</strong> chooses a type based on a test, like a ternary for types:</p><pre><code class=\"language-typescript\">type IsString&lt;T&gt; = T extends string ? 'yes' : 'no';\ntype A = IsString&lt;'hi'&gt;; // 'yes'\ntype B = IsString&lt;42&gt;;   // 'no'\n\ntype ElementOf&lt;T&gt; = T extends (infer E)[] ? E : never;\ntype C = ElementOf&lt;number[]&gt;; // number\n\ntype NonNull&lt;T&gt; = T extends null | undefined ? never : T;\ntype D = NonNull&lt;string | null&gt;; // string: applied to each member</code></pre><p><code>infer E</code> captures part of a matched type into a new name. When <code>T</code> is a union, a conditional type is applied to <strong>each member separately</strong> and the results are joined again; this distribution is how many built-in utility types filter unions.</p>"
+      },
+      {
+        "title": "Mapped Types",
+        "content": "<p>A <strong>mapped type</strong> builds a new object type by looping over keys:</p><pre><code class=\"language-typescript\">type Product = { readonly id: number; name: string; price: number };\n\ntype Optional&lt;T&gt; = { [K in keyof T]?: T[K] };\ntype Mutable&lt;T&gt; = { -readonly [K in keyof T]: T[K] };\ntype Getters&lt;T&gt; = { [K in keyof T as `get${Capitalize&lt;string &amp; K&gt;}`]: () =&gt; T[K] };\n\ntype G = Getters&lt;Product&gt;; // { getId: () =&gt; number; getName: ...; getPrice: ... }\nconst draft: Mutable&lt;Product&gt; = { id: 1, name: 'Pen', price: 2 };\ndraft.id = 2; // OK: readonly removed</code></pre><p><code>[K in keyof T]</code> visits every key. Modifiers can be added or removed with <code>+</code> and <code>-</code>, as in <code>-readonly</code>. <code>as</code> renames keys, or drops them when the new name is <code>never</code>.</p>"
+      },
+      {
+        "title": "Template Literal Types",
+        "content": "<p><strong>Template literal types</strong> build string types the way template strings build string values:</p><pre><code class=\"language-typescript\">type Size = 'sm' | 'lg';\ntype Color = 'red' | 'blue';\ntype ClassName = `btn-${Size}-${Color}`; // 4 combinations\n\ntype EventName&lt;T extends string&gt; = `on${Capitalize&lt;T&gt;}`;\ntype Click = EventName&lt;'click'&gt;; // 'onClick'\n\nconst cls: ClassName = 'btn-sm-red';  // OK\nconst bad: ClassName = 'btn-md-red';  // Error: md is not a Size</code></pre><p>Unions inside a template expand into every combination. Combined with the intrinsic helpers <code>Uppercase</code>, <code>Lowercase</code>, <code>Capitalize</code> and <code>Uncapitalize</code>, they type event names, CSS classes, routes and keys generated from other keys.</p>"
+      },
+      {
+        "title": "satisfies",
+        "content": "<p>A type annotation checks a value but also <strong>replaces</strong> its type, losing detail. <code>satisfies</code> (TypeScript 4.9) checks the value but keeps its own inferred type:</p><pre><code class=\"language-typescript\">type Colors = Record&lt;string, string | [number, number, number]&gt;;\n\nconst annotated: Colors = { primary: '#06f', accent: [255, 0, 0] };\nannotated.primary.toUpperCase(); // Error: may be a tuple\n\nconst palette = { primary: '#06f', accent: [255, 0, 0] } satisfies Colors;\npalette.primary.toUpperCase(); // OK: known to be a string\npalette.accent[0];             // OK: known to be a tuple</code></pre><p>Use <code>satisfies</code> for configuration objects and lookup tables: you get a check that every entry is valid, typos included, while code that uses the object still sees the precise type of each property.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li><code>as const</code> keeps literal types and makes values readonly</li><li><code>typeof</code>, <code>instanceof</code>, <code>in</code> and equality checks narrow unions</li><li><code>value is T</code> predicates and <code>asserts</code> functions package custom checks</li><li>Discriminated unions plus a <code>never</code> check catch unhandled cases</li><li><code>typeof</code>, <code>keyof</code> and <code>T['key']</code> derive types from existing code</li><li>Conditional types distribute over unions; <code>infer</code> captures parts of types</li><li>Mapped types loop over keys, change modifiers and rename keys with <code>as</code></li><li>Template literal types build string types from unions</li><li><code>satisfies</code> checks a value without widening its type</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-utility-types",
+    "title": "Utility Types",
+    "subjectSlug": "typescript",
+    "topicSlug": "utility-types",
+    "level": 2,
+    "summary": "Derive types instead of duplicating them: Partial, Required, Readonly, Pick, Omit, Record, Exclude, Extract, ReturnType, Parameters, Awaited and friends, DTOs from one model, and writing your own.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "typescript",
+      "utility types",
+      "partial",
+      "omit",
+      "record"
+    ],
+    "sections": [
+      {
+        "title": "Derive, Do Not Duplicate",
+        "content": "<p>Real code needs many variations of the same shape: the full record, the data to create it, the fields to update, a public view. Writing each by hand means that when the model changes, some copies are forgotten.</p><p><strong>Utility types</strong> are built-in generic types that transform one type into another. You define the model once and derive every variation from it:</p><pre><code class=\"language-typescript\">interface User {\n  id: number;\n  name: string;\n  email: string;\n  passwordHash: string;\n}\n\ntype PublicUser = Omit&lt;User, 'passwordHash'&gt;;\ntype UserUpdate = Partial&lt;Pick&lt;User, 'name' | 'email'&gt;&gt;;</code></pre><p>Add a field to <code>User</code> and every derived type follows automatically.</p>"
+      },
+      {
+        "title": "Partial, Required and Readonly",
+        "content": "<p>These three change the modifiers of every property:</p><pre><code class=\"language-typescript\">interface Settings {\n  theme: string;\n  fontSize?: number;\n}\n\nconst patch: Partial&lt;Settings&gt; = { theme: 'dark' };  // every property optional\nconst full: Required&lt;Settings&gt; = { theme: 'dark' };  // Error: fontSize is now required\n\nconst frozen: Readonly&lt;Settings&gt; = { theme: 'dark' };\nfrozen.theme = 'light'; // Error: readonly</code></pre><ul><li><code>Partial&lt;T&gt;</code> suits update payloads and option objects with defaults.</li><li><code>Required&lt;T&gt;</code> suits values after defaults have been filled in.</li><li><code>Readonly&lt;T&gt;</code> suits state that must not be mutated.</li></ul><p>All three are <strong>shallow</strong>: nested objects are not affected.</p>"
+      },
+      {
+        "title": "Pick and Omit",
+        "content": "<p><code>Pick</code> keeps the listed properties; <code>Omit</code> keeps everything except them:</p><pre><code class=\"language-typescript\">interface Article {\n  id: number;\n  title: string;\n  body: string;\n  authorId: number;\n}\n\ntype ArticleCard = Pick&lt;Article, 'id' | 'title'&gt;;\ntype NewArticle = Omit&lt;Article, 'id'&gt;;\n\ntype Typo = Omit&lt;Article, 'tittle'&gt;; // no error: Omit does not check keys\ntype Checked = Pick&lt;Article, 'tittle'&gt;; // Error: not a key of Article</code></pre><p>Choose by what should happen when the model grows: <code>Pick</code> stays the same, <code>Omit</code> automatically includes new properties. Note that <code>Omit</code> accepts any key, so a typo silently removes nothing.</p>"
+      },
+      {
+        "title": "Record",
+        "content": "<p><code>Record&lt;K, V&gt;</code> builds an object type whose keys are <code>K</code> and whose values are <code>V</code>:</p><pre><code class=\"language-typescript\">type Role = 'admin' | 'editor' | 'viewer';\n\nconst permissions: Record&lt;Role, string[]&gt; = {\n  admin: ['read', 'write', 'delete'],\n  editor: ['read', 'write'],\n  viewer: ['read'],\n};\n\nconst labels: Record&lt;Role, string&gt; = { admin: 'Admin', editor: 'Editor' }; // Error: viewer missing\n\nconst cache: Record&lt;string, number&gt; = {}; // any string key</code></pre><p>With a union of keys, <code>Record</code> is <strong>exhaustive</strong>: add a role and every lookup table that misses it becomes an error. With <code>string</code> keys it acts like an index signature, so remember that a lookup may find nothing.</p>"
+      },
+      {
+        "title": "Exclude, Extract and NonNullable",
+        "content": "<p>These filter <strong>union</strong> types, member by member:</p><pre><code class=\"language-typescript\">type Status = 'draft' | 'published' | 'archived' | 'deleted';\n\ntype Visible = Exclude&lt;Status, 'deleted' | 'archived'&gt;; // 'draft' | 'published'\ntype Final = Extract&lt;Status, 'archived' | 'deleted' | 'other'&gt;; // 'archived' | 'deleted'\n\ntype MaybeName = string | null | undefined;\ntype Name = NonNullable&lt;MaybeName&gt;; // string</code></pre><ul><li><code>Exclude&lt;T, U&gt;</code> removes members assignable to <code>U</code>.</li><li><code>Extract&lt;T, U&gt;</code> keeps only members assignable to <code>U</code>.</li><li><code>NonNullable&lt;T&gt;</code> removes <code>null</code> and <code>undefined</code>.</li></ul><p>Do not confuse them with <code>Omit</code> and <code>Pick</code>, which work on the <strong>properties</strong> of an object type.</p>"
+      },
+      {
+        "title": "Types from Functions and Classes",
+        "content": "<p>Sometimes the source of truth is a function or class, often from a library that does not export its types:</p><pre><code class=\"language-typescript\">function createOrder(customerId: number, items: string[]) {\n  return { id: 1, customerId, items, total: 0 };\n}\n\ntype Order = ReturnType&lt;typeof createOrder&gt;;      // { id: number; customerId: number; ... }\ntype OrderArgs = Parameters&lt;typeof createOrder&gt;;   // [customerId: number, items: string[]]\n\nclass Logger {\n  constructor(public prefix: string) {}\n}\ntype LoggerArgs = ConstructorParameters&lt;typeof Logger&gt;; // [prefix: string]\ntype LoggerInstance = InstanceType&lt;typeof Logger&gt;;     // Logger</code></pre><p>Note the <code>typeof</code>: these utilities take the <strong>type</strong> of a function or class, not the value itself.</p>"
+      },
+      {
+        "title": "Awaited",
+        "content": "<p><code>Awaited&lt;T&gt;</code> gives the type you get after <code>await</code>, unwrapping nested promises:</p><pre><code class=\"language-typescript\">async function fetchUser() {\n  return { id: 1, name: 'Ana' };\n}\n\ntype P = ReturnType&lt;typeof fetchUser&gt;;           // Promise&lt;{ id: number; name: string }&gt;\ntype User = Awaited&lt;ReturnType&lt;typeof fetchUser&gt;&gt;; // { id: number; name: string }\n\ntype Deep = Awaited&lt;Promise&lt;Promise&lt;number&gt;&gt;&gt;;   // number</code></pre><p>The combination <code>Awaited&lt;ReturnType&lt;typeof fn&gt;&gt;</code> is common for typing the result of an async function, such as a data loader or an API client method, without writing the type out by hand.</p>"
+      },
+      {
+        "title": "Building DTOs from One Model",
+        "content": "<p>Combining utilities covers most API needs from a single model:</p><pre><code class=\"language-typescript\">interface Product {\n  id: number;\n  name: string;\n  price: number;\n  stock: number;\n  createdAt: Date;\n}\n\ntype CreateProductDto = Omit&lt;Product, 'id' | 'createdAt'&gt;;\ntype UpdateProductDto = Partial&lt;CreateProductDto&gt;;\ntype ProductSummary = Pick&lt;Product, 'id' | 'name' | 'price'&gt;;\ntype ProductIndex = Record&lt;number, ProductSummary&gt;;\n\nconst update: UpdateProductDto = { price: 9.99 };          // OK\nconst bad: UpdateProductDto = { id: 5 };                    // Error: id is not updatable</code></pre><p>Each type states its intent in one line. Server-generated fields cannot be sent on create, updates are partial, and lists carry only what they display.</p>"
+      },
+      {
+        "title": "Writing Your Own",
+        "content": "<p>Built-in utilities are ordinary mapped and conditional types, so you can read and extend them:</p><pre><code class=\"language-typescript\">// How the built-ins are defined\ntype MyPartial&lt;T&gt; = { [K in keyof T]?: T[K] };\ntype MyOmit&lt;T, K extends keyof any&gt; = Pick&lt;T, Exclude&lt;keyof T, K&gt;&gt;;\n\n// A recursive version of Partial\ntype DeepPartial&lt;T&gt; = {\n  [K in keyof T]?: T[K] extends object ? DeepPartial&lt;T[K]&gt; : T[K];\n};\n\ntype Config = { db: { host: string; port: number } };\nconst override: DeepPartial&lt;Config&gt; = { db: { port: 5433 } }; // OK\n\ntype Loud = Uppercase&lt;'save'&gt;; // 'SAVE'</code></pre><p>String helpers such as <code>Uppercase</code> are <strong>intrinsic</strong>: they are built into the compiler rather than written in TypeScript.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>Define a model once and derive variations with utility types</li><li><code>Partial</code>, <code>Required</code> and <code>Readonly</code> change modifiers, shallowly</li><li><code>Pick</code> keeps properties; <code>Omit</code> removes them and does not check key names</li><li><code>Record</code> with a union of keys is exhaustive</li><li><code>Exclude</code>, <code>Extract</code> and <code>NonNullable</code> filter unions</li><li><code>ReturnType</code>, <code>Parameters</code> and <code>InstanceType</code> need <code>typeof</code></li><li><code>Awaited&lt;ReturnType&lt;typeof fn&gt;&gt;</code> types async results</li><li>Built-ins are mapped and conditional types; write your own the same way</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-modules-declaration-files",
+    "title": "Modules and Declaration Files",
+    "subjectSlug": "typescript",
+    "topicSlug": "modules-declaration-files",
+    "level": 3,
+    "summary": "Organize TypeScript code into modules, import types correctly, configure module resolution, understand where package types come from, write .d.ts files and extend library types with augmentation.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "typescript",
+      "modules",
+      "declaration files",
+      "@types",
+      "module augmentation"
+    ],
+    "sections": [
+      {
+        "title": "Scripts and Modules",
+        "content": "<p>TypeScript treats a file as a <strong>module</strong> if it has a top-level <code>import</code> or <code>export</code>. Everything declared in a module is private to it unless exported.</p><p>A file without either is a <strong>script</strong>: its top-level declarations are global and visible in every other script of the project. That is how two unrelated files can clash with \"Cannot redeclare block-scoped variable\".</p><pre><code class=\"language-typescript\">// math.ts: a module\nexport function add(a: number, b: number) {\n  return a + b;\n}\n\n// helpers.ts: forced to be a module with no exports\nexport {};</code></pre><p>Modern projects are module-only. <code>\"moduleDetection\": \"force\"</code>, which <code>tsc --init</code> now sets, treats every file as a module.</p>"
+      },
+      {
+        "title": "Importing Types",
+        "content": "<p>Imports used only as types disappear from the JavaScript output. <code>import type</code> makes that explicit:</p><pre><code class=\"language-typescript\">import type { User } from './models.js';     // removed from output\nimport { saveUser } from './db.js';           // kept\nimport { type Role, hasRole } from './auth.js'; // mixed import\n\nexport type { User };   // a type-only re-export</code></pre><p>With <code>verbatimModuleSyntax</code> enabled, TypeScript keeps every import that is not marked <code>type</code>, exactly as written. Importing a type without the marker is then an error. The rule is simple to follow, and it lets single-file tools such as esbuild know which imports to drop, without guessing and without breaking imports that exist only for their side effects.</p>"
+      },
+      {
+        "title": "Module Resolution",
+        "content": "<p><strong>Module resolution</strong> is how TypeScript finds the file behind an import path. It should mirror what will happen at runtime:</p><ul><li><code>nodenext</code>: Node.js rules. In ES modules, relative imports include the extension of the output file, so <code>./db.js</code> even though the source is <code>db.ts</code>. The <code>\"type\"</code> field in package.json decides whether <code>.js</code> files are ES modules or CommonJS.</li><li><code>bundler</code>: rules used by Vite, esbuild and webpack. Extensions are optional and folder imports find <code>index.ts</code>.</li></ul><pre><code class=\"language-typescript\">import { connect } from './db.js';   // nodenext\nimport { connect } from './db';      // bundler</code></pre><p>A mismatch shows up as code that type checks but fails to load at runtime.</p>"
+      },
+      {
+        "title": "Where Package Types Come From",
+        "content": "<p>When you import a package, TypeScript looks for its types in this order:</p><ol><li>Types <strong>shipped with the package</strong>, found through the <code>\"types\"</code> condition in its <code>exports</code> map, or its <code>\"types\"</code> field.</li><li>A matching package under <code>node_modules/@types</code>, such as <code>@types/express</code>.</li><li>Otherwise, an error: the module \"implicitly has an 'any' type\".</li></ol><pre><code class=\"language-json\">{\n  \"name\": \"my-lib\",\n  \"exports\": {\n    \".\": {\n      \"types\": \"./dist/index.d.ts\",\n      \"default\": \"./dist/index.js\"\n    }\n  }\n}</code></pre><p>Libraries written in TypeScript usually ship their own types. When publishing one, list <code>\"types\"</code> first within each condition, because the first matching condition wins.</p>"
+      },
+      {
+        "title": "@types Packages and the types Option",
+        "content": "<p>DefinitelyTyped is a community repository of type definitions for JavaScript packages that do not ship their own, published as <code>@types/name</code>:</p><pre><code class=\"language-typescript\">// npm install --save-dev @types/node @types/jest\nconsole.log(process.env.PORT);   // global from @types/node\n</code></pre><pre><code class=\"language-json\">{\n  \"compilerOptions\": {\n    \"types\": [\"node\", \"jest\"]\n  }\n}</code></pre><p>The <code>types</code> option controls which <code>@types</code> packages add <strong>globals</strong>, such as <code>process</code> or <code>describe</code>. Since TypeScript 6 it defaults to <code>[]</code>, so list the ones you need. It does not affect packages you import: <code>import express from 'express'</code> still finds <code>@types/express</code>.</p>"
+      },
+      {
+        "title": "Declaration Files and declare",
+        "content": "<p>A <strong>declaration file</strong> (<code>.d.ts</code>) contains only types: no implementations and no output. It describes JavaScript that exists somewhere else:</p><pre><code class=\"language-typescript\">// math.d.ts\nexport declare function add(a: number, b: number): number;\nexport declare const version: string;\n\n// globals.d.ts: a value defined by a script tag or the build tool\ndeclare const API_URL: string;</code></pre><p><code>declare</code> means \"this exists at runtime; trust me about its type\". With <code>\"declaration\": true</code>, <code>tsc</code> generates <code>.d.ts</code> files from your own code, which is how TypeScript libraries publish their types alongside the JavaScript.</p>"
+      },
+      {
+        "title": "Typing an Untyped Library",
+        "content": "<p>If a package has no types and no <code>@types</code> package, write a small declaration file yourself, inside the project's <code>include</code>:</p><pre><code class=\"language-typescript\">// src/types/legacy-lib.d.ts\ndeclare module 'legacy-lib' {\n  export function slugify(text: string): string;\n  export const version: string;\n}</code></pre><pre><code class=\"language-typescript\">import { slugify } from 'legacy-lib'; // now typed</code></pre><p>Describe only what you actually use, and grow it over time. As a temporary measure, <code>declare module 'legacy-lib';</code> on its own makes every import <code>any</code>, which silences the error but gives up all checking for that library.</p>"
+      },
+      {
+        "title": "Augmenting Existing Types",
+        "content": "<p><strong>Augmentation</strong> adds to types you do not own, using declaration merging. A classic case is adding <code>user</code> to Express requests after authentication:</p><pre><code class=\"language-typescript\">// src/types/express.d.ts\ndeclare global {\n  namespace Express {\n    interface Request {\n      user?: { id: number; name: string };\n    }\n  }\n}\nexport {};</code></pre><p>Now <code>req.user</code> is typed in every handler. <code>declare global</code> extends global types, such as <code>Window</code>; <code>declare module 'name'</code> extends a module's exports. The file must be a module, hence the <code>export {}</code>, and must be included in the project.</p>"
+      },
+      {
+        "title": "Barrels, Triple-Slash and Namespaces",
+        "content": "<p>A few patterns you will meet in existing code:</p><ul><li><strong>Barrel files</strong>: an <code>index.ts</code> that re-exports a folder, for example <code>export * from './user.js'</code>. They shorten imports, but large barrels slow down tools and can create circular imports.</li><li><strong>Triple-slash directives</strong> such as <code>/// &lt;reference types=\"node\" /&gt;</code> pull in declarations from within a file. Today they mostly appear inside <code>.d.ts</code> files; prefer imports and the <code>types</code> option.</li><li><strong>Namespaces</strong> (<code>namespace App { }</code>) group code into one global object. They predate ES modules and are considered legacy; use modules instead. They still appear in declaration files, as in the Express example.</li></ul>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>A file with top-level <code>import</code> or <code>export</code> is a module; others are global scripts</li><li>Use <code>import type</code> for type-only imports; <code>verbatimModuleSyntax</code> enforces it</li><li><code>nodenext</code> imports include <code>.js</code>; <code>bundler</code> follows bundler rules</li><li>Package types come from the package itself, then <code>@types</code></li><li>The <code>types</code> option controls global <code>@types</code> and defaults to <code>[]</code></li><li><code>.d.ts</code> files describe JavaScript; <code>declare</code> says a value exists</li><li>Type untyped libraries with <code>declare module 'name'</code></li><li>Augment library types with <code>declare global</code> or <code>declare module</code></li><li>Namespaces are legacy; prefer ES modules</li></ul>"
+      }
+    ]
+  },
+  {
+    "slug": "typescript-decorators-framework-integration",
+    "title": "Decorators and Framework Integration",
+    "subjectSlug": "typescript",
+    "topicSlug": "decorators-framework-integration",
+    "level": 3,
+    "summary": "Write standard decorators for classes, methods, fields and accessors, understand legacy experimentalDecorators and metadata, and use TypeScript well in Angular, NestJS and React.",
+    "format": "tutorial",
+    "accessLevel": "Basic",
+    "tags": [
+      "typescript",
+      "decorators",
+      "angular",
+      "nestjs",
+      "react"
+    ],
+    "sections": [
+      {
+        "title": "What a Decorator Is",
+        "content": "<p>A <strong>decorator</strong> is a function applied with <code>@</code> to a class or class member. It runs when the class is defined and can observe, replace or extend what it decorates:</p><pre><code class=\"language-typescript\">function tag(label: string) {\n  return function (target: Function, context: ClassDecoratorContext) {\n    console.log(`${label}: ${String(context.name)}`);\n  };\n}\n\n@tag('model')\nclass Invoice {}\n// logs \"model: Invoice\" once, when the class is defined</code></pre><p><code>tag</code> is a <strong>decorator factory</strong>: a function that takes options and returns the actual decorator. That is why framework decorators are written with parentheses, such as <code>@Injectable()</code>, even when no options are passed.</p>"
+      },
+      {
+        "title": "Standard Method Decorators",
+        "content": "<p>Since TypeScript 5.0, the standard ECMAScript decorators work without any compiler flag. A method decorator receives the method and a <strong>context</strong> object, and can return a replacement:</p><pre><code class=\"language-typescript\">function log(target: (...args: any[]) =&gt; any, context: ClassMethodDecoratorContext) {\n  return function (this: unknown, ...args: any[]) {\n    console.log(`Calling ${String(context.name)} with`, args);\n    return target.apply(this, args);\n  };\n}\n\nclass Calculator {\n  @log\n  add(a: number, b: number) {\n    return a + b;\n  }\n}\n\nnew Calculator().add(2, 3); // logs, then returns 5</code></pre><p>The context describes what is being decorated: its <code>name</code>, its <code>kind</code>, whether it is <code>static</code> or <code>private</code>, and an <code>addInitializer</code> function for setup code.</p>"
+      },
+      {
+        "title": "Class, Field and Accessor Decorators",
+        "content": "<p>Each kind of decorator has its own context type and its own way to change behavior:</p><pre><code class=\"language-typescript\">function trim(_: undefined, context: ClassFieldDecoratorContext&lt;unknown, string&gt;) {\n  return (initial: string) =&gt; initial.trim(); // transforms the initial value\n}\n\nfunction logged&lt;This, V&gt;(target: ClassAccessorDecoratorTarget&lt;This, V&gt;, context: ClassAccessorDecoratorContext&lt;This, V&gt;): ClassAccessorDecoratorResult&lt;This, V&gt; {\n  return {\n    set(value) {\n      console.log(`${String(context.name)} = ${value}`);\n      target.set.call(this, value);\n    },\n  };\n}\n\nclass Profile {\n  @trim name = '  Ana  ';     // stored as 'Ana'\n  @logged accessor visits = 0; // every assignment is logged\n}</code></pre><p>The <code>accessor</code> keyword creates a property backed by a hidden getter and setter, giving decorators a way to intercept reads and writes.</p>"
+      },
+      {
+        "title": "Decorator Metadata",
+        "content": "<p>Decorators often need to record information for later, such as which fields map to which database columns. Standard decorators share a <code>context.metadata</code> object per class, readable through <code>Symbol.metadata</code>:</p><pre><code class=\"language-typescript\">function column(name: string) {\n  return function (_: undefined, context: ClassFieldDecoratorContext) {\n    const columns = (context.metadata['columns'] ??= []) as string[];\n    columns.push(name);\n  };\n}\n\nclass Row {\n  @column('user_name') name = '';\n  @column('created_at') created = new Date();\n}\n\nconst columns = Row[Symbol.metadata]?.['columns']; // ['user_name', 'created_at']</code></pre><p>This needs a runtime that defines <code>Symbol.metadata</code>. Where it is missing, a one-line polyfill such as <code>Symbol.metadata ??= Symbol('Symbol.metadata')</code> must run before the classes load.</p>"
+      },
+      {
+        "title": "Legacy experimentalDecorators",
+        "content": "<p>Before the standard existed, TypeScript had its own decorator system, enabled with <code>\"experimentalDecorators\": true</code>. It has different function signatures, and the two systems cannot be mixed in one project.</p><pre><code class=\"language-typescript\">class Service {\n  constructor(@Inject('DB') private db: unknown) {} // OK only in legacy mode\n}</code></pre><p>Legacy mode is still widely used because <strong>Angular and NestJS rely on it</strong>, and new Angular projects still enable it. Only legacy mode supports <strong>parameter decorators</strong> like <code>@Inject()</code>. With <code>emitDecoratorMetadata</code>, it also writes constructor parameter types into the output, read through the <code>reflect-metadata</code> library, which is how NestJS knows what to inject.</p>"
+      },
+      {
+        "title": "Decorators in Angular",
+        "content": "<p>In Angular, decorators mark the role of a class, and the Angular compiler turns them into static definitions at build time:</p><pre><code class=\"language-typescript\">@Injectable({ providedIn: 'root' })\nexport class UserService {\n  private http = inject(HttpClient);\n  getUser(id: number) {\n    return this.http.get&lt;User&gt;(`/api/users/${id}`); // Observable&lt;User&gt;\n  }\n}\n\n@Component({\n  selector: 'app-user-card',\n  template: `&lt;h2&gt;{{ user().name }}&lt;/h2&gt;`,\n})\nexport class UserCardComponent {\n  user = input.required&lt;User&gt;(); // a typed signal input\n}</code></pre><p>Modern Angular leans on functions more than decorators: <code>inject()</code> replaces constructor injection, and <code>input()</code> and <code>output()</code> replace <code>@Input</code> and <code>@Output</code>. Generic type arguments, as in <code>http.get&lt;User&gt;</code>, describe what the server returns, but remember the response is not validated at runtime.</p>"
+      },
+      {
+        "title": "Decorators in NestJS",
+        "content": "<p>NestJS uses decorators for routing, injection and validation:</p><pre><code class=\"language-typescript\">export class CreateUserDto {\n  @IsEmail() email!: string;\n  @Length(2, 50) name!: string;\n}\n\n@Controller('users')\nexport class UsersController {\n  constructor(private readonly users: UsersService) {} // injected by type\n\n  @Get(':id')\n  findOne(@Param('id', ParseIntPipe) id: number) {\n    return this.users.findOne(id);\n  }\n\n  @Post()\n  create(@Body() dto: CreateUserDto) {\n    return this.users.create(dto);\n  }\n}</code></pre><p>DTOs are <strong>classes</strong>, not interfaces, because interfaces disappear at runtime. With a global <code>ValidationPipe</code>, the class-validator decorators on the DTO are checked for every request, closing the gap between compile-time types and real input.</p>"
+      },
+      {
+        "title": "TypeScript with React",
+        "content": "<p>React does not use decorators, but TypeScript types every part of a component:</p><pre><code class=\"language-typescript\">import { createContext, useState, type ChangeEvent } from 'react';\n\ntype User = { id: number; name: string };\ntype ButtonProps = { label: string; onClick: () =&gt; void; variant?: 'primary' | 'ghost' };\n\nexport function Button({ label, onClick, variant = 'primary' }: ButtonProps) {\n  return &lt;button className={variant} onClick={onClick}&gt;{label}&lt;/button&gt;;\n}\n\nexport function NameField() {\n  const [name, setName] = useState('');                 // string, inferred\n  const [user, setUser] = useState&lt;User | null&gt;(null);  // explicit: starts empty\n  const onChange = (e: ChangeEvent&lt;HTMLInputElement&gt;) =&gt; setName(e.target.value);\n  return &lt;input value={name} onChange={onChange} /&gt;;\n}\n\nexport const ThemeContext = createContext&lt;'light' | 'dark'&gt;('light');</code></pre><p>Type props with a type or interface, and pass a type argument to hooks only when inference cannot work it out.</p>"
+      },
+      {
+        "title": "Things to Remember",
+        "content": "<ul><li>A decorator is a function applied with <code>@</code>; a factory returns one</li><li>Standard decorators need no flag since TypeScript 5.0 and receive a context object</li><li>Method decorators can wrap methods; field decorators transform initial values</li><li>The <code>accessor</code> keyword lets decorators intercept reads and writes</li><li><code>context.metadata</code> and <code>Symbol.metadata</code> share data between decorators</li><li>Angular and NestJS use legacy <code>experimentalDecorators</code></li><li>Only legacy mode has parameter decorators and <code>emitDecoratorMetadata</code></li><li>NestJS DTOs are classes so validation decorators exist at runtime</li><li>In React, type props and pass hook type arguments only when needed</li></ul>"
+      }
+    ]
   }
 ]

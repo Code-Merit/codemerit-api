@@ -906,14 +906,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Foundation",
-      "shortDesc": "What is TypeScript, tsc, ts-node, and basic type annotations",
+      "shortDesc": "What TypeScript is, how it compiles and runs, and basic type annotations",
       "order": 1,
       "weight": 1,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers what TypeScript is and why it exists over plain JavaScript, installing TypeScript and the tsc compiler, running TypeScript with ts-node, the TypeScript Playground for quick experimentation, adding basic type annotations to variables and function parameters, the compilation step to JavaScript, and how TypeScript integrates with existing JavaScript codebases.",
-      "goal": "Explain what TypeScript adds over JavaScript, compile and run TypeScript files using tsc and ts-node, and add basic type annotations to variables and function signatures."
+      "description": "Covers what TypeScript is and why it exists over plain JavaScript, how types are erased at compile time and give no runtime checks, adding basic type annotations to variables, parameters and return values, and when to rely on type inference instead. Shows how to type check and compile with tsc (including noEmit and why tsc still emits JavaScript when there are errors), how to run TypeScript directly with Node.js type stripping or tsx, the TypeScript Playground, structural typing, gradual adoption in existing JavaScript codebases with allowJs, checkJs and JSDoc, and what the native TypeScript 7 compiler changes.",
+      "goal": "Explain what TypeScript adds over JavaScript and what it cannot do at runtime, type check and compile code with tsc, run TypeScript files directly with Node.js or tsx, and add basic type annotations where inference is not enough."
     },
     {
       "slug": "typescript-configuration",
@@ -921,14 +921,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Foundation",
-      "shortDesc": "tsconfig.json, strict mode, and compiler option flags",
+      "shortDesc": "tsconfig.json, strict mode, module settings and modern compiler defaults",
       "order": 2,
       "weight": 1,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers the tsconfig.json file and its key compilerOptions: target (ES version output), module (CommonJS, ESNext), lib, outDir, rootDir, and baseUrl. Deep-dives into strict mode and its constituent flags (strictNullChecks, noImplicitAny, strictFunctionTypes, strictPropertyInitialization). Also covers include/exclude path patterns, path aliases for clean imports, project references for monorepos, and the role of build tools like esbuild and swc alongside tsc.",
-      "goal": "Configure a TypeScript project with tsconfig.json, enable and understand each strict mode flag, and set up path aliases to eliminate relative import chains."
+      "description": "Covers the tsconfig.json file and its key compilerOptions: include and exclude, target and lib, outDir, rootDir, sourceMap and declaration output, and choosing module and moduleResolution (nodenext for Node.js, bundler for bundled apps). Deep-dives into the strict family of flags (noImplicitAny, strictNullChecks, strictFunctionTypes, strictPropertyInitialization) and extra safety flags such as noUncheckedIndexedAccess, exactOptionalPropertyTypes and noImplicitOverride. Also covers path aliases with paths (baseUrl is removed in TypeScript 7), the new TypeScript 6.0 defaults (strict on, ESM, types: []), isolatedModules and verbatimModuleSyntax for fast transpilers like esbuild and swc, and project references with composite for large codebases.",
+      "goal": "Configure a TypeScript project with tsconfig.json, choose the right module settings for Node.js or a bundler, understand what each strict flag catches, and set up path aliases and project references using current TypeScript defaults."
     },
     {
       "slug": "core-types",
@@ -936,14 +936,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Foundation",
-      "shortDesc": "Primitives, arrays, tuples, enums, and union types",
+      "shortDesc": "Primitives, arrays, tuples, special types, unions and enums",
       "order": 3,
       "weight": 1,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers TypeScript's built-in primitive types (string, number, boolean, bigint, symbol), typed arrays and readonly arrays, tuples for fixed-length typed structures, numeric and string enums and const enums, the special types any, unknown, never, void, null, and undefined, union types (|) and type aliases with the type keyword, and the difference between type widening and type narrowing.",
-      "goal": "Annotate variables and function parameters with TypeScript's core types, choose between any and unknown correctly, define type aliases and basic union types, and explain the difference between null, undefined, void, and never."
+      "description": "Covers TypeScript's primitive types (string, number, boolean, bigint, symbol) and why the lowercase names are used, type inference and widening with let and const, typed and readonly arrays, tuples including labeled and optional elements, null and undefined under strictNullChecks, the special types any, unknown, void and never, union types with first steps in narrowing, type aliases with the type keyword, and numeric, string and const enums compared with unions of literal types.",
+      "goal": "Annotate values with the core types, choose unknown over any for untrusted data, explain null, undefined, void and never, use unions and type aliases, and decide between an enum and a union of literal types."
     },
     {
       "slug": "functions-classes",
@@ -951,14 +951,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Foundation",
-      "shortDesc": "Typed functions, overloads, access modifiers, abstract classes",
+      "shortDesc": "Typed functions, overloads, access modifiers and abstract classes",
       "order": 5,
       "weight": 1,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers typing function parameters and return values, optional and default parameters, rest parameters with typed arrays, function overloads for multiple call signatures, the this parameter type annotation, TypeScript classes with explicit property declarations, access modifiers (public, private, protected) and readonly, the private class field syntax (#), abstract classes and abstract methods, implements for interface adherence, and static members and class expressions.",
-      "goal": "Write fully typed functions including overloads, implement TypeScript classes with access modifiers and abstract patterns, and enforce interface contracts on classes with implements."
+      "description": "Covers typing function parameters and return values, optional, default and rest parameters, function types and contextual typing of callbacks, function overloads and when a union parameter is simpler, the this parameter, TypeScript classes with property declarations, strictPropertyInitialization and parameter properties, access modifiers (public, private, protected) and readonly compared with JavaScript #private fields, abstract classes and methods, implements and override, and static members and class expressions.",
+      "goal": "Write fully typed functions including overloads and callbacks, build classes with the right access modifiers, and enforce contracts with abstract classes, implements and override."
     },
     {
       "slug": "advanced-type-system",
@@ -966,14 +966,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Intermediate",
-      "shortDesc": "Discriminated unions, conditional types, and mapped types",
+      "shortDesc": "Narrowing, discriminated unions, conditional, mapped and template literal types",
       "order": 7,
       "weight": 2,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers literal types and literal narrowing, discriminated union patterns (tagged unions) for exhaustive type-safe branching, type guards using typeof, instanceof, the in operator, and user-defined type predicates (is), conditional types (T extends U ? X : Y), the infer keyword inside conditional types, mapped types (transforming all properties of a type), template literal types (TypeScript 4.1+) for string-based type generation, and the satisfies operator (TypeScript 4.9+) for validating without widening.",
-      "goal": "Model complex domain data with discriminated unions, write type guard functions, create conditional and mapped types for type transformations, and use template literal types to generate string-based type variants."
+      "description": "Covers literal types and as const, narrowing with typeof, instanceof, in, equality and truthiness checks, user-defined type predicates (is) and assertion functions, discriminated (tagged) unions with exhaustive checks using never, the keyof and typeof type operators and indexed access types, conditional types (T extends U ? X : Y) including distribution and the infer keyword, mapped types with modifiers and key remapping with as, template literal types for string-based types, and the satisfies operator for validating a value without widening its type.",
+      "goal": "Model domain data with discriminated unions and exhaustive checks, write type guards and assertion functions, and build conditional, mapped and template literal types to transform existing types."
     },
     {
       "slug": "modules-declaration-files",
@@ -981,14 +981,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Advanced",
-      "shortDesc": ".d.ts files, @types packages, and module augmentation",
+      "shortDesc": "Modules, module resolution, .d.ts files, @types and augmentation",
       "order": 9,
       "weight": 3,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers ES Module syntax in TypeScript (import/export), module resolution strategies (node16, bundler), the purpose and structure of .d.ts declaration files, installing community type definitions via @types packages, writing your own ambient .d.ts files for untyped JavaScript libraries, module augmentation and declaration merging for extending existing library types, the declare keyword for ambient declarations, triple-slash reference directives, and why namespaces are considered legacy in modern TypeScript.",
-      "goal": "Manage imports and exports in a TypeScript project, install and interpret @types packages, write declaration files for untyped libraries, and use module augmentation to extend existing type definitions."
+      "description": "Covers what makes a file a module instead of a global script, ES module import and export in TypeScript, type-only imports and verbatimModuleSyntax, module resolution with nodenext and bundler (including .js extensions in imports under nodenext), how TypeScript finds a package's types through package.json exports and types, @types packages and the new types: [] default in TypeScript 6.0, the purpose of .d.ts declaration files and the declare keyword, typing an untyped JavaScript library, module and global augmentation for extending library types, barrel files, triple-slash directives, and why namespaces are legacy in modern code.",
+      "goal": "Organize imports and exports in a TypeScript project, configure module resolution for Node.js or a bundler, use and write declaration files, and extend existing library types with module augmentation."
     },
     {
       "slug": "generics",
@@ -996,14 +996,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Intermediate",
-      "shortDesc": "Generic functions, constraints, and default type parameters",
+      "shortDesc": "Generic functions, constraints, defaults and const type parameters",
       "order": 6,
       "weight": 2,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers the motivation for generics — writing reusable typed code without losing type information — generic function syntax with <T>, generic interfaces and generic classes, applying constraints with extends to limit accepted types, multiple type parameters and their interaction, default type parameters (TypeScript 4.7+), const type parameters (TypeScript 5.0+) for preserving literal types during inference, and common real-world generic patterns (wrapper types, factory functions, repository patterns).",
-      "goal": "Write generic functions and classes that are both reusable and type-safe, apply constraints with extends, use default type parameters, and understand how TypeScript infers type arguments automatically."
+      "description": "Covers the motivation for generics, writing reusable code without losing type information, generic functions and how TypeScript infers type arguments, generic interfaces, type aliases and classes, constraints with extends, the K extends keyof T pattern for safe property access, multiple type parameters and default type parameters, const type parameters (TypeScript 5.0) for keeping literal types, what happens when inference fails and how NoInfer helps, and common real-world patterns such as API response wrappers, factories and repositories, along with signs of over-generic code.",
+      "goal": "Write generic functions, types and classes that are reusable and type-safe, apply constraints with extends and keyof, use default and const type parameters, and predict how TypeScript infers type arguments."
     },
     {
       "slug": "utility-types",
@@ -1011,14 +1011,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Intermediate",
-      "shortDesc": "Partial, Pick, Omit, Record, and building custom utility types",
+      "shortDesc": "Partial, Pick, Omit, Record and building custom utility types",
       "order": 8,
       "weight": 2,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers TypeScript's complete set of built-in utility types: Partial<T>, Required<T>, Readonly<T>, Pick<T,K>, Omit<T,K>, Record<K,V>, Extract<T,U>, Exclude<T,U>, NonNullable<T>, ReturnType<F>, Parameters<F>, ConstructorParameters<T>, InstanceType<T>, and Awaited<T>. Covers how to chain and combine utility types for real-world DTO and API typing, and how to implement custom utility types from scratch using mapped types, conditional types, and the keyof and typeof operators.",
-      "goal": "Apply the standard TypeScript utility types to derive and transform types for DTOs, API responses, and component props, and build custom utility types using mapped and conditional types."
+      "description": "Covers TypeScript's built-in utility types: Partial, Required and Readonly, Pick and Omit, Record, Exclude, Extract and NonNullable, ReturnType, Parameters, ConstructorParameters and InstanceType, Awaited, and the intrinsic string types such as Uppercase. Shows how to derive DTO and API types from a single model instead of duplicating them, and how to write custom utility types such as DeepPartial using mapped types, conditional types and the keyof and typeof operators.",
+      "goal": "Apply the built-in utility types to derive DTOs, API responses and component props from one source of truth, and write custom utility types with mapped and conditional types."
     },
     {
       "slug": "decorators-framework-integration",
@@ -1026,14 +1026,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Advanced",
-      "shortDesc": "Stage 3 decorators, and how Angular/NestJS use them",
+      "shortDesc": "Standard and legacy decorators, and TypeScript in Angular, NestJS and React",
       "order": 10,
       "weight": 3,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers TypeScript decorators using the stable Stage 3 syntax (no experimental flags required since TypeScript 5.0), class decorators, method decorators, property and accessor decorators, parameter decorators, decorator factories, and the TC39 Decorator Metadata proposal (stable since TypeScript 5.2). Shows how Angular uses @Component, @Injectable, @Pipe, and @Directive, how NestJS uses @Controller, @Get, @Injectable, and validation decorators, and how to type React component props, hooks, context, and event handlers correctly in TypeScript.",
-      "goal": "Write and compose class and method decorators using Stage 3 syntax, explain how Angular and NestJS decorators work under the hood via metadata, and correctly type Angular services, components, and React component props with TypeScript."
+      "description": "Covers what decorators are and how decorator factories work, the two decorator systems in TypeScript: standard ECMAScript decorators (TypeScript 5.0+, no flag needed) and legacy experimentalDecorators, which NestJS still relies on and which is the only system with parameter decorators. Shows standard class, method, field and accessor decorators with the context object, decorator metadata (Symbol.metadata) compared with emitDecoratorMetadata and reflect-metadata, how Angular uses @Component and @Injectable alongside inject(), how NestJS uses @Controller, @Get, @Param and validation decorators on DTO classes, and how to type React component props, hooks, events and context with TypeScript.",
+      "goal": "Write class and method decorators with the standard syntax, explain when a project needs experimentalDecorators, and correctly type Angular services and components, NestJS controllers and DTOs, and React components."
     },
     {
       "slug": "interfaces-type-aliases",
@@ -1041,14 +1041,14 @@
       "subjectSlug": "typescript",
       "image": null,
       "label": "Foundation",
-      "shortDesc": "interface vs type, extending, and structural typing",
+      "shortDesc": "interface vs type, extending, intersections and structural typing",
       "order": 4,
       "weight": 1,
       "popularity": 1,
       "parentSlug": null,
       "isPublished": true,
-      "description": "Covers defining object contracts with interface, optional (?) and readonly properties, extending interfaces with extends and merging via declaration merging, intersection types (&) for type composition, the key differences between interface and type alias (primitives, declaration merging, extending), structural (duck) typing and what it means for assignability, index signatures for dynamic keys, and practical guidance on when to prefer interface versus type.",
-      "goal": "Define object shapes using both interface and type alias, understand structural typing and assignability, compose types with extends and intersections, and choose the correct tool for each use case."
+      "description": "Covers describing object shapes with interface and type, optional (?) and readonly properties, structural typing and excess property checks on object literals, extending interfaces (including several at once), intersection types (&) and what happens when members conflict, index signatures and Record for dynamic keys, declaration merging, what only an interface or only a type alias can express, classes implementing either one, and practical guidance on choosing between them.",
+      "goal": "Define object shapes with both interface and type, explain structural typing and excess property checks, compose types with extends and intersections, and choose the right tool for each use case."
     },
     {
       "slug": "java-basics",
