@@ -106,6 +106,20 @@ export class AchievementController {
     );
   }
 
+  @ApiOperation({
+    summary: "Claim today's daily-quest bonus XP",
+    description:
+      'Awards the bonus once all three of today\'s learning-dashboard quests are done (a lesson ' +
+      'completed, the practice target answered, an interview question studied). 400 ' +
+      'QUESTS_INCOMPLETE otherwise. A second claim the same day awards nothing and returns ' +
+      '`alreadyClaimed: true`.',
+  })
+  @UseGuards(AuthGuard('jwt'))
+  @Post('daily-quests/claim')
+  async claimDailyQuestBonus(@Request() req: any) {
+    return this.achievementService.claimDailyQuestBonus(req.user.id);
+  }
+
   /** Catalog of badge definitions, e.g. for an interviewer picking which badge to grant.
    * ?scopeType=Subject&scopeId=12 narrows to badges defined for that subject; scopeId requires
    * scopeType alongside it (scopeId alone is ambiguous — it's a Subject/JobRole/Topic id depending

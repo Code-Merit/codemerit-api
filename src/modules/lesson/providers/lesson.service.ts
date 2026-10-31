@@ -16,8 +16,8 @@ import { GetLessonsDto } from '../dtos/get-lessons.dto';
 import { UpdateLessonDto } from '../dtos/update-lesson.dto';
 import { UpdateLessonProgressDto } from '../dtos/update-lesson-progress.dto';
 import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
-import { EnrollmentTierEnum, TIER_RANK } from 'src/common/enum/enrollment-tier.enum';
-import { LessonAccessLevelEnum, LESSON_ACCESS_RANK } from 'src/common/enum/lesson-access-level.enum';
+import { EnrollmentTierEnum } from 'src/common/enum/enrollment-tier.enum';
+import { isLessonLocked, LessonAccessLevelEnum } from 'src/common/enum/lesson-access-level.enum';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 
 interface LessonAccessResult {
@@ -45,9 +45,7 @@ export class LessonService {
    * enrollment/login at all (`tier === null`, rank -1 always satisfies it). No daily
    * cap or cumulative ceiling — access is a fixed per-lesson fact, not a throttle. */
   private evaluateLessonAccess(lesson: Lesson, tier: EnrollmentTierEnum | null): { locked: boolean } {
-    if (lesson.accessLevel === LessonAccessLevelEnum.Public) return { locked: false };
-    const effectiveRank = tier === null ? -1 : TIER_RANK[tier];
-    return { locked: effectiveRank < LESSON_ACCESS_RANK[lesson.accessLevel] };
+    return { locked: isLessonLocked(lesson.accessLevel, tier) };
   }
 
   /** Batched access computation for a set of lessons in one pass. */
@@ -336,7 +334,9 @@ export class LessonService {
       changes.status === UserLessonTrackerStatusEnum.Completed &&
       tracker.status !== UserLessonTrackerStatusEnum.Completed;
 
-    await this.userLessonTrackerRepo.update(tracker.id, changes);
+    // completedAt marks the first completion only — a lesson re-completed after "needs revisit" keeps it.
+    const completedAt = isNewlyCompleted && !tracker.completedAt ? { completedAt: new Date() } : {};
+    await this.userLessonTrackerRepo.update(tracker.id, { ...changes, ...completedAt });
     const updated = await this.userLessonTrackerRepo.findOneBy({ id: tracker.id });
 
     if (isNewlyCompleted) {

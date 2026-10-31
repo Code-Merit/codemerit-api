@@ -8,6 +8,7 @@ import { Badge } from 'src/common/typeorm/entities/badge.entity';
 import { BadgeRule } from 'src/common/typeorm/entities/badge-rule.entity';
 import { UserBadge } from 'src/common/typeorm/entities/user-badge.entity';
 import { UserStreak } from 'src/common/typeorm/entities/user-streak.entity';
+import { DailyQuestBonus } from 'src/common/typeorm/entities/daily-quest-bonus.entity';
 import { UserXpLog } from 'src/common/typeorm/entities/user-xp-log.entity';
 import { LinkedinShare } from 'src/common/typeorm/entities/linkedin-share.entity';
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
@@ -124,6 +125,7 @@ export class TypeormConfigService implements TypeOrmOptionsFactory {
         BadgeRule,
         UserBadge,
         UserStreak,
+        DailyQuestBonus,
         UserXpLog,
         LinkedinShare,
         SkillEnrollment,

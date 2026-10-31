@@ -26,6 +26,8 @@ import { QuizTypeEnum } from '../../enum/quiz-type.enum';
 // userId up front. questionId-leading lets MySQL drive from the (small) question
 // set for a subject/track and index-only-lookup matching attempts.
 @Index(['questionId', 'isCorrect', 'userId'])
+// One user's attempts over a date range — the learning dashboard's daily activity counts.
+@Index('IDX_question_attempt_user_created', ['userId', 'createdAt'])
 @Entity()
 export class QuestionAttempt extends AbstractEntity implements IQuestionAttempt {
 

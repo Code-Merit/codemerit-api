@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, In, Repository } from 'typeorm';
+import { DataSource, EntityManager, In, Repository } from 'typeorm';
 import { AppCustomException } from 'src/common/exceptions/app-custom-exception.filter';
 import { SkillEnrollment } from 'src/common/typeorm/entities/skill-enrollment.entity';
 import { SkillTierOffering } from 'src/common/typeorm/entities/skill-tier-offering.entity';
@@ -9,10 +9,12 @@ import { Subject } from 'src/common/typeorm/entities/subject.entity';
 import { JobRole } from 'src/common/typeorm/entities/job-role.entity';
 import { JobRoleSubject } from 'src/common/typeorm/entities/job-role-subject.entity';
 import { EnrollmentBatch } from 'src/common/typeorm/entities/enrollment-batch.entity';
+import { QuizSubject } from 'src/common/typeorm/entities/quiz-subject.entity';
+import { UserQuiz } from 'src/common/typeorm/entities/user-quiz.entity';
 import { EnrollmentStatusEnum } from 'src/common/enum/enrollment-status.enum';
 import { EnrollmentSourceEnum } from 'src/common/enum/enrollment-source.enum';
 import { EnrollmentBatchStatusEnum } from 'src/common/enum/enrollment-batch-status.enum';
-import { EnrollmentTierEnum, TIER_RANK } from 'src/common/enum/enrollment-tier.enum';
+import { EnrollmentTierEnum, isTierAtLeast, TIER_RANK } from 'src/common/enum/enrollment-tier.enum';
 import { SubjectTagEnum } from 'src/common/enum/subject-tag.enum';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { GrantEnrollmentDto } from '../dtos/grant-enrollment.dto';
@@ -96,6 +98,12 @@ export interface JobRoleSubjectsBreakdown {
   }[];
 }
 
+export interface DailyQuestionAllowance {
+  tier: EnrollmentTierEnum | null;
+  dailyQuestionCap: number | null;
+  questionsUsedToday: number;
+}
+
 @Injectable()
 export class SkillEnrollmentService {
   private readonly logger = new Logger(SkillEnrollmentService.name);
@@ -116,6 +124,7 @@ export class SkillEnrollmentService {
     @InjectRepository(EnrollmentBatch)
     private readonly batchRepo: Repository<EnrollmentBatch>,
     private readonly activityService: ActivityService,
+    private readonly dataSource: DataSource,
   ) {}
 
   // ---------------------------------------------------------------------------
@@ -1039,6 +1048,58 @@ export class SkillEnrollmentService {
     const row = await this.tierCapConfigRepo.findOne({ where: { tier } });
     if (row) return { dailyQuestionCap: row.dailyQuestionCap };
     return DEFAULT_TIER_CAPS[tier] ?? null;
+  }
+
+  /** Questions in the user's practice quizzes generated today, per subject — what the daily
+   * cap counts. Read from UserQuiz.questionIds (a UserQuiz has no QuizSettings row to read a
+   * count from). Today starts at server midnight. */
+  async sumQuestionsUsedTodayBySubject(userId: number, subjectIds: number[]): Promise<Map<number, number>> {
+    if (!subjectIds.length) return new Map();
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const rows = await this.dataSource
+      .getRepository(QuizSubject)
+      .createQueryBuilder('qs')
+      .innerJoin(UserQuiz, 'q', 'q.id = qs.userQuizId')
+      .select('qs.subjectId', 'subjectId')
+      .addSelect('SUM(JSON_LENGTH(q.questionIds))', 'total')
+      .where('q.createdBy = :userId', { userId })
+      .andWhere('q.createdAt >= :startOfDay', { startOfDay })
+      .andWhere('qs.subjectId IN (:...subjectIds)', { subjectIds })
+      .groupBy('qs.subjectId')
+      .getRawMany<{ subjectId: number; total: string }>();
+
+    return new Map(rows.map((r) => [Number(r.subjectId), Number(r.total) || 0]));
+  }
+
+  /** Today's practice-question allowance per subject — the rule QuizService enforces, for many
+   * subjects at once. `tier: null` = no access (a premium subject the user isn't enrolled in);
+   * `dailyQuestionCap: null` = unlimited (a non-premium subject, or Pro and above). */
+  async getDailyQuestionAllowances(userId: number, subjectIds: number[]): Promise<Map<number, DailyQuestionAllowance>> {
+    const ids = Array.from(new Set(subjectIds));
+    if (!ids.length) return new Map();
+
+    const [subjects, tierMap, usedBySubject] = await Promise.all([
+      this.subjectRepo.find({ where: { id: In(ids) }, select: ['id', 'isPremium'] }),
+      this.getSubjectTierMap(userId),
+      this.sumQuestionsUsedTodayBySubject(userId, ids),
+    ]);
+
+    const capByTier = new Map<EnrollmentTierEnum, number | null>();
+    const allowances = new Map<number, DailyQuestionAllowance>();
+    for (const subject of subjects) {
+      // A non-premium subject is open to everyone (getMinEffectiveTierForSubjects' rule).
+      const tier = subject.isPremium ? tierMap.get(subject.id) ?? null : EnrollmentTierEnum.Serious;
+      let dailyQuestionCap: number | null = null;
+      if (tier && !isTierAtLeast(tier, EnrollmentTierEnum.Pro)) {
+        if (!capByTier.has(tier)) capByTier.set(tier, (await this.getCapsForTier(tier))?.dailyQuestionCap ?? null);
+        dailyQuestionCap = capByTier.get(tier) ?? null;
+      }
+      allowances.set(subject.id, { tier, dailyQuestionCap, questionsUsedToday: usedBySubject.get(subject.id) ?? 0 });
+    }
+    return allowances;
   }
 
   async upsertTierCapConfig(

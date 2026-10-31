@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   Unique,
@@ -15,6 +16,7 @@ import { User } from './user.entity';
 // One tracker row per (userId, lessonId) — enforced below so concurrent "record access" calls
 // can never fork a single user's progress on one lesson into two rows.
 @Unique(['userId', 'lessonId'])
+@Index('IDX_user_lesson_tracker_user_completed', ['userId', 'completedAt'])
 @Entity('user_lesson_tracker')
 export class UserLessonTracker extends AbstractEntity {
   @Column({
@@ -50,6 +52,11 @@ export class UserLessonTracker extends AbstractEntity {
     default: 0,
   })
   progressPercent: number;
+
+  // When the lesson was first completed — set once, never moved by later views or ratings
+  // (updatedAt is). Feeds the dashboard's daily activity and lesson quest.
+  @Column({ type: 'datetime', nullable: true, default: null })
+  completedAt: Date | null;
 
   @Column({
     type: 'text',

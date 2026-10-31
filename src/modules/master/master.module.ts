@@ -20,6 +20,7 @@ import { MeritService } from './providers/merit.service';
 import { SubjectStatsService } from './providers/subject-stats.service';
 import { ProgramService } from './providers/program.service';
 import { SubjectTrackAnalysisService } from './providers/subject-track-analysis.service';
+import { LearningActivityService } from './providers/learning-activity.service';
 import { BadgeQueryModule } from '../achievement/badge-query.module';
 import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.module';
 
@@ -36,11 +37,11 @@ import { SkillEnrollmentModule } from '../skill-enrollment/skill-enrollment.modu
   controllers: [MasterController],
   providers: [
     MasterService, SubjectAnalysisService, TopicAnalysisService, RouteService,
-    MeritService, SubjectStatsService, ProgramService, SubjectTrackAnalysisService,
+    MeritService, SubjectStatsService, ProgramService, SubjectTrackAnalysisService, LearningActivityService,
   ],
   exports: [
     MasterService, SubjectAnalysisService, TopicAnalysisService, RouteService,
-    MeritService, SubjectStatsService, ProgramService, SubjectTrackAnalysisService,
+    MeritService, SubjectStatsService, ProgramService, SubjectTrackAnalysisService, LearningActivityService,
   ],
 })
 export class MasterModule {}

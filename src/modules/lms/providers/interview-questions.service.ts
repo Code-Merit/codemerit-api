@@ -24,7 +24,7 @@ export interface GetInterviewQuestionsFilters {
 // per topic from the database — a locked question's content is never queried, built, or
 // sent for a caller who can't see it, so a subject with hundreds of questions doesn't
 // balloon the response (or the DB scan) just because most of them are locked.
-const FREE_PREVIEW_COUNT = 5;
+import { FREE_PREVIEW_COUNT } from 'src/common/constants/interview-questions.constants';
 
 @Injectable()
 export class InterviewQuestionsService {

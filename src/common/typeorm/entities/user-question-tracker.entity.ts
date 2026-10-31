@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import { AbstractEntity } from './abstract.entity';
 import { Question } from './question.entity';
 import { User } from './user.entity';
@@ -9,6 +9,8 @@ import { User } from './user.entity';
 // General question completion is one-way, matching the frontend's static "Completed"
 // indicator (no toggle-off).
 @Unique(['userId', 'questionId'])
+// One user's completions over a date range — the learning dashboard's daily activity counts.
+@Index('IDX_user_question_tracker_user_completed', ['userId', 'completedAt'])
 @Entity('user_question_tracker')
 export class UserQuestionTracker extends AbstractEntity {
   @Column({ type: 'integer', nullable: false })

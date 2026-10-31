@@ -1,3 +1,5 @@
+import { EnrollmentTierEnum, TIER_RANK } from './enrollment-tier.enum';
+
 // Static per-lesson access gate — replaces the old daily-view-cap/ceiling model.
 // A lesson unlocks for a user once their enrollment tier's rank (see TIER_RANK in
 // enrollment-tier.enum.ts) is >= LESSON_ACCESS_RANK[lesson.accessLevel]. `Public` is
@@ -21,3 +23,12 @@ export const LESSON_ACCESS_RANK: Record<LessonAccessLevelEnum, number> = {
   [LessonAccessLevelEnum.Pro]: 2,
   [LessonAccessLevelEnum.Intern]: 3,
 };
+
+/** The lesson gate itself: locked unless Public, or the user's tier for the lesson's subject
+ * ranks at or above its access level (`tier: null` = not enrolled). Shared by the lesson
+ * service and the learning dashboard, so both decide access the same way. */
+export function isLessonLocked(accessLevel: LessonAccessLevelEnum, tier: EnrollmentTierEnum | null): boolean {
+  if (accessLevel === LessonAccessLevelEnum.Public) return false;
+  const effectiveRank = tier === null ? -1 : TIER_RANK[tier];
+  return effectiveRank < LESSON_ACCESS_RANK[accessLevel];
+}

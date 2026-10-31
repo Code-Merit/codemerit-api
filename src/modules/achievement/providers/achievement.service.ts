@@ -16,6 +16,7 @@ import {
 import { Badge } from 'src/common/typeorm/entities/badge.entity';
 import { BadgeRule } from 'src/common/typeorm/entities/badge-rule.entity';
 import { Certificate } from 'src/common/typeorm/entities/certificate.entity';
+import { DailyQuestBonus } from 'src/common/typeorm/entities/daily-quest-bonus.entity';
 import { CertificationTrack } from 'src/common/typeorm/entities/certification-track.entity';
 import { Question } from 'src/common/typeorm/entities/question.entity';
 import { QuestionAttempt } from 'src/common/typeorm/entities/question-attempt.entity';
@@ -40,6 +41,7 @@ import { GrantBadgeDto } from '../dtos/grant-badge.dto';
 import { BadgeQueryService } from './badge-query.service';
 import { SubjectTrackAnalysisService } from '../../master/providers/subject-track-analysis.service';
 import { TopicAnalysisService } from '../../master/providers/topic-analysis.service';
+import { LearningActivityService, QUEST_BONUS_XP } from '../../master/providers/learning-activity.service';
 import {
   BADGE_CODES,
   computeLevel,
@@ -130,6 +132,7 @@ export class AchievementService {
     private readonly permissionsService: PermissionsService,
     private readonly badgeQueryService: BadgeQueryService,
     private readonly skillEnrollmentService: SkillEnrollmentService,
+    private readonly learningActivity: LearningActivityService,
   ) {}
 
   /**
@@ -319,6 +322,12 @@ export class AchievementService {
       if (score === 100) xpAwarded += XP_PERFECT_SCORE_BONUS;
     }
 
+    return { xpAwarded, ...(await this.applyXp(userId, xpAwarded)) };
+  }
+
+  /** Adds XP to the user's total, writes the ledger entry and announces a level-up. Shared by
+   * quiz submissions and the daily-quest bonus. */
+  private async applyXp(userId: number, xpAwarded: number) {
     const user = await this.userRepo.findOne({ where: { id: userId }, select: ['id', 'points'] });
     const oldPoints = user?.points ?? 0;
     const totalPoints = oldPoints + xpAwarded;
@@ -342,7 +351,40 @@ export class AchievementService {
       );
     }
 
-    return { xpAwarded, totalPoints, levelBefore, levelAfter, leveledUp };
+    return { totalPoints, levelBefore, levelAfter, leveledUp };
+  }
+
+  /** Claims today's daily-quest bonus. Checks all three quests are done today (the same counts
+   * the learning dashboard shows), then records the claim; the unique (userId, questDate) key
+   * makes a second claim for the same day a no-op that awards nothing. */
+  async claimDailyQuestBonus(userId: number) {
+    const [today] = await this.learningActivity.getDailyActivity(userId, 1);
+    const { date, quests } = this.learningActivity.buildTodayQuests(today, false);
+    if (!quests.every((q) => q.done)) {
+      throw new AppCustomException(
+        HttpStatus.BAD_REQUEST,
+        "Finish all three of today's quests to claim the bonus.",
+        'QUESTS_INCOMPLETE',
+      );
+    }
+
+    const insert = await this.userXpLogRepo.manager
+      .createQueryBuilder()
+      .insert()
+      .into(DailyQuestBonus)
+      .values({ userId, questDate: date, xpAwarded: QUEST_BONUS_XP })
+      .orIgnore()
+      .execute();
+    if (!insert.raw?.affectedRows) {
+      const user = await this.userRepo.findOne({ where: { id: userId }, select: ['id', 'points'] });
+      return { xpAwarded: 0, alreadyClaimed: true, totalPoints: user?.points ?? 0, level: computeLevel(user?.points ?? 0) };
+    }
+
+    const result = await this.applyXp(userId, QUEST_BONUS_XP);
+    return {
+      xpAwarded: QUEST_BONUS_XP, alreadyClaimed: false,
+      totalPoints: result.totalPoints, level: result.levelAfter, leveledUp: result.leveledUp,
+    };
   }
 
   /** Upserts UserStreak by comparing lastActiveDate to today; same-day resubmissions

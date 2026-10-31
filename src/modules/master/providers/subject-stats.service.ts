@@ -67,7 +67,7 @@ export class SubjectStatsService {
 
   // ─── Core Subject Stats Query ─────────────────────────────────────────────────
 
-  private async getSubjectStats(subjectId?: number, userId?: number) {
+  private async getSubjectStats(subjectId?: number, userId?: number, subjectIds?: number[]) {
     const qb = this.dataSource
       .createQueryBuilder()
       .select('s.id', 'subjectId')
@@ -118,7 +118,6 @@ export class SubjectStatsService {
         'numGeneralAdvanced',
       )
       .from(Subject, 's')
-      .where('s.isPublished = :isPublished', { isPublished: 1 })
       .leftJoin('question', 'q', 'q.subjectId = s.id')
       .setParameter('questionType', QuestionTypeEnum.Trivia)
       .setParameter('general', QuestionTypeEnum.General)
@@ -128,7 +127,14 @@ export class SubjectStatsService {
       .setParameter('hard', DifficultyLevelEnum.Advanced)
       .groupBy('s.id');
 
-    if (subjectId) qb.where('s.id = :subjectId', { subjectId });
+    // One subject: computed whatever its publish state, because its page (getSubjectPage) loads
+    // unpublished subjects too, e.g. for learners still enrolled in one. Lists: published only.
+    if (subjectId) {
+      qb.where('s.id = :subjectId', { subjectId });
+    } else {
+      qb.where('s.isPublished = :isPublished', { isPublished: 1 });
+      if (subjectIds?.length) qb.andWhere('s.id IN (:...subjectIds)', { subjectIds });
+    }
 
     if (userId) {
       const latestAttemptSub = this.dataSource
@@ -219,9 +225,10 @@ export class SubjectStatsService {
     return qb.getRawMany();
   }
 
-  /** Public accessor returning a Map keyed by subjectId — used by ProgramService. */
-  async getSubjectStatsMap(userId?: number): Promise<Map<number, any>> {
-    const rows = (await this.getSubjectStats(undefined, userId)) as any[];
+  /** Public accessor returning a Map keyed by subjectId — used by ProgramService. Pass
+   * `subjectIds` to compute only those subjects (e.g. one role's) instead of every published one. */
+  async getSubjectStatsMap(userId?: number, subjectIds?: number[]): Promise<Map<number, any>> {
+    const rows = (await this.getSubjectStats(undefined, userId, subjectIds)) as any[];
     return new Map(rows.map((r) => [+r.subjectId, r]));
   }
 

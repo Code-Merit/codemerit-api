@@ -37,7 +37,7 @@ import { NotificationService } from 'src/modules/notification/providers/notifica
 import { GetQuestionsByIdsDto } from 'src/modules/question/dtos/get-questions-by-ids.dto';
 import { QuestionService } from 'src/modules/question/providers/question.service';
 import { QuestionGeneratorService } from 'src/modules/question/providers/question-generator.service';
-import { SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
+import { DailyQuestionAllowance, SkillEnrollmentService } from 'src/modules/skill-enrollment/providers/skill-enrollment.service';
 import { ActivityService } from 'src/modules/activity/providers/activity/activity.service';
 import { DataSource, In, Repository } from 'typeorm';
 import { CreateQuizDto } from '../dtos/create-quiz.dto';
@@ -495,7 +495,7 @@ export class QuizService {
     const dailyCap = caps?.dailyQuestionCap;
     if (dailyCap === undefined) return;
 
-    const usedBySubject = await this.sumQuestionsUsedTodayBySubject(userId, targetSubjectIds);
+    const usedBySubject = await this.skillEnrollmentService.sumQuestionsUsedTodayBySubject(userId, targetSubjectIds);
     const exhausted = targetSubjectIds.some((id) => (usedBySubject.get(id) ?? 0) >= dailyCap);
     if (exhausted) {
       throw new AppCustomException(
@@ -551,54 +551,12 @@ export class QuizService {
     );
   }
 
-  /** Questions in the user's practice quizzes generated today, per subject. Counted from
-   * UserQuiz.questionIds; UserQuiz has no QuizSettings row to read a count from. */
-  private async sumQuestionsUsedTodayBySubject(
-    userId: number,
-    subjectIds: number[],
-  ): Promise<Map<number, number>> {
-    if (!subjectIds.length) return new Map();
-
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const rows = await this.quizSubjectRepo
-      .createQueryBuilder('qs')
-      .innerJoin(UserQuiz, 'q', 'q.id = qs.userQuizId')
-      .select('qs.subjectId', 'subjectId')
-      .addSelect('SUM(JSON_LENGTH(q.questionIds))', 'total')
-      .where('q.createdBy = :userId', { userId })
-      .andWhere('q.createdAt >= :startOfDay', { startOfDay })
-      .andWhere('qs.subjectId IN (:...subjectIds)', { subjectIds })
-      .groupBy('qs.subjectId')
-      .getRawMany<{ subjectId: number; total: string }>();
-
-    return new Map(rows.map((r) => [Number(r.subjectId), Number(r.total) || 0]));
-  }
-
   /** Display-only counterpart to enforceSubjectAccessForUserQuiz ("X of Y practice
    * questions left today"). `tier: null` = not enrolled; `dailyQuestionCap: null` =
-   * unlimited. */
-  async getSubjectQuestionQuota(
-    userId: number,
-    subjectId: number,
-  ): Promise<{ tier: EnrollmentTierEnum | null; dailyQuestionCap: number | null; questionsUsedToday: number }> {
-    const tier = await this.skillEnrollmentService.getMinEffectiveTierForSubjects(userId, [subjectId]);
-    if (tier === null) {
-      return { tier: null, dailyQuestionCap: null, questionsUsedToday: 0 };
-    }
-    if (isTierAtLeast(tier, EnrollmentTierEnum.Pro)) {
-      return { tier, dailyQuestionCap: null, questionsUsedToday: 0 };
-    }
-
-    const caps = await this.skillEnrollmentService.getCapsForTier(tier);
-    const dailyCap = caps?.dailyQuestionCap ?? null;
-    if (dailyCap === null) {
-      return { tier, dailyQuestionCap: null, questionsUsedToday: 0 };
-    }
-
-    const usedBySubject = await this.sumQuestionsUsedTodayBySubject(userId, [subjectId]);
-    return { tier, dailyQuestionCap: dailyCap, questionsUsedToday: usedBySubject.get(subjectId) ?? 0 };
+   * unlimited. The rule itself lives in SkillEnrollmentService.getDailyQuestionAllowances. */
+  async getSubjectQuestionQuota(userId: number, subjectId: number): Promise<DailyQuestionAllowance> {
+    const allowances = await this.skillEnrollmentService.getDailyQuestionAllowances(userId, [subjectId]);
+    return allowances.get(subjectId) ?? { tier: null, dailyQuestionCap: null, questionsUsedToday: 0 };
   }
 
   /** One-time skill check for a new user across every subject in their job role.

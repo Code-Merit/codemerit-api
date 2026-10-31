@@ -45,7 +45,7 @@ export class MeritService {
     rows: any[],
     userId?: number,
     limit = 10,
-  ): { meritList: any[]; userRank: number | null } {
+  ): { meritList: any[]; userRank: number | null; around: any[] } {
     const shaped = rows
       .map((r) => ({
         userId: +r.userId, name: r.name, username: r.username,
@@ -54,9 +54,12 @@ export class MeritService {
       }))
       .sort((a, b) => b.masteryCount - a.masteryCount);
     const ranked = this.assignDenseRanks(shaped, (m) => m.masteryCount);
+    const userIndex = userId != null ? ranked.findIndex((m) => m.userId === userId) : -1;
     return {
       meritList: ranked.slice(0, limit),
-      userRank: userId != null ? ranked.find((m) => m.userId === userId)?.rank ?? null : null,
+      userRank: userIndex >= 0 ? ranked[userIndex].rank : null,
+      // The user and whoever sits directly above and below them — empty when unranked.
+      around: userIndex >= 0 ? ranked.slice(Math.max(0, userIndex - 1), userIndex + 2) : [],
     };
   }
 
@@ -254,8 +257,8 @@ export class MeritService {
     jobRoleIds: number[],
     userId?: number,
     limit = 10,
-  ): Promise<{ meritLists: Map<number, any[]>; userRanks: Map<number, number | null> }> {
-    if (!jobRoleIds.length) return { meritLists: new Map(), userRanks: new Map() };
+  ): Promise<{ meritLists: Map<number, any[]>; userRanks: Map<number, number | null>; around: Map<number, any[]> }> {
+    if (!jobRoleIds.length) return { meritLists: new Map(), userRanks: new Map(), around: new Map() };
 
     const rows = await this.dataSource
       .createQueryBuilder()
@@ -292,12 +295,14 @@ export class MeritService {
 
     const meritLists = new Map<number, any[]>();
     const userRanks = new Map<number, number | null>();
+    const around = new Map<number, any[]>();
     for (const jrId of jobRoleIds) {
-      const { meritList, userRank } = this.shapeAndRankMasteryRows(buckets.get(jrId) ?? [], userId, limit);
-      meritLists.set(jrId, meritList);
-      userRanks.set(jrId, userRank);
+      const shaped = this.shapeAndRankMasteryRows(buckets.get(jrId) ?? [], userId, limit);
+      meritLists.set(jrId, shaped.meritList);
+      userRanks.set(jrId, shaped.userRank);
+      around.set(jrId, shaped.around);
     }
-    return { meritLists, userRanks };
+    return { meritLists, userRanks, around };
   }
 
   // ─── Popular Topics ───────────────────────────────────────────────────────────

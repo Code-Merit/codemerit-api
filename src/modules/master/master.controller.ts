@@ -1,5 +1,6 @@
 import {
   Controller,
+  BadRequestException,
   Get,
   Query,
   Request,
@@ -25,6 +26,9 @@ import {
   ApiParam,
   ApiResponse as ApiResponseDoc,
 } from '@nestjs/swagger';
+
+// Shape of a job role slug (frontend-engineer) — checked before it reaches a query.
+const JOB_ROLE_SLUG = /^[a-z0-9-]{1,120}$/i;
 
 @ApiTags('Master Data')
 @ApiBearerAuth('access-token') // Same name used in `addBearerAuth`
@@ -132,19 +136,24 @@ export class MasterController {
   }
 
   @ApiOperation({
-    summary: "Get the caller's enriched career dashboard (scores, lesson completion, badges, next-best-action)",
+    summary: "Get the caller's learning dashboard (one call for the whole page)",
     description:
-      "Builds on the legacy career dashboard's data with lesson-completion metrics (no per-lesson " +
-      'list — this dashboard has no lesson browsing UI), per-job-role ' +
-      'badges, and a computed `nextCertificationTrack`/`nextSubjectTrack` suggestion (the ' +
-      'closest-to-completion not-yet-achieved cert, and the closest-to-completion subject track ' +
-      'within it). Any unexpected error is caught and logged server-side rather than propagated — ' +
-      'the caller gets an all-zero, empty-arrays dashboard shape instead of a 500.',
+      "`roles` lists the caller's job roles; `role` is full detail for the selected one only — " +
+      'subjects, every certificate that applies (role-linked and its subjects\' own), every badge ' +
+      '(its subjects\' included), self-rating status and the next-best-action suggestions. ' +
+      '`gamification` is account-wide XP/level/streak. `accountBadges` is set only when the caller ' +
+      'has no role yet. `jobRole` (a job role slug) is used only if it is one of the caller\'s own ' +
+      'roles; otherwise the most recently targeted role is shown. Any unexpected error is caught ' +
+      'and logged server-side — the caller gets an empty dashboard shape instead of a 500.',
   })
+  @ApiQuery({ name: 'jobRole', required: false, type: String, description: 'Job role slug, e.g. frontend-engineer.' })
   @UseGuards(AuthGuard('jwt'))
   @Get('career-dashboard')
-  async getEnrichedCareerDashboard(@Request() req: any) {
-    return this.programService.getEnrichedCareerDashboard(req.user.id);
+  async getEnrichedCareerDashboard(@Request() req: any, @Query('jobRole') jobRoleSlug?: string) {
+    if (jobRoleSlug && !JOB_ROLE_SLUG.test(jobRoleSlug)) {
+      throw new BadRequestException('jobRole must be a job role slug.');
+    }
+    return this.programService.getEnrichedCareerDashboard(req.user.id, jobRoleSlug || undefined);
   }
 
   @ApiOperation({
